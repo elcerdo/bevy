@@ -79,14 +79,16 @@ fn populate_models(
         Transform::from_translation(sphere_center),
     ));
 
+    let union_center = Vec3::new(0.0, 0.0, 2.0);
     let union_material = morpheus_union_materials.add(MorpheusUnionMaterial {
         matcap_texture: Some(matcap_texture.clone()),
+        bbox_center: union_center,
         alpha_mode: AlphaMode::Blend,
     });
     commands.spawn((
         Mesh3d(meshes.add(Mesh::from(Cuboid::new(2.0, 2.0, 2.0)))),
         MeshMaterial3d(union_material),
-        Transform::from_xyz(0.0, 0.0, 2.0),
+        Transform::from_translation(union_center),
     ));
 
     let alien_material = morpheus_alien_materials.add(MorpheusAlienMaterial {
@@ -206,6 +208,8 @@ struct MorpheusUnionMaterial {
     #[texture(0)]
     #[sampler(1)]
     matcap_texture: Option<Handle<Image>>,
+    #[uniform(2)]
+    bbox_center: Vec3,
     alpha_mode: AlphaMode,
 }
 

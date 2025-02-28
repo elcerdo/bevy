@@ -7,6 +7,7 @@
 
 @group(2) @binding(0) var matcap_texture: texture_2d<f32>;
 @group(2) @binding(1) var matcap_sampler: sampler;
+@group(2) @binding(2) var<uniform> bbox_center: vec3<f32>;
 
 struct Vertex {
     @builtin(instance_index) instance_index: u32,
@@ -40,11 +41,11 @@ fn fragment(
     let eye_position = view_transformations::position_ndc_to_world(vec3(0.0, 0.0, -1.0));
     let world_direction = normalize(out.world_position - eye_position);
 
-    var pos = out.world_position;
+    var pos = out.world_position - bbox_center;
     var dist = signed_distance_function(pos);
     for (var kk=0; kk<64; kk++) {
         if (dist <= 0.0) { break; }
-        if (length(pos - vec3(0.0, 0.0, 2.0)) > sqrt(3.0)) { break; }
+        if (length(pos) > sqrt(3.0)) { break; }
         pos += world_direction * dist;
         dist = signed_distance_function(pos);
     }
