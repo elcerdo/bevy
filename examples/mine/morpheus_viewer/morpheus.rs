@@ -1,3 +1,5 @@
+use std::marker::PhantomData;
+
 use bevy::input::mouse::AccumulatedMouseMotion;
 use bevy::render::render_resource::{AsBindGroup, ShaderRef};
 
@@ -10,15 +12,48 @@ use std::f32::consts::PI;
 
 //////////////////////////////////////////////////////////////////////
 
+trait Sdf: TypePath + Clone + Sync + Send {
+    fn raymarching_shader() -> ShaderRef;
+}
+
+#[derive(Clone, TypePath)]
+struct SphereSdf;
+
+impl Sdf for SphereSdf {
+    fn raymarching_shader() -> ShaderRef {
+        "shaders/morpheus/sphere_raymarching.wgsl".into()
+    }
+}
+
+#[derive(Clone, TypePath)]
+struct UnionSdf;
+
+impl Sdf for UnionSdf {
+    fn raymarching_shader() -> ShaderRef {
+        "shaders/morpheus/union_raymarching.wgsl".into()
+    }
+}
+
+#[derive(Clone, TypePath)]
+struct AlienSdf;
+
+impl Sdf for AlienSdf {
+    fn raymarching_shader() -> ShaderRef {
+        "shaders/morpheus/alien_raymarching.wgsl".into()
+    }
+}
+
+//////////////////////////////////////////////////////////////////////
+
 pub struct MorpheusPlugin;
 
 impl Plugin for MorpheusPlugin {
     fn build(&self, app: &mut App) {
         info!("** build_morpheus_plugin **");
 
-        app.add_plugins(MaterialPlugin::<MorpheusSphereMaterial>::default());
-        app.add_plugins(MaterialPlugin::<MorpheusUnionMaterial>::default());
-        app.add_plugins(MaterialPlugin::<MorpheusAlienMaterial>::default());
+        app.add_plugins(MaterialPlugin::<MorpheusRaymarchingMaterial<SphereSdf>>::default());
+        app.add_plugins(MaterialPlugin::<MorpheusRaymarchingMaterial<UnionSdf>>::default());
+        app.add_plugins(MaterialPlugin::<MorpheusRaymarchingMaterial<AlienSdf>>::default());
 
         app.add_systems(Startup, populate_camera_and_lights);
         app.add_systems(Startup, populate_models);
@@ -31,9 +66,9 @@ impl Plugin for MorpheusPlugin {
 fn populate_models(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut morpheus_sphere_materials: ResMut<Assets<MorpheusSphereMaterial>>,
-    mut morpheus_union_materials: ResMut<Assets<MorpheusUnionMaterial>>,
-    mut morpheus_alien_materials: ResMut<Assets<MorpheusAlienMaterial>>,
+    mut morpheus_sphere_materials: ResMut<Assets<MorpheusRaymarchingMaterial<SphereSdf>>>,
+    mut morpheus_union_materials: ResMut<Assets<MorpheusRaymarchingMaterial<UnionSdf>>>,
+    mut morpheus_alien_materials: ResMut<Assets<MorpheusRaymarchingMaterial<AlienSdf>>>,
     mut standard_materials: ResMut<Assets<StandardMaterial>>,
     asset_server: Res<AssetServer>,
 ) {
@@ -68,11 +103,9 @@ fn populate_models(
     let matcap_texture = asset_server.load("textures/matcap/583629_2E1810_765648_3C1C14-512px.png");
 
     let sphere_center = Vec3::new(2.0, 0.0, 0.0);
-    let sphere_material = morpheus_sphere_materials.add(MorpheusSphereMaterial {
-        matcap_texture: Some(matcap_texture.clone()),
-        bbox_center: sphere_center,
-        alpha_mode: AlphaMode::Blend,
-    });
+    let sphere_material = morpheus_sphere_materials.add(
+        MorpheusRaymarchingMaterial::<SphereSdf>::new(sphere_center, matcap_texture.clone()),
+    );
     commands.spawn((
         Mesh3d(meshes.add(Mesh::from(Cuboid::new(2.0, 2.0, 2.0)))),
         MeshMaterial3d(sphere_material),
@@ -80,11 +113,9 @@ fn populate_models(
     ));
 
     let union_center = Vec3::new(0.0, 0.0, 2.0);
-    let union_material = morpheus_union_materials.add(MorpheusUnionMaterial {
-        matcap_texture: Some(matcap_texture.clone()),
-        bbox_center: union_center,
-        alpha_mode: AlphaMode::Blend,
-    });
+    let union_material = morpheus_union_materials.add(
+        MorpheusRaymarchingMaterial::<UnionSdf>::new(union_center, matcap_texture.clone()),
+    );
     commands.spawn((
         Mesh3d(meshes.add(Mesh::from(Cuboid::new(2.0, 2.0, 2.0)))),
         MeshMaterial3d(union_material),
@@ -92,11 +123,9 @@ fn populate_models(
     ));
 
     let alien_center = Vec3::ZERO;
-    let alien_material = morpheus_alien_materials.add(MorpheusAlienMaterial {
-        matcap_texture: Some(matcap_texture),
-        bbox_center: alien_center,
-        alpha_mode: AlphaMode::Blend,
-    });
+    let alien_material = morpheus_alien_materials.add(
+        MorpheusRaymarchingMaterial::<AlienSdf>::new(alien_center, matcap_texture.clone()),
+    );
     commands.spawn((
         Mesh3d(meshes.add(Mesh::from(Cuboid::new(2.0, 2.0, 2.0)))),
         MeshMaterial3d(alien_material),
@@ -177,82 +206,36 @@ fn animate_camera(
 
 //////////////////////////////////////////////////////////////////////
 
-// pub const TRACK0_HANDLE: Handle<Track> = weak_handle!("1347c9b7-c46a-48e7-0000-023a354b7cac");
-
-const SPHERE_SHADER_ASSET_PATH: &str = "shaders/morpheus/sphere_raymarching.wgsl";
-
 #[derive(Asset, TypePath, AsBindGroup, Clone)]
-struct MorpheusSphereMaterial {
+struct MorpheusRaymarchingMaterial<T: Sdf> {
     #[texture(0)]
     #[sampler(1)]
     matcap_texture: Option<Handle<Image>>,
     #[uniform(2)]
     bbox_center: Vec3,
-    alpha_mode: AlphaMode,
+    phantom: PhantomData<T>,
 }
 
-impl Material for MorpheusSphereMaterial {
+impl<T: Sdf> Material for MorpheusRaymarchingMaterial<T> {
     fn vertex_shader() -> ShaderRef {
-        SPHERE_SHADER_ASSET_PATH.into()
+        T::raymarching_shader()
     }
 
     fn fragment_shader() -> ShaderRef {
-        SPHERE_SHADER_ASSET_PATH.into()
+        T::raymarching_shader()
     }
 
     fn alpha_mode(&self) -> AlphaMode {
-        self.alpha_mode
+        AlphaMode::Blend
     }
 }
 
-const UNION_SHADER_ASSET_PATH: &str = "shaders/morpheus/union_raymarching.wgsl";
-
-#[derive(Asset, TypePath, AsBindGroup, Clone)]
-struct MorpheusUnionMaterial {
-    #[texture(0)]
-    #[sampler(1)]
-    matcap_texture: Option<Handle<Image>>,
-    #[uniform(2)]
-    bbox_center: Vec3,
-    alpha_mode: AlphaMode,
-}
-
-impl Material for MorpheusUnionMaterial {
-    fn vertex_shader() -> ShaderRef {
-        UNION_SHADER_ASSET_PATH.into()
-    }
-
-    fn fragment_shader() -> ShaderRef {
-        UNION_SHADER_ASSET_PATH.into()
-    }
-
-    fn alpha_mode(&self) -> AlphaMode {
-        self.alpha_mode
-    }
-}
-
-const ALIEN_SHADER_ASSET_PATH: &str = "shaders/morpheus/alien_raymarching.wgsl";
-
-#[derive(Asset, TypePath, AsBindGroup, Clone)]
-struct MorpheusAlienMaterial {
-    #[texture(0)]
-    #[sampler(1)]
-    matcap_texture: Option<Handle<Image>>,
-    #[uniform(2)]
-    bbox_center: Vec3,
-    alpha_mode: AlphaMode,
-}
-
-impl Material for MorpheusAlienMaterial {
-    fn vertex_shader() -> ShaderRef {
-        ALIEN_SHADER_ASSET_PATH.into()
-    }
-
-    fn fragment_shader() -> ShaderRef {
-        ALIEN_SHADER_ASSET_PATH.into()
-    }
-
-    fn alpha_mode(&self) -> AlphaMode {
-        self.alpha_mode
+impl<T: Sdf> MorpheusRaymarchingMaterial<T> {
+    fn new(center: Vec3, matcap_texture: Handle<Image>) -> Self {
+        Self {
+            bbox_center: center,
+            matcap_texture: Some(matcap_texture),
+            phantom: PhantomData,
+        }
     }
 }

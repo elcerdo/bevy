@@ -1,5 +1,5 @@
-// #import "shaders/morpheus/sdf/alien.wgsl"::signed_distance_function
-#import "shaders/morpheus/sdf/can_with_soup.wgsl"::signed_distance_function
+#import "shaders/morpheus/sdf/alien.wgsl"::signed_distance_function
+// #import "shaders/morpheus/sdf/can_with_soup.wgsl"::signed_distance_function
 
 #import bevy_pbr::{
     mesh_functions,
