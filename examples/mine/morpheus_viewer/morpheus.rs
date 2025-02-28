@@ -14,21 +14,17 @@ use std::f32::consts::PI;
 //////////////////////////////////////////////////////////////////////
 
 trait Sdf: TypePath + Clone + Sync + Send {
+    const NAME: &'static str;
     fn raymarching_shader() -> ShaderRef;
 }
 
 #[derive(Clone, TypePath)]
 struct SphereSdf;
 
-impl SphereSdf {
-    const fn name() -> &'static str {
-        "sphere"
-    }
-}
-
 impl Sdf for SphereSdf {
+    const NAME: &'static str = "sphere";
     fn raymarching_shader() -> ShaderRef {
-        formatcp!("shaders/morpheus/{}_raymarching.wgsl", SphereSdf::name()).into()
+        formatcp!("shaders/morpheus/{}_raymarching.wgsl", SphereSdf::NAME).into()
     }
 }
 
@@ -36,8 +32,9 @@ impl Sdf for SphereSdf {
 struct UnionSdf;
 
 impl Sdf for UnionSdf {
+    const NAME: &'static str = "union";
     fn raymarching_shader() -> ShaderRef {
-        "shaders/morpheus/union_raymarching.wgsl".into()
+        formatcp!("shaders/morpheus/{}_raymarching.wgsl", UnionSdf::NAME).into()
     }
 }
 
@@ -45,8 +42,9 @@ impl Sdf for UnionSdf {
 struct AlienSdf;
 
 impl Sdf for AlienSdf {
+    const NAME: &'static str = "alien";
     fn raymarching_shader() -> ShaderRef {
-        "shaders/morpheus/alien_raymarching.wgsl".into()
+        formatcp!("shaders/morpheus/{}_raymarching.wgsl", AlienSdf::NAME).into()
     }
 }
 
