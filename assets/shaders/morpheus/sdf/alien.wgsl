@@ -1,71 +1,5 @@
 //// PREAMBLE
 
-#import bevy_pbr::{
-    mesh_functions,
-    view_transformations,
-}
-
-@group(2) @binding(0) var matcap_texture: texture_2d<f32>;
-@group(2) @binding(1) var matcap_sampler: sampler;
-
-struct Vertex {
-    @builtin(instance_index) instance_index: u32,
-    @location(0) position: vec3<f32>,
-    @location(1) normal: vec3<f32>,
-    @location(2) uv: vec2<f32>,
-}
-
-struct VertexOutput {
-    @builtin(position) clip_position: vec4<f32>,
-    @location(0) world_position: vec3<f32>,
-    @location(1) world_normal: vec3<f32>,
-    @location(2) uv: vec2<f32>,
-}
-
-@vertex
-fn vertex(vertex: Vertex) -> VertexOutput {
-    var out: VertexOutput;
-    var world_from_local = mesh_functions::get_world_from_local(vertex.instance_index);
-    out.world_position = mesh_functions::mesh_position_local_to_world(world_from_local, vec4(vertex.position, 1.0)).xyz;
-    out.world_normal = mesh_functions::mesh_normal_local_to_world(vertex.normal, vertex.instance_index);
-    out.clip_position = view_transformations::position_world_to_clip(out.world_position);
-    out.uv = vertex.uv;
-    return out;
-}
-
-@fragment
-fn fragment(
-    out: VertexOutput,
-) -> @location(0) vec4<f32> {
-    let eye_position = view_transformations::position_ndc_to_world(vec3(0.0, 0.0, -1.0));
-    let world_direction = normalize(out.world_position - eye_position);
-
-    var pos = out.world_position;
-    var dist = signed_distance_function(pos);
-    for (var kk=0; kk<64; kk++) {
-        if (dist <= 0.0) { break; }
-        if (length(pos) > sqrt(3.0)) { break; }
-        pos += world_direction * dist;
-        dist = signed_distance_function(pos);
-    }
-
-    if dist > 1e-3 {
-        return vec4(0.0);
-    }
-
-    let hh = 1e-3;
-    let world_grad = normalize(vec3(
-        signed_distance_function(pos + vec3(hh, 0.0, 0.0)) - signed_distance_function(pos - vec3(hh, 0.0, 0.0)), 
-        signed_distance_function(pos + vec3(0.0, hh, 0.0)) - signed_distance_function(pos - vec3(0.0, hh, 0.0)), 
-        signed_distance_function(pos + vec3(0.0, 0.0, hh)) - signed_distance_function(pos - vec3(0.0, 0.0, hh)), 
-    ));
-    let view_grad = normalize(view_transformations::direction_world_to_view(world_grad));
-    
-    var color = textureSample(matcap_texture, matcap_sampler, (view_grad.xy + 1.0) / 2.0);
-    
-    return color;
-}
-
 fn signed_distance_function(pos: vec3<f32>) -> f32 {
     return compute_main_digraph(pos).v_dist;
 }
@@ -255,6 +189,20 @@ fn noisePcg4(q: vec4<f32>) -> vec4<f32> {
 
 //// CUSTOM TYPES
 
+struct t_eyes_parameters {
+	v_spacing: f32,
+	v_size: f32,
+	v_offset: f32,
+	v_open: f32,
+	v_emotion: f32,
+	v_offset_height: f32,
+}
+
+struct t_seq2 {
+	v_duration: f32,
+	v_delay: f32,
+}
+
 struct t_seq_1 {
 	v_start: f32,
 	v_end: f32,
@@ -267,26 +215,12 @@ struct t_seq3 {
 }
 
 struct t_material {
-	v_color_eyes: vec3<f32>,
-	v_color_body_1: vec3<f32>,
-	v_color_body_angry: vec3<f32>,
+	v_col_eyes: vec3<f32>,
+	v_col_body_1: vec3<f32>,
+	v_col_body_angry: vec3<f32>,
 	v_roughness_eyes: f32,
 	v_roughness_body: f32,
-	v_color_body_sad: vec3<f32>,
-}
-
-struct t_seq2 {
-	v_duration: f32,
-	v_delay: f32,
-}
-
-struct t_eyes_parameters {
-	v_spacing: f32,
-	v_size: f32,
-	v_offset: f32,
-	v_open: f32,
-	v_emotion: f32,
-	v_offset_height: f32,
+	v_col_body_sad: vec3<f32>,
 }
 
 struct t_arms_params {
@@ -328,11 +262,6 @@ struct t_animation {
 	v_end: f32,
 }
 
-struct t_consts_al {
-	v_o0: f32,
-	v_o1: f32,
-}
-
 struct t_pi {
 	v_value: f32,
 }
@@ -367,12 +296,17 @@ struct t_one {
 	v_value: f32,
 }
 
+struct t_zero {
+	v_value: f32,
+}
+
 struct t_angle {
 	v_o0: f32,
 }
 
-struct t_zero {
-	v_value: f32,
+struct t_consts_al {
+	v_o0: f32,
+	v_o1: f32,
 }
 
 struct t_body_params {
@@ -423,17 +357,16 @@ struct t_outlet {
 
 //// INSTANCES
 
+const u_eyes_parameters: t_eyes_parameters = t_eyes_parameters(f32(0.568), f32(0.172), f32(0), f32(1), f32(-6.3), f32(0.056));
+const u_seq2: t_seq2 = t_seq2(f32(1), f32(1.5));
 const u_seq_1: t_seq_1 = t_seq_1(f32(1.5), f32(2.8), f32(1.5));
 const u_seq3: t_seq3 = t_seq3(f32(1), f32(0.5));
 const u_material: t_material = t_material(vec3(0.074, 0.13, 0.179), vec3(1, 0.519, 0.804), vec3(0.926, 0.241, 0.054), f32(0.265), f32(0.43), vec3(0.426, 0.648, 0.839));
-const u_seq2: t_seq2 = t_seq2(f32(1), f32(1.5));
-const u_eyes_parameters: t_eyes_parameters = t_eyes_parameters(f32(0.568), f32(0.172), f32(0), f32(1), f32(-6.3), f32(0.056));
 const u_arms_params: t_arms_params = t_arms_params(vec3(0.222, 0.111, 0.071), vec3(0.333, 0.185, 0.25), f32(0.055), f32(0.06), f32(0.085), vec3(0.259, 0, 0.179), vec3(0.222, 0.148, 0.214));
 const u_anm_angry: t_anm_angry = t_anm_angry(f32(10), f32(0.055), f32(0.805), f32(0), f32(25.2), f32(0.265), f32(0.24), f32(0.2), f32(-0.045), f32(0.5));
 const u_anm_sad: t_anm_sad = t_anm_sad(f32(0), f32(-40.05), f32(0.475), f32(0.135), f32(0), f32(-0.09), f32(0.365));
-const u_animation: t_animation = t_animation(f32(5.6241236), f32(0), f32(10));
+const u_animation: t_animation = t_animation(f32(2.3927634), f32(0), f32(10));
 
-const c_consts_al: t_consts_al = t_consts_al(f32(0.1), f32(0.5));
 const c_pi: t_pi = t_pi(f32(3.1415927));
 const c_minus_one: t_minus_one = t_minus_one(f32(-1));
 const c_ten: t_ten = t_ten(f32(10));
@@ -441,8 +374,9 @@ const c_half: t_half = t_half(f32(0.5));
 const c_front_leg_param: t_front_leg_param = t_front_leg_param(f32(0.13), f32(0.11), vec3(0.111, -0.185, 0), f32(0.13), vec3(0, 1, 0), f32(0.5), f32(18.9));
 const c_two: t_two = t_two(f32(2));
 const c_one: t_one = t_one(f32(1));
-const c_angle: t_angle = t_angle(f32(180));
 const c_zero: t_zero = t_zero(f32(0));
+const c_angle: t_angle = t_angle(f32(180));
+const c_consts_al: t_consts_al = t_consts_al(f32(0.1), f32(0.5));
 const c_body_params: t_body_params = t_body_params(vec3(0.259, 0.241, 0.286), f32(0.065), f32(0.055));
 const c_mouth_params: t_mouth_params = t_mouth_params(vec3(0.193, 0.047, 0.169), vec3(0, 0.333, 0.25), f32(0.385), f32(0.08));
 const c_eyes_bridge_params: t_eyes_bridge_params = t_eyes_bridge_params(vec3(0.148, 0, 0.107), vec3(0, 0.444, 0), f32(0.525), f32(0.005));
@@ -1195,17 +1129,17 @@ fn compute_main_digraph(a_pos: vec3<f32>) -> t_outlet {
 	let tmp239: f32 = (tmp003 + tmp240.v_value);
 	let tmp278: f32 = (tmp275 * tmp277);
 	let tmp606: f32 = (tmp293 - tmp561);
-	let tmp618: vec3<f32> = mix(u_material.v_color_body_1, u_material.v_color_body_angry, tmp620);
+	let tmp618: vec3<f32> = mix(u_material.v_col_body_1, u_material.v_col_body_angry, tmp620);
 	let tmp273: f32 = min(tmp254, tmp260);
 	let tmp264: t_one = c_one;
 	let tmp629: vec3<f32> = vec3<f32>(tmp709, tmp709, tmp709);
 	let tmp607: f32 = ceil(tmp606);
-	let tmp630: vec3<f32> = mix(tmp618, u_material.v_color_body_sad, tmp629);
+	let tmp630: vec3<f32> = mix(tmp618, u_material.v_col_body_sad, tmp629);
 	let tmp598: vec3<f32> = vec3<f32>(tmp607, tmp607, tmp607);
 	let tmp599: t_material = u_material;
 	let tmp265: f32 = (tmp239 * tmp264.v_value);
 	let tmp279: f32 = (tmp273 - tmp278);
-	let tmp597: vec3<f32> = mix(tmp599.v_color_eyes, tmp630, tmp598);
+	let tmp597: vec3<f32> = mix(tmp599.v_col_eyes, tmp630, tmp598);
 	let tmp283: f32 = min(tmp279, tmp265);
 	let tmp623: f32 = mix(tmp599.v_roughness_eyes, tmp599.v_roughness_body, tmp607);
 	return t_outlet(tmp283, tmp597, tmp623);

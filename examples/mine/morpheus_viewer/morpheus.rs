@@ -91,14 +91,16 @@ fn populate_models(
         Transform::from_translation(union_center),
     ));
 
+    let alien_center = Vec3::ZERO;
     let alien_material = morpheus_alien_materials.add(MorpheusAlienMaterial {
         matcap_texture: Some(matcap_texture),
+        bbox_center: alien_center,
         alpha_mode: AlphaMode::Blend,
     });
     commands.spawn((
         Mesh3d(meshes.add(Mesh::from(Cuboid::new(2.0, 2.0, 2.0)))),
         MeshMaterial3d(alien_material),
-        Transform::from_xyz(0.0, 0.0, 0.0),
+        Transform::from_translation(alien_center),
     ));
 }
 
@@ -175,6 +177,8 @@ fn animate_camera(
 
 //////////////////////////////////////////////////////////////////////
 
+// pub const TRACK0_HANDLE: Handle<Track> = weak_handle!("1347c9b7-c46a-48e7-0000-023a354b7cac");
+
 const SPHERE_SHADER_ASSET_PATH: &str = "shaders/morpheus/sphere_raymarching.wgsl";
 
 #[derive(Asset, TypePath, AsBindGroup, Clone)]
@@ -227,13 +231,15 @@ impl Material for MorpheusUnionMaterial {
     }
 }
 
-const ALIEN_SHADER_ASSET_PATH: &str = "shaders/morpheus/alien.wgsl";
+const ALIEN_SHADER_ASSET_PATH: &str = "shaders/morpheus/alien_raymarching.wgsl";
 
 #[derive(Asset, TypePath, AsBindGroup, Clone)]
 struct MorpheusAlienMaterial {
     #[texture(0)]
     #[sampler(1)]
     matcap_texture: Option<Handle<Image>>,
+    #[uniform(2)]
+    bbox_center: Vec3,
     alpha_mode: AlphaMode,
 }
 
