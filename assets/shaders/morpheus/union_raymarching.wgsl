@@ -1,3 +1,5 @@
+#import "shaders/morpheus/sdf/union.wgsl"::signed_distance_function
+
 #import bevy_pbr::{
     mesh_functions,
     view_transformations,
@@ -42,7 +44,7 @@ fn fragment(
     var dist = signed_distance_function(pos);
     for (var kk=0; kk<64; kk++) {
         if (dist <= 0.0) { break; }
-        if (length(pos - vec3(2.0, 0.0, 0.0)) > sqrt(3.0)) { break; }
+        if (length(pos - vec3(0.0, 0.0, 2.0)) > sqrt(3.0)) { break; }
         pos += world_direction * dist;
         dist = signed_distance_function(pos);
     }
@@ -58,21 +60,7 @@ fn fragment(
         signed_distance_function(pos + vec3(0.0, 0.0, hh)) - signed_distance_function(pos - vec3(0.0, 0.0, hh)), 
     ));
     let view_grad = normalize(view_transformations::direction_world_to_view(world_grad));
-    
     var color = textureSample(matcap_texture, matcap_sampler, (view_grad.xy + 1.0) / 2.0);
-
-    /*
-    let light_pos = vec3(-4.0, 16.0, 8.0);
-    var light_dir = light_pos - pos;
-    light_dir /= length(light_dir);
-    let shadow_factor = clamp(dot(world_grad, light_dir), 0.2, 1.0);
-    color = vec4(color.xyz * shadow_factor, color.w);
-    */
     
     return color;
-}
-
-fn signed_distance_function(pos_: vec3<f32>) -> f32 {
-    let pos = pos_ - vec3(2.0, 0.0, 0.0);
-    return length(pos) - 0.8;
 }

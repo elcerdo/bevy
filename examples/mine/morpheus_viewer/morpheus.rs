@@ -67,14 +67,16 @@ fn populate_models(
 
     let matcap_texture = asset_server.load("textures/matcap/583629_2E1810_765648_3C1C14-512px.png");
 
+    let sphere_center = Vec3::new(2.0, 0.0, 0.0);
     let sphere_material = morpheus_sphere_materials.add(MorpheusSphereMaterial {
         matcap_texture: Some(matcap_texture.clone()),
+        bbox_center: sphere_center,
         alpha_mode: AlphaMode::Blend,
     });
     commands.spawn((
         Mesh3d(meshes.add(Mesh::from(Cuboid::new(2.0, 2.0, 2.0)))),
         MeshMaterial3d(sphere_material),
-        Transform::from_xyz(2.0, 0.0, 0.0),
+        Transform::from_translation(sphere_center),
     ));
 
     let union_material = morpheus_union_materials.add(MorpheusUnionMaterial {
@@ -171,13 +173,15 @@ fn animate_camera(
 
 //////////////////////////////////////////////////////////////////////
 
-const SPHERE_SHADER_ASSET_PATH: &str = "shaders/morpheus/sphere.wgsl";
+const SPHERE_SHADER_ASSET_PATH: &str = "shaders/morpheus/sphere_raymarching.wgsl";
 
 #[derive(Asset, TypePath, AsBindGroup, Clone)]
 struct MorpheusSphereMaterial {
     #[texture(0)]
     #[sampler(1)]
     matcap_texture: Option<Handle<Image>>,
+    #[uniform(2)]
+    bbox_center: Vec3,
     alpha_mode: AlphaMode,
 }
 
@@ -195,7 +199,7 @@ impl Material for MorpheusSphereMaterial {
     }
 }
 
-const UNION_SHADER_ASSET_PATH: &str = "shaders/morpheus/union.wgsl";
+const UNION_SHADER_ASSET_PATH: &str = "shaders/morpheus/union_raymarching.wgsl";
 
 #[derive(Asset, TypePath, AsBindGroup, Clone)]
 struct MorpheusUnionMaterial {
