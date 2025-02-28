@@ -1,3 +1,4 @@
+use const_format::formatcp;
 use std::marker::PhantomData;
 
 use bevy::input::mouse::AccumulatedMouseMotion;
@@ -19,9 +20,15 @@ trait Sdf: TypePath + Clone + Sync + Send {
 #[derive(Clone, TypePath)]
 struct SphereSdf;
 
+impl SphereSdf {
+    const fn name() -> &'static str {
+        "sphere"
+    }
+}
+
 impl Sdf for SphereSdf {
     fn raymarching_shader() -> ShaderRef {
-        "shaders/morpheus/sphere_raymarching.wgsl".into()
+        formatcp!("shaders/morpheus/{}_raymarching.wgsl", SphereSdf::name()).into()
     }
 }
 
