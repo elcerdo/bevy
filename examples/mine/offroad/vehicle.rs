@@ -191,10 +191,10 @@ fn setup_vehicles(
     ));
 
     commands.spawn((
-        Text::new("$$best$$"),
+        Text::new("$$best_lap_leaderboard$$"),
         Node {
             position_type: PositionType::Absolute,
-            top: Val::Px(5.0),
+            bottom: Val::Px(5.0),
             right: Val::Px(5.0),
             ..Node::default()
         },
@@ -211,7 +211,7 @@ fn setup_vehicles(
         .spawn(Node {
             position_type: PositionType::Absolute,
             top: Val::Px(5.0),
-            right: Val::Px(75.0),
+            right: Val::Px(5.0),
             ..Node::default()
         })
         .with_children(|parent| {
@@ -271,51 +271,41 @@ fn update_vehicle_rankings(
     };
 
     assert!(track.is_looping);
-    // assert!(!boats.is_empty());
 
-    // FIXME sort
-
-    let mut maybe_current_best: Option<(Duration, Player)> = None;
-    for boat in &boats {
+    // sort by best lap
+    let mut sorted_lap_duration_boats: Vec<(Duration, &BoatData)> = vec![];
+    for boat in boats {
         let Some(best_stat) = &boat.maybe_best_stat else {
             continue;
         };
         let lap_duration = best_stat.top_finish - best_stat.top_start;
-        maybe_current_best = match maybe_current_best {
-            None => Some((lap_duration, boat.player.clone())),
-            Some(current_best) => {
-                if lap_duration < current_best.0 {
-                    Some((lap_duration, boat.player.clone()))
-                } else {
-                    Some(current_best)
-                }
-            }
-        };
+        sorted_lap_duration_boats.push((lap_duration, boat));
     }
+    sorted_lap_duration_boats.sort_by_key(|(duration, _)| duration.clone());
 
-    if let Some((_, player)) = &maybe_current_best {
+    // update racing line cursors
+    if !sorted_lap_duration_boats.is_empty() {
+        let best_boat_position = sorted_lap_duration_boats[0].1.position_current;
         for material_handle in material_handles.iter() {
             if let Some(material) = materials.get_mut(material_handle) {
-                for boat in boats {
-                    if boat.player != *player {
-                        continue;
-                    }
-                    let mut pos = boat.position_current;
-                    pos -= track.initial_position.xz();
-                    pos.x = -pos.x;
-                    material.cursor_position = pos;
-                }
+                let mut position = best_boat_position;
+                position -= track.initial_position.xz();
+                position.x = -position.x;
+                material.cursor_position = position;
             }
         }
     }
 
-    let name = match &maybe_current_best {
-        Some((_, player)) => format!("{}", player.clone()),
-        None => "??".into(),
-    };
-
+    // update labels
+    const RANK_NAMES: [&str; 3] = ["1st", "2nd", "3rd"];
+    assert!(sorted_lap_duration_boats.len() < RANK_NAMES.len());
+    let mut rr = vec![];
+    for ((_, boat), rank_name) in sorted_lap_duration_boats.iter().zip(RANK_NAMES) {
+        rr.push(format!("{} {}", boat.player, rank_name));
+    }
+    let label = format!("{}\nBEST LAP", rr.join("\n"));
     for mut first_place_label in first_place_labels {
-        *first_place_label = format!("BEST\n{}", name).into();
+        *first_place_label = label.clone().into();
     }
 }
 
