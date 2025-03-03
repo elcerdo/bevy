@@ -156,8 +156,6 @@ fn setup_vehicles(
     };
 
     assert!(track.is_looping);
-    assert!(!track.track_kdtree.is_empty());
-    assert!(!track.checkpoint_kdtree.is_empty());
 
     let initial_righthand = track.initial_forward.cross(track.initial_up);
     let pos_p1 = track.initial_position;
@@ -193,7 +191,7 @@ fn setup_vehicles(
     ));
 
     commands.spawn((
-        Text::new("best"),
+        Text::new("$$best$$"),
         Node {
             position_type: PositionType::Absolute,
             top: Val::Px(5.0),
@@ -230,21 +228,21 @@ fn setup_vehicles(
             };
             let layout = TextLayout::new_with_justify(JustifyText::Right);
             parent.spawn((
-                Text::new("status p1"),
+                Text::new("$$status_p1$$"),
                 font.clone(),
                 layout,
                 node.clone(),
                 StatusMarker,
             ));
             parent.spawn((
-                Text::new("status p2"),
+                Text::new("$$status_p2$$"),
                 font.clone(),
                 layout,
                 node.clone(),
                 StatusMarker,
             ));
             parent.spawn((
-                Text::new("status p3"),
+                Text::new("$$status_p3$"),
                 font.clone(),
                 layout,
                 node.clone(),
@@ -266,7 +264,17 @@ fn update_vehicle_rankings(
     material_handles: Query<&MeshMaterial3d<RacingLineMaterial>>,
     boats: Query<&BoatData>,
     first_place_labels: Query<&mut Text, With<FirstPlaceMarker>>,
+    tracks: Res<Assets<Track>>,
 ) {
+    let Some(track) = tracks.get(&TRACK_CURRENT_HANDLE) else {
+        return;
+    };
+
+    assert!(track.is_looping);
+    // assert!(!boats.is_empty());
+
+    // FIXME sort
+
     let mut maybe_current_best: Option<(Duration, Player)> = None;
     for boat in &boats {
         let Some(best_stat) = &boat.maybe_best_stat else {
@@ -293,7 +301,7 @@ fn update_vehicle_rankings(
                         continue;
                     }
                     let mut pos = boat.position_current;
-                    pos -= Vec2::new(-12.0, 0.0);
+                    pos -= track.initial_position.xz();
                     pos.x = -pos.x;
                     material.cursor_position = pos;
                 }
@@ -321,13 +329,10 @@ fn resolve_checkpoints(
         return;
     };
 
-    if boats.is_empty() {
-        return;
-    }
-
     assert!(track.is_looping);
     assert!(!track.track_kdtree.is_empty());
     assert!(!track.checkpoint_kdtree.is_empty());
+    assert!(boats.iter().len() == status_labels.iter().len());
 
     // bounce track boundary
     for mut boat in &mut boats {
@@ -388,7 +393,6 @@ fn resolve_checkpoints(
     }
 
     // prepare ui status label
-    assert!(boats.iter().len() == status_labels.iter().len());
     for (boat, mut status_label) in boats.iter().zip(status_labels) {
         let mut ss: Vec<String> = vec![];
         ss.push(format!(

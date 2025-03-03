@@ -181,17 +181,18 @@ fn populate_overlays(
         track3_transform,
     ));
 
-    // showcases non animated racing lines on vertical track
+    // showcases racing lines on vertical track
     let track4_material = racing_line_material::make(&asset_server, track1.total_length);
     let track4_transform =
         TRACK_VERTICAL_TRANSFORM_AA * Transform::from_translation(1e-3 * track1.initial_up);
     commands.spawn((
+        AnimatedRacingLineMarker,
         Mesh3d(meshes.add(track1.track.clone())),
         MeshMaterial3d(materials.add(track4_material)),
         track4_transform,
     ));
 
-    //  showcases racing lines on transformed vertical track
+    // showcases racing lines on transformed vertical track
     let mut track5_material = racing_line_material::make(&asset_server, track1.total_length);
     track5_material.middle_line_width = 0.5;
     track5_material.lateral_range = Vec2::new(-1.8, 0.8);
@@ -204,15 +205,15 @@ fn populate_overlays(
         track5_transform,
     ));
 
-    //  showcases non animated racing lines on advanced track
-    let mut track5_material = racing_line_material::make(&asset_server, track2.total_length);
+    // showcases non animated racing lines on advanced track
+    let mut track6_material = racing_line_material::make(&asset_server, track2.total_length);
     // track5_material.middle_line_width = -1.0; // no middle line
-    track5_material.lateral_range = Vec2::new(-1.5, 1.5);
-    let track5_transform =
+    track6_material.lateral_range = Vec2::new(-1.5, 1.5);
+    let track6_transform =
         TRACK_ADVANCED_TRANSFORM * Transform::from_translation(1e-3 * track2.initial_up);
     commands.spawn((
         Mesh3d(meshes.add(track2.track.clone())),
-        MeshMaterial3d(materials.add(track5_material)),
-        track5_transform,
+        MeshMaterial3d(materials.add(track6_material)),
+        track6_transform,
     ));
 }
