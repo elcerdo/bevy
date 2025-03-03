@@ -60,7 +60,7 @@ impl fmt::Display for Player {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 struct LapStat {
     top_start: Duration,
     checkpoint_to_tops: HashMap<u8, Duration>,
@@ -368,11 +368,6 @@ fn resolve_checkpoints(
                             boat.current_stat.checkpoint_to_tops.contains_key(&kk);
                     }
                     if crossed_all_checkpoints {
-                        warn!(
-                            "player {} completed a lap in {:>6.3}",
-                            boat.player,
-                            boat.current_stat.elapsed_secs(),
-                        );
                         boat.maybe_last_stat = Some(boat.current_stat.clone());
                         boat.maybe_best_stat = Some(match &boat.maybe_best_stat {
                             None => boat.current_stat.clone(),
@@ -385,6 +380,15 @@ fn resolve_checkpoints(
                             }
                         });
                         boat.lap_count += 1;
+                        let is_new_best: bool =
+                            boat.maybe_best_stat.clone() == boat.maybe_last_stat.clone();
+                        warn!(
+                            "player {} completed lap {} in {:>6.3}{}",
+                            boat.player,
+                            boat.lap_count,
+                            boat.current_stat.elapsed_secs(),
+                            if is_new_best { " NEW BEST LAP !!!" } else { "" },
+                        );
                         boat.current_stat = LapStat::from(top_now);
                     }
                 }
@@ -426,7 +430,7 @@ fn resolve_checkpoints(
                     let duration = (*duration - boat.current_stat.top_start).as_secs_f32();
                     format!("{:>6.3}", duration)
                 }
-                None => "     C".into(),
+                None => "     _".into(),
             };
             let cc: String = match &boat.maybe_last_stat {
                 Some(stat) => {
@@ -442,7 +446,7 @@ fn resolve_checkpoints(
                         }
                     }
                 }
-                None => "     L".into(),
+                None => "     _".into(),
             };
             let dd: String = match &boat.maybe_best_stat {
                 Some(stat) => {
@@ -458,7 +462,7 @@ fn resolve_checkpoints(
                         }
                     }
                 }
-                None => "     B".into(),
+                None => "     _".into(),
             };
             ss.push(format!("{}{} {} {}", aa, bb, cc, dd));
         }
