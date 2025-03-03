@@ -1,7 +1,10 @@
-use crate::track::{Track, TrackPiece, StraightData, CornerData, TrackData};
-use bevy::math::Vec3;
+use crate::track::{prepare_track, CornerData, StraightData, Track, TrackData, TrackPiece};
+
 use bevy::asset::weak_handle;
-use bevy::prelude::Handle;
+use bevy::math::Vec3;
+use bevy::prelude::{info, Assets, Handle, ResMut};
+
+//////////////////////////////////////////////////////////////////////
 
 static TRACK_ADVANCED_PIECES: &[TrackPiece] = &[
     TrackPiece::Start,
@@ -44,8 +47,10 @@ pub static TRACK_ADVANCED_DATA: TrackData = TrackData {
     num_segments: 4,
 };
 
-pub const TRACK_ADVANCED_HANDLE: Handle<Track> = weak_handle!("1347c9b7-c46a-48e7-0000-023a354b7cac");
+pub const TRACK_ADVANCED_HANDLE: Handle<Track> =
+    weak_handle!("1347c9b7-c46a-48e7-0000-023a354b7cac");
 
+//////////////////////////////////////////////////////////////////////
 
 static TRACK_BEGINNER_PIECES: [TrackPiece; 22] = [
     TrackPiece::Start,
@@ -82,7 +87,10 @@ pub static TRACK_BEGINNER_DATA: TrackData = TrackData {
     num_segments: 4,
 };
 
-pub const TRACK_BEGINNER_HANDLE: Handle<Track> = weak_handle!("1347c9b7-c46a-48e7-1111-023a354b7cac");
+pub const TRACK_BEGINNER_HANDLE: Handle<Track> =
+    weak_handle!("1347c9b7-c46a-48e7-1111-023a354b7cac");
+
+//////////////////////////////////////////////////////////////////////
 
 static TRACK_VERTICAL_PIECES: [TrackPiece; 14] = [
     TrackPiece::Start,
@@ -111,4 +119,14 @@ pub static TRACK_VERTICAL_DATA: TrackData = TrackData {
     num_segments: 4,
 };
 
-pub const TRACK_VERTICAL_HANDLE: Handle<Track> = weak_handle!("1347c9b7-c46a-48e7-2222-023a354b7cac");
+pub const TRACK_VERTICAL_HANDLE: Handle<Track> =
+    weak_handle!("1347c9b7-c46a-48e7-2222-023a354b7cac");
+
+//////////////////////////////////////////////////////////////////////
+
+pub fn prepare_tracks(mut tracks: ResMut<Assets<Track>>) {
+    info!("** prepare_tracks **");
+    tracks.insert(&TRACK_BEGINNER_HANDLE, prepare_track(&TRACK_BEGINNER_DATA));
+    tracks.insert(&TRACK_VERTICAL_HANDLE, prepare_track(&TRACK_VERTICAL_DATA));
+    // tracks.insert(&TRACK_ADVANCED_HANDLE, prepare_track(&TRACK_ADVANCED_DATA));
+}

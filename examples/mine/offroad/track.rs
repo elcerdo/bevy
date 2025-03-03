@@ -24,10 +24,11 @@ pub struct TrackPlugin;
 
 impl bevy::prelude::Plugin for TrackPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
+        use crate::track_data;
         use bevy::prelude::{MaterialPlugin, PreStartup, Startup, Update};
         app.init_asset::<Track>();
         app.add_plugins(MaterialPlugin::<RacingLineMaterial>::default());
-        app.add_systems(PreStartup, prepare_tracks);
+        app.add_systems(PreStartup, track_data::prepare_tracks);
         app.add_systems(Startup, populate_tracks);
         app.add_systems(Startup, populate_racing_lines);
         app.add_systems(Update, animate_wavy_materials);
@@ -36,16 +37,6 @@ impl bevy::prelude::Plugin for TrackPlugin {
 }
 
 //////////////////////////////////////////////////////////////////////
-
-fn prepare_tracks(mut tracks: ResMut<Assets<Track>>) {
-    info!("** prepare_tracks **");
-    use crate::track_data::*;
-    // let track0 = tracks.get(&track_datas::TRACK_BEGINNER_HANDLE).unwrap();
-    // let track1 = tracks.get(&track_datas::TRACK_VERTICAL_HANDLE).unwrap();
-    tracks.insert(&TRACK_BEGINNER_HANDLE, prepare_track(&TRACK_BEGINNER_DATA));
-    tracks.insert(&TRACK_VERTICAL_HANDLE, prepare_track(&TRACK_VERTICAL_DATA));
-    tracks.insert(&TRACK_ADVANCED_HANDLE, prepare_track(&TRACK_ADVANCED_DATA));
-}
 
 fn populate_tracks(
     mut commands: Commands,
@@ -531,7 +522,7 @@ pub struct Track {
     pub checkpoint_count: u8,
 }
 
-fn prepare_track(track_data: &TrackData) -> Track {
+pub fn prepare_track(track_data: &TrackData) -> Track {
     assert!(ops::abs(track_data.initial_forward.norm() - 1.0) < 1e-5);
     assert!(ops::abs(track_data.initial_up.norm() - 1.0) < 1e-5);
     assert!(track_data.initial_left < track_data.initial_right);
