@@ -39,7 +39,7 @@ impl bevy::prelude::Plugin for TrackPlugin {
 
 fn prepare_tracks(mut tracks: ResMut<Assets<Track>>) {
     info!("** prepare_tracks **");
-    use crate::track_datas::*;
+    use crate::track_data::*;
     // let track0 = tracks.get(&track_datas::TRACK_BEGINNER_HANDLE).unwrap();
     // let track1 = tracks.get(&track_datas::TRACK_VERTICAL_HANDLE).unwrap();
     tracks.insert(&TRACK_BEGINNER_HANDLE, prepare_track(&TRACK_BEGINNER_DATA));
@@ -54,7 +54,7 @@ fn populate_tracks(
     tracks: Res<Assets<Track>>,
     asset_server: Res<AssetServer>,
 ) {
-    use crate::track_datas;
+    use crate::track_data;
     use bevy::color::Color;
     use bevy::image::ImageAddressMode;
     use bevy::image::ImageLoaderSettings;
@@ -66,8 +66,8 @@ fn populate_tracks(
 
     info!("** populate_tracks **");
 
-    let track0 = tracks.get(&track_datas::TRACK_BEGINNER_HANDLE).unwrap();
-    let track1 = tracks.get(&track_datas::TRACK_VERTICAL_HANDLE).unwrap();
+    let track0 = tracks.get(&track_data::TRACK_BEGINNER_HANDLE).unwrap();
+    let track1 = tracks.get(&track_data::TRACK_VERTICAL_HANDLE).unwrap();
 
     // track 0 showcases flow parametrization
     let checkpoint0_material = materials.add(StandardMaterial {
@@ -148,12 +148,12 @@ fn populate_racing_lines(
     tracks: Res<Assets<Track>>,
     asset_server: Res<AssetServer>,
 ) {
-    use crate::track_datas;
+    use crate::track_data;
     use bevy::prelude::Transform;
     info!("** populate_track_dots **");
 
-    let track0 = tracks.get(&track_datas::TRACK_BEGINNER_HANDLE).unwrap();
-    let track1 = tracks.get(&track_datas::TRACK_VERTICAL_HANDLE).unwrap();
+    let track0 = tracks.get(&track_data::TRACK_BEGINNER_HANDLE).unwrap();
+    let track1 = tracks.get(&track_data::TRACK_VERTICAL_HANDLE).unwrap();
 
     // track 3 showcases racing lines on track 0 data
     let track3_material = make_racing_line_material(&asset_server, track0.total_length);

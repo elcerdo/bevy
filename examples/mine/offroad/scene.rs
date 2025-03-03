@@ -26,7 +26,7 @@ use bevy::prelude::Projection;
 use bevy::prelude::Transform;
 use bevy::prelude::{Quat, Vec3};
 
-const CAMERA_DATAS: &[(Transform, f32)] = &[
+const CAMERA_DATA: &[(Transform, f32)] = &[
     (
         Transform {
             translation: Vec3::new(-18.0, 10.0, 16.0),
@@ -59,10 +59,10 @@ fn move_camera(
     use bevy_render::camera::OrthographicProjection;
 
     if button.just_pressed(MouseButton::Left) {
-        *current_view = (*current_view + 1) % CAMERA_DATAS.len();
+        *current_view = (*current_view + 1) % CAMERA_DATA.len();
         bevy::prelude::info!("switched camera {}", current_view.clone());
     }
-    let target = CAMERA_DATAS[*current_view];
+    let target = CAMERA_DATA[*current_view];
     camera_projection.0.translation = camera_projection
         .0
         .translation
@@ -166,11 +166,11 @@ fn populate_camera_and_lights(mut commands: Commands) {
         Projection::from(OrthographicProjection {
             // 20 world units per pixel of window height.
             scaling_mode: ScalingMode::FixedVertical {
-                viewport_height: CAMERA_DATAS[0].1,
+                viewport_height: CAMERA_DATA[0].1,
             },
             ..OrthographicProjection::default_3d()
         }),
-        CAMERA_DATAS[0].0,
+        CAMERA_DATA[0].0,
         CameraController,
     ));
 }
