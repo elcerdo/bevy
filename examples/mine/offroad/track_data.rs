@@ -5,11 +5,14 @@ use bevy::math::Vec3;
 use bevy::prelude::{info, Assets, Handle, ResMut};
 
 //////////////////////////////////////////////////////////////////////
-const WW: f32 = 1.8;
+const TRACK_ADVANCED_WW: f32 = 1.8;
 
-const TRACK_ADVANCED_STRAIGHT : StraightData = StraightData::from_left_right_length(-WW, WW, 4.0);
-const TRACK_ADVANCED_STRAIGHT_DOUBLE : StraightData = StraightData::from_left_right_length(-WW, WW, 8.0);
-const TRACK_ADVANCED_STRAIGHT_TRIPLE : StraightData = StraightData::from_left_right_length(-WW, WW, 12.0);
+const TRACK_ADVANCED_STRAIGHT: StraightData =
+    StraightData::from_left_right_length(-TRACK_ADVANCED_WW, TRACK_ADVANCED_WW, 4.0);
+const TRACK_ADVANCED_STRAIGHT_DOUBLE: StraightData =
+    StraightData::from_left_right_length(-TRACK_ADVANCED_WW, TRACK_ADVANCED_WW, 8.0);
+const TRACK_ADVANCED_STRAIGHT_TRIPLE: StraightData =
+    StraightData::from_left_right_length(-TRACK_ADVANCED_WW, TRACK_ADVANCED_WW, 12.0);
 
 static TRACK_ADVANCED_PIECES: &[TrackPiece] = &[
     TrackPiece::Start,
@@ -43,8 +46,8 @@ static TRACK_ADVANCED_DATA: TrackData = TrackData {
     initial_position: Vec3::new(-16.0, 0.0, 0.0),
     initial_forward: Vec3::Z,
     initial_up: Vec3::Y,
-    initial_left: -WW,
-    initial_right: WW,
+    initial_left: -TRACK_ADVANCED_WW,
+    initial_right: TRACK_ADVANCED_WW,
     num_segments: 10,
 };
 
