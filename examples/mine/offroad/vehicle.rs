@@ -110,7 +110,7 @@ impl BoatData {
             position_initial: pos.xz(),
             position_previous: pos.xz(),
             position_current: pos.xz(),
-            angle_current: PI,
+            angle_current: 0.0,
             current_stat: LapStat::from(Duration::MAX),
             maybe_last_stat: None,
             maybe_best_stat: None,
@@ -120,7 +120,7 @@ impl BoatData {
     fn reset(&mut self) {
         self.position_previous = self.position_initial.clone();
         self.position_current = self.position_initial.clone();
-        self.angle_current = PI;
+        self.angle_current = 0.0;
         self.current_stat = LapStat::from(Duration::MAX);
         self.lap_count = 0;
     }
@@ -525,7 +525,7 @@ fn update_vehicle_physics(
                 if keyboard.pressed(KeyCode::ArrowRight) {
                     boat.angle_current -= physics.turning_speed * dt;
                 }
-                let dir_current = Vec2::from_angle(3.0 * PI / 2.0 - boat.angle_current);
+                let dir_current = Vec2::from_angle(PI / 2.0 - boat.angle_current);
                 if keyboard.pressed(KeyCode::ArrowUp) {
                     physics.force += physics.thrust * dir_current;
                 }
@@ -541,7 +541,7 @@ fn update_vehicle_physics(
                 if keyboard.pressed(KeyCode::KeyD) {
                     boat.angle_current -= physics.turning_speed * dt;
                 }
-                let dir_current = Vec2::from_angle(3.0 * PI / 2.0 - boat.angle_current);
+                let dir_current = Vec2::from_angle(PI / 2.0 - boat.angle_current);
                 if keyboard.pressed(KeyCode::KeyW) {
                     physics.force += physics.thrust * dir_current;
                 }
@@ -556,7 +556,7 @@ fn update_vehicle_physics(
                     if left_stick_x.abs() > 0.01 {
                         boat.angle_current -= physics.turning_speed * left_stick_x * dt;
                     }
-                    let dir_current = Vec2::from_angle(3.0 * PI / 2.0 - boat.angle_current);
+                    let dir_current = Vec2::from_angle(PI / 2.0 - boat.angle_current);
                     if gamepad.pressed(GamepadButton::East) {
                         physics.force += physics.thrust * dir_current;
                     }
