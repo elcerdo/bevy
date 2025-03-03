@@ -56,7 +56,7 @@ fn move_camera(
     button: Res<ButtonInput<MouseButton>>,
 ) {
     use bevy::render::camera::ScalingMode;
-    use bevy_render::camera::OrthographicProjection;
+    use bevy::render::camera::OrthographicProjection;
 
     if button.just_pressed(MouseButton::Left) {
         *current_view = (*current_view + 1) % CAMERA_DATA.len();
