@@ -567,6 +567,8 @@ pub struct Track {
     pub initial_up: Vec3,
     pub initial_position: Vec3,
     pub initial_forward: Vec3,
+    pub initial_left: f32,
+    pub initial_right: f32,
 }
 
 pub fn prepare_track(track_data: &TrackData) -> Track {
@@ -864,5 +866,7 @@ pub fn prepare_track(track_data: &TrackData) -> Track {
         initial_up: track_data.initial_up,
         initial_position: track_data.initial_position,
         initial_forward: track_data.initial_forward,
+        initial_left: track_data.initial_left,
+        initial_right: track_data.initial_right,
     }
 }

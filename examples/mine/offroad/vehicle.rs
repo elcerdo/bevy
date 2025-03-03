@@ -24,6 +24,7 @@ impl Plugin for VehiclePlugin {
         info!("** build_vehicle **");
 
         app.add_systems(Startup, setup_vehicles);
+        app.add_systems(Update, reset_vehicle_positions);
         app.add_systems(Update, update_vehicle_physics);
         app.add_systems(Update, resolve_checkpoints);
         app.add_systems(Update, update_first_place);
@@ -82,6 +83,7 @@ impl LapStat {
 #[derive(Component, Clone)]
 struct BoatData {
     player: Player,
+    position_initial: Vec2,
     position_previous: Vec2,
     position_current: Vec2,
     angle_current: f32,
@@ -91,39 +93,24 @@ struct BoatData {
 }
 
 impl BoatData {
-    fn from_player(player: Player) -> Self {
-        const POS_P1: Vec3 = Vec3::new(-11.5, 0.0, 0.0);
-        const POS_P2: Vec3 = Vec3::new(-12.5, 0.0, 0.0);
-        const POS_P3: Vec3 = Vec3::new(-12.0, 0.0, 0.0);
-        match player {
-            Player::One => BoatData {
-                player: Player::One,
-                position_previous: POS_P1.xz(),
-                position_current: POS_P1.xz(),
-                angle_current: PI,
-                current_stat: LapStat::from(Duration::MAX),
-                maybe_best_stat: None,
-                lap_count: 0,
-            },
-            Player::Two => BoatData {
-                player: Player::Two,
-                position_previous: POS_P2.xz(),
-                position_current: POS_P2.xz(),
-                angle_current: PI,
-                current_stat: LapStat::from(Duration::MAX),
-                maybe_best_stat: None,
-                lap_count: 0,
-            },
-            Player::Three => BoatData {
-                player: Player::Three,
-                position_previous: POS_P3.xz(),
-                position_current: POS_P3.xz(),
-                angle_current: PI,
-                current_stat: LapStat::from(Duration::MAX),
-                maybe_best_stat: None,
-                lap_count: 0,
-            },
+    fn from_player_and_position(player: Player, pos: Vec3) -> Self {
+        Self {
+            player,
+            position_initial: pos.xz(),
+            position_previous: pos.xz(),
+            position_current: pos.xz(),
+            angle_current: PI,
+            current_stat: LapStat::from(Duration::MAX),
+            maybe_best_stat: None,
+            lap_count: 0,
         }
+    }
+    fn reset(&mut self) {
+        self.position_previous = self.position_initial.clone();
+        self.position_current = self.position_initial.clone();
+        self.angle_current = PI;
+        self.current_stat = LapStat::from(Duration::MAX);
+        self.lap_count = 0;
     }
 }
 
@@ -137,10 +124,25 @@ fn setup_vehicles(
     mut commands: Commands,
     mut materials: ResMut<Assets<StandardMaterial>>,
     server: Res<AssetServer>,
+    tracks: Res<Assets<track::Track>>,
 ) {
     info!("** setup_vehicles **");
 
     let my_mesh: Handle<Mesh> = server.load("models/offroad/boat.glb#Mesh0/Primitive0");
+
+    use crate::track_data;
+    let Some(track) = tracks.get(&track_data::TRACK_ADVANCED_HANDLE) else {
+        return;
+    };
+
+    assert!(track.is_looping);
+    assert!(!track.track_kdtree.is_empty());
+    assert!(!track.checkpoint_kdtree.is_empty());
+
+    let initial_righthand = track.initial_forward.cross(track.initial_up);
+    let pos_p1 = track.initial_position;
+    let pos_p2 = track.initial_position + initial_righthand * track.initial_left / 2.0;
+    let pos_p3 = track.initial_position + initial_righthand * track.initial_right / 2.0;
 
     commands.spawn((
         Mesh3d(my_mesh.clone()),
@@ -149,7 +151,7 @@ fn setup_vehicles(
             ..StandardMaterial::default()
         })),
         Transform::from_scale(Vec3::ONE * 0.15),
-        BoatData::from_player(Player::One),
+        BoatData::from_player_and_position(Player::One, pos_p1),
     ));
     commands.spawn((
         Mesh3d(my_mesh.clone()),
@@ -158,7 +160,7 @@ fn setup_vehicles(
             ..StandardMaterial::default()
         })),
         Transform::from_scale(Vec3::ONE * 0.15),
-        BoatData::from_player(Player::Two),
+        BoatData::from_player_and_position(Player::Two, pos_p2),
     ));
     commands.spawn((
         Mesh3d(my_mesh),
@@ -167,7 +169,7 @@ fn setup_vehicles(
             ..StandardMaterial::default()
         })),
         Transform::from_scale(Vec3::ONE * 0.15),
-        BoatData::from_player(Player::Three),
+        BoatData::from_player_and_position(Player::Three, pos_p3),
     ));
 
     commands.spawn((
@@ -288,7 +290,7 @@ fn resolve_checkpoints(
     time: Res<Time>,
 ) {
     use crate::track_data;
-    let Some(track) = tracks.get(&track_data::TRACK_BEGINNER_HANDLE) else {
+    let Some(track) = tracks.get(&track_data::TRACK_ADVANCED_HANDLE) else {
         return;
     };
 
@@ -411,6 +413,14 @@ fn resolve_checkpoints(
     }
 }
 
+fn reset_vehicle_positions(mut boats: Query<&mut BoatData>, keyboard: Res<ButtonInput<KeyCode>>) {
+    if keyboard.just_pressed(KeyCode::KeyR) {
+        for mut boat in &mut boats {
+            boat.reset();
+        }
+    }
+}
+
 fn update_vehicle_physics(
     mut boats: Query<(&mut BoatData, &mut Transform)>,
     time: Res<Time>,
@@ -454,12 +464,6 @@ fn update_vehicle_physics(
 
     let dt = time.delta_secs();
     for (mut boat, mut transform) in &mut boats {
-        if keyboard.just_pressed(KeyCode::KeyR) {
-            let player = boat.player.clone();
-            let maybe_best_stat = boat.maybe_best_stat.clone();
-            *boat = BoatData::from_player(player);
-            boat.maybe_best_stat = maybe_best_stat;
-        }
         let pos_prev = boat.position_previous;
         let pos_current = boat.position_current;
         let mut physics = BoatPhysics::from_dt(dt);
