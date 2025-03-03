@@ -26,21 +26,24 @@ use bevy::prelude::Projection;
 use bevy::prelude::Transform;
 use bevy::prelude::{Quat, Vec3};
 
+const CAMERA_ROTATION: Quat = Quat::from_xyzw(-0.24781081, -0.2946635, -0.07941471, 0.91948706);
 const CAMERA_DATA: &[(Transform, f32)] = &[
     (
         Transform {
             translation: Vec3::new(-18.0, 10.0, 16.0),
-            rotation: Quat::from_xyzw(-0.24781081, -0.2946635, -0.07941471, 0.91948706),
+            rotation: CAMERA_ROTATION,
             scale: Vec3::ONE,
         },
+        // 13.0 world units per pixel of window height.
         13.0,
     ),
     (
         Transform {
             translation: Vec3::new(-10.0, 10.0, 14.0),
-            rotation: Quat::from_xyzw(-0.24781081, -0.2946635, -0.07941471, 0.91948706),
+            rotation: CAMERA_ROTATION,
             scale: Vec3::ONE,
         },
+        // 20 world units per pixel of window height.
         20.0,
     ),
 ];
@@ -55,24 +58,33 @@ fn move_camera(
     mut current_view: Local<usize>,
     button: Res<ButtonInput<MouseButton>>,
 ) {
-    use bevy::render::camera::ScalingMode;
     use bevy::render::camera::OrthographicProjection;
+    use bevy::render::camera::ScalingMode;
 
     if button.just_pressed(MouseButton::Left) {
         *current_view = (*current_view + 1) % CAMERA_DATA.len();
-        bevy::prelude::info!("switched camera {}", current_view.clone());
+        bevy::prelude::info!("switched to camera {}", current_view.clone());
     }
     let target = CAMERA_DATA[*current_view];
+
     camera_projection.0.translation = camera_projection
         .0
         .translation
         .lerp(target.0.translation, 0.2);
     camera_projection.0.rotation = camera_projection.0.rotation.slerp(target.0.rotation, 0.2);
+
+    let Projection::Orthographic(ortho_projection) = camera_projection.1.clone() else {
+        return;
+    };
+    let ScalingMode::FixedVertical {
+        mut viewport_height,
+    } = ortho_projection.scaling_mode
+    else {
+        return;
+    };
+    viewport_height = viewport_height * 0.8 + target.1 * 0.2;
     *camera_projection.1 = Projection::from(OrthographicProjection {
-        // 20 world units per pixel of window height.
-        scaling_mode: ScalingMode::FixedVertical {
-            viewport_height: target.1,
-        },
+        scaling_mode: ScalingMode::FixedVertical { viewport_height },
         ..OrthographicProjection::default_3d()
     });
 }

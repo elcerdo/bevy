@@ -52,7 +52,7 @@ pub const TRACK_ADVANCED_HANDLE: Handle<Track> =
 
 //////////////////////////////////////////////////////////////////////
 
-static TRACK_BEGINNER_PIECES: [TrackPiece; 22] = [
+static TRACK_BEGINNER_PIECES: &[TrackPiece] = &[
     TrackPiece::Start,
     TrackPiece::Straight(StraightData::default()),
     TrackPiece::Corner(CornerData::left_turn()),
@@ -92,7 +92,7 @@ pub const TRACK_BEGINNER_HANDLE: Handle<Track> =
 
 //////////////////////////////////////////////////////////////////////
 
-static TRACK_VERTICAL_PIECES: [TrackPiece; 14] = [
+static TRACK_VERTICAL_PIECES: &[TrackPiece] = &[
     TrackPiece::Start,
     TrackPiece::Straight(StraightData::from_length(5.0)),
     TrackPiece::Straight(StraightData::from_left_right(-1.0, 0.5)),
