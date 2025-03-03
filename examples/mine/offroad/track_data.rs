@@ -5,12 +5,15 @@ use bevy::math::Vec3;
 use bevy::prelude::{info, Assets, Handle, ResMut};
 
 //////////////////////////////////////////////////////////////////////
+const WW: f32 = 1.8;
 
-const TRACK_ADVANCED_STRAIGHT: StraightData = StraightData::from_left_right_length(-2.0, 2.0, 4.0);
+const TRACK_ADVANCED_STRAIGHT : StraightData = StraightData::from_left_right_length(-WW, WW, 4.0);
+const TRACK_ADVANCED_STRAIGHT_DOUBLE : StraightData = StraightData::from_left_right_length(-WW, WW, 8.0);
+const TRACK_ADVANCED_STRAIGHT_TRIPLE : StraightData = StraightData::from_left_right_length(-WW, WW, 12.0);
 
 static TRACK_ADVANCED_PIECES: &[TrackPiece] = &[
     TrackPiece::Start,
-    TrackPiece::Straight(StraightData::from_left_right_length(-2.0, 2.0, 8.0)),
+    TrackPiece::Straight(TRACK_ADVANCED_STRAIGHT_DOUBLE),
     TrackPiece::Corner(CornerData::left_turn()),
     TrackPiece::Checkpoint,
     TrackPiece::Straight(TRACK_ADVANCED_STRAIGHT),
@@ -25,10 +28,10 @@ static TRACK_ADVANCED_PIECES: &[TrackPiece] = &[
     TrackPiece::Corner(CornerData::left_turn()),
     TrackPiece::Corner(CornerData::left_turn()),
     TrackPiece::Checkpoint,
-    TrackPiece::Straight(StraightData::from_left_right_length(-2.0, 2.0, 8.0)),
+    TrackPiece::Straight(TRACK_ADVANCED_STRAIGHT_DOUBLE),
     TrackPiece::Corner(CornerData::left_turn()),
     TrackPiece::Checkpoint,
-    TrackPiece::Straight(StraightData::from_left_right_length(-2.0, 2.0, 12.0)),
+    TrackPiece::Straight(TRACK_ADVANCED_STRAIGHT_TRIPLE),
     TrackPiece::Checkpoint,
     TrackPiece::Corner(CornerData::left_turn()),
     TrackPiece::Straight(TRACK_ADVANCED_STRAIGHT),
@@ -40,9 +43,9 @@ static TRACK_ADVANCED_DATA: TrackData = TrackData {
     initial_position: Vec3::new(-16.0, 0.0, 0.0),
     initial_forward: Vec3::Z,
     initial_up: Vec3::Y,
-    initial_left: -2.0,
-    initial_right: 2.0,
-    num_segments: 6,
+    initial_left: -WW,
+    initial_right: WW,
+    num_segments: 10,
 };
 
 pub const TRACK_ADVANCED_HANDLE: Handle<Track> =
