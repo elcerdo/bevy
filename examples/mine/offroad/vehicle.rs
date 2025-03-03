@@ -416,14 +416,19 @@ fn resolve_checkpoints(
 
         for kk in 1..track.checkpoint_count {
             let foo = boat.current_stat.checkpoint_to_tops.get(&kk);
-            let aa: String = match foo {
+            let aa = if boat.player == Player::One {
+                format!("#{} ", kk)
+            } else {
+                "".into()
+            };
+            let bb: String = match foo {
                 Some(duration) => {
                     let duration = (*duration - boat.current_stat.top_start).as_secs_f32();
-                    format!("#{} {:>6.3}", kk, duration)
+                    format!("{:>6.3}", duration)
                 }
-                None => format!("#{}      C", kk),
+                None => "     C".into(),
             };
-            let bb: String = match &boat.maybe_last_stat {
+            let cc: String = match &boat.maybe_last_stat {
                 Some(stat) => {
                     let stat_top = stat.checkpoint_to_tops.get(&kk).unwrap();
                     let stat_duration = (*stat_top - stat.top_start).as_secs_f32();
@@ -439,7 +444,7 @@ fn resolve_checkpoints(
                 }
                 None => "     L".into(),
             };
-            let cc: String = match &boat.maybe_best_stat {
+            let dd: String = match &boat.maybe_best_stat {
                 Some(stat) => {
                     let stat_top = stat.checkpoint_to_tops.get(&kk).unwrap();
                     let stat_duration = (*stat_top - stat.top_start).as_secs_f32();
@@ -455,7 +460,7 @@ fn resolve_checkpoints(
                 }
                 None => "     B".into(),
             };
-            ss.push(format!("{} {} {}", aa, bb, cc));
+            ss.push(format!("{}{} {} {}", aa, bb, cc, dd));
         }
 
         *status_label = ss.join("\n").into();
