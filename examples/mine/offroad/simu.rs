@@ -310,7 +310,7 @@ fn setup_simu(
             base_color_texture: Some(image_a.clone()),
             ..StandardMaterial::default()
         })),
-        Transform::from_xyz(-7.0, 3.0, -11.0).with_scale(Vec3::ONE * 6.0),
+        Transform::from_xyz(-7.0, 3.0, -13.0).with_scale(Vec3::ONE * 6.0),
         SimuSettings { rng_seed: 42 },
     ));
 

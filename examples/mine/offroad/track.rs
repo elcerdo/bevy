@@ -10,7 +10,7 @@ use bevy::render::render_resource::{AsBindGroup, ShaderRef};
 
 use bevy::prelude::Vec3Swizzles;
 use bevy::prelude::{debug, info, warn};
-use bevy::prelude::{Commands, Component, Handle, Query, Res, ResMut, Time, With};
+use bevy::prelude::{Commands, Component, Handle, Query, Res, ResMut, Time, Transform, With};
 use bevy::prelude::{Mesh3d, MeshMaterial3d};
 
 use bevy::color::palettes::basic::BLUE;
@@ -38,6 +38,15 @@ impl bevy::prelude::Plugin for TrackPlugin {
 
 //////////////////////////////////////////////////////////////////////
 
+const TRACK_BEGINNER_TRANSFORM: Transform = Transform::from_xyz(22.0, 0.0, -14.0);
+const TRACK_VERTICAL_TRANSFORM_AA: Transform = Transform::from_xyz(-1.0, 0.0, -8.0);
+const TRACK_VERTICAL_TRANSFORM_BB: Transform = Transform {
+    translation: Vec3::new(12.0, 0.0, 9.0),
+    rotation: Quat::from_xyzw(-0.70710677, -0.0, -0.0, 0.70710677),
+    scale: Vec3::ONE,
+};
+const TRACK_ADVANCED_TRANSFORM: Transform = Transform::from_xyz(0.0, 0.0, 0.0);
+
 fn populate_tracks(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -53,37 +62,19 @@ fn populate_tracks(
     use bevy::image::ImageSamplerDescriptor;
     use bevy::math::Affine2;
     use bevy::pbr::UvChannel;
-    use bevy::prelude::Transform;
 
     info!("** populate_tracks **");
 
+    // tracks
     let track0 = tracks.get(&track_data::TRACK_BEGINNER_HANDLE).unwrap();
     let track1 = tracks.get(&track_data::TRACK_VERTICAL_HANDLE).unwrap();
+    let track2 = tracks.get(&track_data::TRACK_ADVANCED_HANDLE).unwrap();
 
-    // track 0 showcases flow parametrization
-    let checkpoint0_material = materials.add(StandardMaterial {
-        base_color: Color::hsva(0.0, 0.8, 1.0, 0.8),
-        // alpha_mode: AlphaMode::Blend, FIXME buggy
-        ..StandardMaterial::default()
-    });
-    commands.spawn((
-        Mesh3d(meshes.add(track0.checkpoint.clone())),
-        MeshMaterial3d(checkpoint0_material),
-    ));
-    let track0_material = materials.add(make_wavy_material(&asset_server, 0.6, PI / 3.0));
-    commands.spawn((
-        WavyMarker,
-        Mesh3d(meshes.add(track0.track.clone())),
-        MeshMaterial3d(track0_material),
-    ));
-
-    // track 1 showcases projected parametrization
-    let track1_material = materials.add(StandardMaterial {
+    // materials
+    let wavy_material = materials.add(make_wavy_material(&asset_server, 0.6, PI / 3.0));
+    let checkerboard_material = materials.add(StandardMaterial {
         base_color_channel: UvChannel::Uv1,
         base_color_texture: Some(asset_server.load_with_settings(
-            // "textures/parallax_example/cube_color.png",
-            // "textures/slice_square.png",
-            // "textures/fantasy_ui_borders/panel-border-015.png",
             "textures/uv_checker_bw.png",
             |s: &mut _| {
                 *s = ImageLoaderSettings {
@@ -99,14 +90,7 @@ fn populate_tracks(
         uv_transform: Affine2::from_scale(Vec2::new(1.0 / 8.0, 1.0 / 8.0)),
         ..StandardMaterial::default()
     });
-    commands.spawn((
-        Mesh3d(meshes.add(track1.track.clone())),
-        MeshMaterial3d(track1_material),
-        Transform::from_xyz(-1.0, 0.0, -2.0),
-    ));
-
-    // track 2 showcases water effect
-    let track2_material = materials.add(StandardMaterial {
+    let tiledflow_material = materials.add(StandardMaterial {
         base_color_channel: UvChannel::Uv0,
         base_color_texture: Some(asset_server.load_with_settings(
             "textures/fantasy_ui_borders/panel-border-010.png",
@@ -124,11 +108,52 @@ fn populate_tracks(
         )),
         ..StandardMaterial::default()
     });
+    let checkpoint_material = materials.add(StandardMaterial {
+        base_color: Color::hsva(0.0, 0.8, 1.0, 0.8),
+        // alpha_mode: AlphaMode::Blend, FIXME buggy
+        ..StandardMaterial::default()
+    });
+
+    // beginner track showcases water effect
+    commands.spawn((
+        Mesh3d(meshes.add(track0.checkpoint.clone())),
+        MeshMaterial3d(checkpoint_material.clone()),
+        TRACK_BEGINNER_TRANSFORM,
+    ));
+    commands.spawn((
+        Mesh3d(meshes.add(track0.track.clone())),
+        WavyMarker,
+        MeshMaterial3d(wavy_material.clone()),
+        TRACK_BEGINNER_TRANSFORM,
+    ));
+
+    // vertical track showcases projected parametrization wo checkpoints
     commands.spawn((
         Mesh3d(meshes.add(track1.track.clone())),
-        MeshMaterial3d(track2_material),
-        Transform::from_xyz(12.0, 0.0, 9.0)
-            .with_rotation(Quat::from_axis_angle(Vec3::X, -PI / 2.0)),
+        MeshMaterial3d(checkerboard_material.clone()),
+        TRACK_VERTICAL_TRANSFORM_AA,
+    ));
+
+    // transformed vertical track showcases flow parametrization wo checkpoints
+    commands.spawn((
+        Mesh3d(meshes.add(track1.track.clone())),
+        MeshMaterial3d(tiledflow_material.clone()),
+        TRACK_VERTICAL_TRANSFORM_BB,
+    ));
+
+    // advanced showcases water effect
+    commands.spawn((
+        Mesh3d(meshes.add(track2.checkpoint.clone())),
+        MeshMaterial3d(checkpoint_material.clone()),
+        TRACK_ADVANCED_TRANSFORM,
+    ));
+    commands.spawn((
+        Mesh3d(meshes.add(track2.track.clone())),
+        // MeshMaterial3d(checkerboard_material.clone()),
+        // MeshMaterial3d(tiledflow_material.clone()),
+        WavyMarker,
+        MeshMaterial3d(wavy_material.clone()),
+        TRACK_ADVANCED_TRANSFORM,
     ));
 }
 
@@ -143,34 +168,53 @@ fn populate_racing_lines(
     use bevy::prelude::Transform;
     info!("** populate_track_dots **");
 
+    // tracks
     let track0 = tracks.get(&track_data::TRACK_BEGINNER_HANDLE).unwrap();
     let track1 = tracks.get(&track_data::TRACK_VERTICAL_HANDLE).unwrap();
+    let track2 = tracks.get(&track_data::TRACK_ADVANCED_HANDLE).unwrap();
 
-    // track 3 showcases racing lines on track 0 data
+    // showcases racing lines on beginner track
     let track3_material = make_racing_line_material(&asset_server, track0.total_length);
+    let track3_transform =
+        TRACK_BEGINNER_TRANSFORM * Transform::from_translation(1e-3 * track0.initial_up);
     commands.spawn((
         Mesh3d(meshes.add(track0.track.clone())),
         MeshMaterial3d(materials.add(track3_material)),
-        Transform::from_xyz(0.0, 1e-3, 0.0),
+        track3_transform,
     ));
 
-    // track 4 showcases racing lines on track 1 data
+    // showcases racing lines on vertical track
     let track4_material = make_racing_line_material(&asset_server, track1.total_length);
+    let track4_transform =
+        TRACK_VERTICAL_TRANSFORM_AA * Transform::from_translation(1e-3 * track1.initial_up);
     commands.spawn((
         Mesh3d(meshes.add(track1.track.clone())),
         MeshMaterial3d(materials.add(track4_material)),
-        Transform::from_xyz(-1.0, 0.0, -2.0 + 1e-3),
+        track4_transform,
     ));
 
-    // track 5 showcases racing lines on track 1 data
+    //  showcases racing lines on transformed vertical track
     let mut track5_material = make_racing_line_material(&asset_server, track1.total_length);
     track5_material.middle_line_width = 0.5;
     track5_material.lateral_range = Vec2::new(-1.8, 0.8);
+    let track5_transform =
+        TRACK_VERTICAL_TRANSFORM_BB * Transform::from_translation(1e-3 * track1.initial_up);
     commands.spawn((
         Mesh3d(meshes.add(track1.track.clone())),
         MeshMaterial3d(materials.add(track5_material)),
-        Transform::from_xyz(12.0, 1e-3, 9.0)
-            .with_rotation(Quat::from_axis_angle(Vec3::X, -PI / 2.0)),
+        track5_transform,
+    ));
+
+    //  showcases racing lines on advanced track
+    let mut track5_material = make_racing_line_material(&asset_server, track2.total_length);
+    track5_material.middle_line_width = -1.0; // no middle line
+    track5_material.lateral_range = Vec2::new(-1.5, 1.5);
+    let track5_transform =
+        TRACK_ADVANCED_TRANSFORM * Transform::from_translation(1e-3 * track2.initial_up);
+    commands.spawn((
+        Mesh3d(meshes.add(track2.track.clone())),
+        MeshMaterial3d(materials.add(track5_material)),
+        track5_transform,
     ));
 }
 
@@ -520,6 +564,9 @@ pub struct Track {
     pub track_kdtree: KdTree<Segment>,
     pub checkpoint_kdtree: KdTree<Segment>,
     pub checkpoint_count: u8,
+    pub initial_up: Vec3,
+    pub initial_position: Vec3,
+    pub initial_forward: Vec3,
 }
 
 pub fn prepare_track(track_data: &TrackData) -> Track {
@@ -814,5 +861,8 @@ pub fn prepare_track(track_data: &TrackData) -> Track {
         checkpoint_count: checkpoint_segments.len() as u8,
         track_kdtree: KdTree::build_by_ordered_float(track_segments),
         checkpoint_kdtree: KdTree::build_by_ordered_float(checkpoint_segments),
+        initial_up: track_data.initial_up,
+        initial_position: track_data.initial_position,
+        initial_forward: track_data.initial_forward,
     }
 }

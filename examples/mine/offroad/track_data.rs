@@ -6,45 +6,43 @@ use bevy::prelude::{info, Assets, Handle, ResMut};
 
 //////////////////////////////////////////////////////////////////////
 
+const TRACK_ADVANCED_STRAIGHT: StraightData = StraightData::from_left_right_length(-2.0, 2.0, 4.0);
+
 static TRACK_ADVANCED_PIECES: &[TrackPiece] = &[
     TrackPiece::Start,
-    TrackPiece::Straight(StraightData::from_length(4.0)),
+    TrackPiece::Straight(StraightData::from_left_right_length(-2.0, 2.0, 8.0)),
     TrackPiece::Corner(CornerData::left_turn()),
     TrackPiece::Checkpoint,
-    TrackPiece::Straight(StraightData::from_length(1.0)),
+    TrackPiece::Straight(TRACK_ADVANCED_STRAIGHT),
     TrackPiece::Corner(CornerData::left_turn()),
     TrackPiece::Corner(CornerData::left_turn()),
     TrackPiece::Checkpoint,
     TrackPiece::Corner(CornerData::right_turn()),
     TrackPiece::Corner(CornerData::right_turn()),
+    TrackPiece::Straight(TRACK_ADVANCED_STRAIGHT),
     TrackPiece::Checkpoint,
-    TrackPiece::Straight(StraightData::default()),
     TrackPiece::Corner(CornerData::right_turn()),
     TrackPiece::Corner(CornerData::left_turn()),
     TrackPiece::Corner(CornerData::left_turn()),
-    TrackPiece::Straight(StraightData::from_length(10.0)),
     TrackPiece::Checkpoint,
-    // TrackPiece::Straight(StraightData::from_length(14.0)),
-    // TrackPiece::Checkpoint,
-    // TrackPiece::Corner(CornerData::right_turn()),
-    // TrackPiece::Straight(StraightData::from_length(11.0)),
-    // TrackPiece::Checkpoint,
-    // TrackPiece::Corner(CornerData::right_turn()),
-    // TrackPiece::Straight(StraightData::default()),
-    // TrackPiece::Checkpoint,
-    // TrackPiece::Corner(CornerData::right_turn()),
-    // TrackPiece::Straight(StraightData::from_length(3.0)),
+    TrackPiece::Straight(StraightData::from_left_right_length(-2.0, 2.0, 8.0)),
+    TrackPiece::Corner(CornerData::left_turn()),
+    TrackPiece::Checkpoint,
+    TrackPiece::Straight(StraightData::from_left_right_length(-2.0, 2.0, 12.0)),
+    TrackPiece::Checkpoint,
+    TrackPiece::Corner(CornerData::left_turn()),
+    TrackPiece::Straight(TRACK_ADVANCED_STRAIGHT),
     TrackPiece::Finish,
 ];
 
-pub static TRACK_ADVANCED_DATA: TrackData = TrackData {
+static TRACK_ADVANCED_DATA: TrackData = TrackData {
     pieces: &TRACK_ADVANCED_PIECES,
-    initial_position: Vec3::new(-12.0, 0.0, 0.0),
+    initial_position: Vec3::new(-16.0, 0.0, 0.0),
     initial_forward: Vec3::Z,
     initial_up: Vec3::Y,
-    initial_left: -1.0,
-    initial_right: 1.0,
-    num_segments: 4,
+    initial_left: -2.0,
+    initial_right: 2.0,
+    num_segments: 6,
 };
 
 pub const TRACK_ADVANCED_HANDLE: Handle<Track> =
@@ -77,7 +75,7 @@ static TRACK_BEGINNER_PIECES: &[TrackPiece] = &[
     TrackPiece::Finish,
 ];
 
-pub static TRACK_BEGINNER_DATA: TrackData = TrackData {
+static TRACK_BEGINNER_DATA: TrackData = TrackData {
     pieces: &TRACK_BEGINNER_PIECES,
     initial_position: Vec3::new(-12.0, 0.0, 0.0),
     initial_forward: Vec3::Z,
@@ -109,7 +107,7 @@ static TRACK_VERTICAL_PIECES: &[TrackPiece] = &[
     TrackPiece::Finish,
 ];
 
-pub static TRACK_VERTICAL_DATA: TrackData = TrackData {
+static TRACK_VERTICAL_DATA: TrackData = TrackData {
     pieces: &TRACK_VERTICAL_PIECES,
     initial_position: Vec3::new(1.0, 2.0, 0.0),
     initial_forward: Vec3::new(-1.0, 0.0, 0.0),
@@ -128,5 +126,5 @@ pub fn prepare_tracks(mut tracks: ResMut<Assets<Track>>) {
     info!("** prepare_tracks **");
     tracks.insert(&TRACK_BEGINNER_HANDLE, prepare_track(&TRACK_BEGINNER_DATA));
     tracks.insert(&TRACK_VERTICAL_HANDLE, prepare_track(&TRACK_VERTICAL_DATA));
-    // tracks.insert(&TRACK_ADVANCED_HANDLE, prepare_track(&TRACK_ADVANCED_DATA));
+    tracks.insert(&TRACK_ADVANCED_HANDLE, prepare_track(&TRACK_ADVANCED_DATA));
 }

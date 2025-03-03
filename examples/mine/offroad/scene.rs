@@ -34,8 +34,8 @@ const CAMERA_DATA: &[(Transform, f32)] = &[
             rotation: CAMERA_ROTATION,
             scale: Vec3::ONE,
         },
-        // 13.0 world units per pixel of window height.
-        13.0,
+        // 14.0 world units per pixel of window height.
+        14.0,
     ),
     (
         Transform {
@@ -67,12 +67,14 @@ fn move_camera(
     }
     let target = CAMERA_DATA[*current_view];
 
+    // update transform
     camera_projection.0.translation = camera_projection
         .0
         .translation
         .lerp(target.0.translation, 0.2);
     camera_projection.0.rotation = camera_projection.0.rotation.slerp(target.0.rotation, 0.2);
 
+    // update projection scale
     let Projection::Orthographic(ortho_projection) = camera_projection.1.clone() else {
         return;
     };
