@@ -1,33 +1,43 @@
-use crate::track;
+use crate::track::{RacingLineMaterial, Segment, Track, TRACK_CURRENT_HANDLE};
+
+use bevy::asset::{AssetServer, Assets};
+use bevy::math::{Mat2, Quat, Vec2, Vec3, Vec3Swizzles};
+use bevy::pbr::StandardMaterial;
+use bevy::render::mesh::Mesh;
+
+use bevy::prelude::Srgba;
+use bevy::prelude::Text;
+use bevy::prelude::{info, warn};
+use bevy::prelude::{ButtonInput, KeyCode};
+use bevy::prelude::{Commands, Component, Handle, Query, Res, ResMut, Time, Transform, With};
+use bevy::prelude::{Entity, Gamepad, GamepadAxis, GamepadButton};
+use bevy::prelude::{Mesh3d, MeshMaterial3d};
 
 use std::collections::HashMap;
 use std::fmt;
 use std::time::Duration;
 
-use bevy::prelude::*;
+const COLOR_P3: Srgba = bevy::color::palettes::basic::LIME;
+const COLOR_P1: Srgba = bevy::color::palettes::css::GRAY;
+const COLOR_P2: Srgba = bevy::color::palettes::css::LIGHT_PINK;
 
-// const PINK: Color = Color::hsv(270.0, 0.27, 0.87);
-
-use bevy::color::palettes::basic::LIME;
 use bevy::color::palettes::css::GOLD;
-use bevy::color::palettes::css::GRAY;
-use bevy::color::palettes::css::LIGHT_PINK;
-
 use std::f32::consts::PI;
+
+const MODEL_ASSET_PATH: &str = "models/offroad/boat.glb#Mesh0/Primitive0";
 
 //////////////////////////////////////////////////////////////////////
 
 pub struct VehiclePlugin;
 
-impl Plugin for VehiclePlugin {
-    fn build(&self, app: &mut App) {
-        info!("** build_vehicle **");
-
+impl bevy::prelude::Plugin for VehiclePlugin {
+    fn build(&self, app: &mut bevy::prelude::App) {
+        use bevy::prelude::{Startup, Update};
         app.add_systems(Startup, setup_vehicles);
+        app.add_systems(Update, update_vehicle_rankings);
         app.add_systems(Update, reset_vehicle_positions);
-        app.add_systems(Update, update_vehicle_physics);
         app.add_systems(Update, resolve_checkpoints);
-        app.add_systems(Update, update_first_place);
+        app.add_systems(Update, update_vehicle_physics);
     }
 }
 
@@ -124,14 +134,24 @@ fn setup_vehicles(
     mut commands: Commands,
     mut materials: ResMut<Assets<StandardMaterial>>,
     server: Res<AssetServer>,
-    tracks: Res<Assets<track::Track>>,
+    tracks: Res<Assets<Track>>,
 ) {
+    use bevy::prelude::Color;
+    use bevy::prelude::JustifyText;
+    use bevy::prelude::Node;
+    use bevy::prelude::PositionType;
+    use bevy::prelude::Text;
+    use bevy::prelude::TextColor;
+    use bevy::prelude::TextFont;
+    use bevy::prelude::TextLayout;
+    use bevy::prelude::UiRect;
+    use bevy::prelude::Val;
+
     info!("** setup_vehicles **");
 
-    let my_mesh: Handle<Mesh> = server.load("models/offroad/boat.glb#Mesh0/Primitive0");
+    let my_mesh: Handle<Mesh> = server.load(MODEL_ASSET_PATH);
 
-    use crate::track_data;
-    let Some(track) = tracks.get(&track_data::TRACK_ADVANCED_HANDLE) else {
+    let Some(track) = tracks.get(&TRACK_CURRENT_HANDLE) else {
         return;
     };
 
@@ -147,7 +167,7 @@ fn setup_vehicles(
     commands.spawn((
         Mesh3d(my_mesh.clone()),
         MeshMaterial3d(materials.add(StandardMaterial {
-            base_color: Color::from(GRAY),
+            base_color: Color::from(COLOR_P1),
             ..StandardMaterial::default()
         })),
         Transform::from_scale(Vec3::ONE * 0.15),
@@ -156,7 +176,7 @@ fn setup_vehicles(
     commands.spawn((
         Mesh3d(my_mesh.clone()),
         MeshMaterial3d(materials.add(StandardMaterial {
-            base_color: Color::from(LIGHT_PINK),
+            base_color: Color::from(COLOR_P2),
             ..StandardMaterial::default()
         })),
         Transform::from_scale(Vec3::ONE * 0.15),
@@ -165,7 +185,7 @@ fn setup_vehicles(
     commands.spawn((
         Mesh3d(my_mesh),
         MeshMaterial3d(materials.add(StandardMaterial {
-            base_color: Color::from(LIME),
+            base_color: Color::from(COLOR_P3),
             ..StandardMaterial::default()
         })),
         Transform::from_scale(Vec3::ONE * 0.15),
@@ -178,11 +198,11 @@ fn setup_vehicles(
             position_type: PositionType::Absolute,
             top: Val::Px(5.0),
             right: Val::Px(5.0),
-            ..default()
+            ..Node::default()
         },
         TextFont {
             font_size: 25.0,
-            ..default()
+            ..TextFont::default()
         },
         TextLayout::new_with_justify(JustifyText::Center),
         TextColor(GOLD.into()),
@@ -194,19 +214,19 @@ fn setup_vehicles(
             position_type: PositionType::Absolute,
             top: Val::Px(5.0),
             right: Val::Px(75.0),
-            ..default()
+            ..Node::default()
         })
         .with_children(|parent| {
             let node = Node {
                 margin: UiRect {
                     left: Val::Px(15.0),
-                    ..default()
+                    ..UiRect::default()
                 },
-                ..default()
+                ..Node::default()
             };
             let font = TextFont {
                 font_size: 16.0,
-                ..default()
+                ..TextFont::default()
             };
             let layout = TextLayout::new_with_justify(JustifyText::Right);
             parent.spawn((
@@ -233,9 +253,17 @@ fn setup_vehicles(
         });
 }
 
-fn update_first_place(
-    mut materials: ResMut<Assets<track::RacingLineMaterial>>,
-    material_handles: Query<&MeshMaterial3d<track::RacingLineMaterial>>,
+fn reset_vehicle_positions(mut boats: Query<&mut BoatData>, keyboard: Res<ButtonInput<KeyCode>>) {
+    if keyboard.just_pressed(KeyCode::KeyR) {
+        for mut boat in &mut boats {
+            boat.reset();
+        }
+    }
+}
+
+fn update_vehicle_rankings(
+    mut materials: ResMut<Assets<RacingLineMaterial>>,
+    material_handles: Query<&MeshMaterial3d<RacingLineMaterial>>,
     boats: Query<&BoatData>,
     first_place_labels: Query<&mut Text, With<FirstPlaceMarker>>,
 ) {
@@ -265,7 +293,7 @@ fn update_first_place(
                         continue;
                     }
                     let mut pos = boat.position_current;
-                    pos -= vec2(-12.0, 0.0);
+                    pos -= Vec2::new(-12.0, 0.0);
                     pos.x = -pos.x;
                     material.cursor_position = pos;
                 }
@@ -286,11 +314,10 @@ fn update_first_place(
 fn resolve_checkpoints(
     mut boats: Query<&mut BoatData>,
     status_labels: Query<&mut Text, With<StatusMarker>>,
-    tracks: Res<Assets<track::Track>>,
+    tracks: Res<Assets<Track>>,
     time: Res<Time>,
 ) {
-    use crate::track_data;
-    let Some(track) = tracks.get(&track_data::TRACK_ADVANCED_HANDLE) else {
+    let Some(track) = tracks.get(&TRACK_CURRENT_HANDLE) else {
         return;
     };
 
@@ -304,12 +331,11 @@ fn resolve_checkpoints(
 
     // bounce track boundary
     for mut boat in &mut boats {
-        let query_segment =
-            track::Segment::from_endpoints(boat.position_current, boat.position_previous);
+        let query_segment = Segment::from_endpoints(boat.position_current, boat.position_previous);
         let closest_segment = track.track_kdtree.nearest(&query_segment).unwrap();
         assert!(query_segment.ii == 255);
         assert!(closest_segment.item.ii == 0 || closest_segment.item.ii == 1);
-        if track::Segment::clips(closest_segment.item, &query_segment) {
+        if Segment::clips(closest_segment.item, &query_segment) {
             boat.position_previous = closest_segment.item.mirror(boat.position_previous);
             boat.position_current = closest_segment.item.mirror(boat.position_current);
         }
@@ -319,8 +345,7 @@ fn resolve_checkpoints(
     let top_now = time.elapsed();
     for mut boat in &mut boats {
         boat.current_stat.top_finish = top_now;
-        let query_segment =
-            track::Segment::from_endpoints(boat.position_current, boat.position_previous);
+        let query_segment = Segment::from_endpoints(boat.position_current, boat.position_previous);
         let closest_segment = track.checkpoint_kdtree.nearest(&query_segment).unwrap();
         assert!(query_segment.ii == 255);
         assert!(closest_segment.item.ii != 255);
@@ -413,11 +438,38 @@ fn resolve_checkpoints(
     }
 }
 
-fn reset_vehicle_positions(mut boats: Query<&mut BoatData>, keyboard: Res<ButtonInput<KeyCode>>) {
-    if keyboard.just_pressed(KeyCode::KeyR) {
-        for mut boat in &mut boats {
-            boat.reset();
+struct BoatPhysics {
+    mass: f32,
+    friction: Vec2,
+    thrust: f32,
+    brake: f32,
+    turning_speed: f32,
+    force: Vec2,
+    dt: f32,
+}
+
+impl BoatPhysics {
+    fn from_dt(dt: f32) -> Self {
+        Self {
+            mass: 100.0,                     // kg
+            friction: Vec2::new(5e-2, 1e-2), // 0 <= f < 1
+            thrust: 1500.0,                  // m / s^2 / kg ~ N
+            brake: 800.0,                    // m / s^2 / kg ~ N
+            turning_speed: 5.0 * PI / 4.0,   // rad / s
+            force: Vec2::ZERO,               // m / s^2 /kg ~ N
+            dt,                              // s
         }
+    }
+}
+
+impl BoatPhysics {
+    fn compute_next_pos(&self, pos_prev: Vec2, pos_current: Vec2, angle_current: f32) -> Vec2 {
+        let accel = self.force / self.mass / 2.0;
+        let pp = Mat2::from_angle(angle_current);
+        let friction = pp.transpose() * Mat2::from_diagonal(self.friction) * pp;
+        (2.0 * Mat2::IDENTITY - friction) * pos_current
+            - (1.0 * Mat2::IDENTITY - friction) * pos_prev
+            + accel * self.dt * self.dt
     }
 }
 
@@ -427,41 +479,6 @@ fn update_vehicle_physics(
     keyboard: Res<ButtonInput<KeyCode>>,
     gamepads: Query<(Entity, &Gamepad)>,
 ) {
-    struct BoatPhysics {
-        mass: f32,
-        friction: Vec2,
-        thrust: f32,
-        brake: f32,
-        turning_speed: f32,
-        force: Vec2,
-        dt: f32,
-    }
-
-    impl BoatPhysics {
-        fn from_dt(dt: f32) -> Self {
-            Self {
-                mass: 100.0,                     // kg
-                friction: Vec2::new(5e-2, 1e-2), // 0 <= f < 1
-                thrust: 1500.0,                  // m / s^2 / kg ~ N
-                brake: 800.0,                    // m / s^2 / kg ~ N
-                turning_speed: 5.0 * PI / 4.0,   // rad / s
-                force: Vec2::ZERO,               // m / s^2 /kg ~ N
-                dt,                              // s
-            }
-        }
-    }
-
-    impl BoatPhysics {
-        fn compute_next_pos(&self, pos_prev: Vec2, pos_current: Vec2, angle_current: f32) -> Vec2 {
-            let accel = self.force / self.mass / 2.0;
-            let pp = Mat2::from_angle(angle_current);
-            let friction = pp.transpose() * Mat2::from_diagonal(self.friction) * pp;
-            (2.0 * Mat2::IDENTITY - friction) * pos_current
-                - (1.0 * Mat2::IDENTITY - friction) * pos_prev
-                + accel * self.dt * self.dt
-        }
-    }
-
     let dt = time.delta_secs();
     for (mut boat, mut transform) in &mut boats {
         let pos_prev = boat.position_previous;

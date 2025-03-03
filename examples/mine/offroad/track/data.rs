@@ -1,10 +1,13 @@
-use crate::track::{prepare_track, CornerData, StraightData, Track, TrackData, TrackPiece};
+use crate::track::piece::{prepare_track, CornerData, StraightData, Track, TrackData, TrackPiece};
 
-use bevy::asset::weak_handle;
+use bevy::asset::{weak_handle, Assets};
 use bevy::math::Vec3;
-use bevy::prelude::{info, Assets, Handle, ResMut};
+
+use bevy::prelude::info;
+use bevy::prelude::{Handle, ResMut};
 
 //////////////////////////////////////////////////////////////////////
+
 const TRACK_ADVANCED_WW: f32 = 1.8;
 
 const TRACK_ADVANCED_STRAIGHT: StraightData =

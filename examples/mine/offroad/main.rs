@@ -3,7 +3,6 @@
 mod scene;
 mod simu;
 mod track;
-mod track_data;
 mod vehicle;
 
 use bevy::prelude::*;
