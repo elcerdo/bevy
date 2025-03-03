@@ -1,15 +1,13 @@
 use bevy::asset::{Asset, AssetServer, Assets};
+use bevy::color::Srgba;
 use bevy::math::Vec2;
 use bevy::reflect::TypePath;
 use bevy::render::render_resource::{AsBindGroup, ShaderRef};
 
-use bevy::prelude::AlphaMode;
-use bevy::prelude::LinearRgba;
 use bevy::prelude::MeshMaterial3d;
 use bevy::prelude::{Component, Handle, Query, Res, ResMut, Time, With};
 
-use bevy::color::palettes::basic::WHITE;
-
+const COLOR_START_LINE: Srgba = bevy::color::palettes::basic::WHITE;
 const SHADER_ASSET_PATH: &str = "shaders/offroad/racing_line_material.wgsl";
 
 // This struct defines the data that will be passed to your shader
@@ -19,7 +17,7 @@ pub struct RacingLineMaterial {
     #[sampler(1)]
     color_texture: Option<Handle<bevy::image::Image>>,
     #[uniform(2)]
-    color: LinearRgba,
+    color: bevy::prelude::LinearRgba,
     #[uniform(3)]
     track_length: f32,
     #[uniform(4)]
@@ -43,12 +41,13 @@ impl bevy::prelude::Material for RacingLineMaterial {
         SHADER_ASSET_PATH.into()
     }
 
-    fn alpha_mode(&self) -> AlphaMode {
-        AlphaMode::Blend
+    fn alpha_mode(&self) -> bevy::prelude::AlphaMode {
+        bevy::prelude::AlphaMode::Blend
     }
 }
 
 pub fn make(asset_server: &Res<AssetServer>, track_length: f32) -> RacingLineMaterial {
+    use bevy::color::LinearRgba;
     use bevy::image::ImageAddressMode;
     use bevy::image::ImageLoaderSettings;
     use bevy::image::ImageSampler;
@@ -61,7 +60,7 @@ pub fn make(asset_server: &Res<AssetServer>, track_length: f32) -> RacingLineMat
         time: 0.0,
         cursor_position: Vec2::ZERO,
         cursor_radius: 0.4,
-        color: LinearRgba::from(WHITE),
+        color: LinearRgba::from(COLOR_START_LINE),
         color_texture: Some(asset_server.load_with_settings(
             "textures/slice_square.png",
             |settings: &mut ImageLoaderSettings| {

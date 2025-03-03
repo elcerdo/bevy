@@ -1,11 +1,11 @@
 use crate::track::{RacingLineMaterial, Segment, Track, TRACK_CURRENT_HANDLE};
 
 use bevy::asset::{AssetServer, Assets};
+use bevy::color::Srgba;
 use bevy::math::{Mat2, Quat, Vec2, Vec3, Vec3Swizzles};
 use bevy::pbr::StandardMaterial;
 use bevy::render::mesh::Mesh;
 
-use bevy::prelude::Srgba;
 use bevy::prelude::Text;
 use bevy::prelude::{info, warn};
 use bevy::prelude::{ButtonInput, KeyCode};
@@ -136,7 +136,7 @@ fn setup_vehicles(
     server: Res<AssetServer>,
     tracks: Res<Assets<Track>>,
 ) {
-    use bevy::prelude::Color;
+    use bevy::color::Color;
     use bevy::prelude::JustifyText;
     use bevy::prelude::Node;
     use bevy::prelude::PositionType;

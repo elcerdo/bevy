@@ -204,14 +204,13 @@ fn populate_overlays(
         track5_transform,
     ));
 
-    //  showcases racing lines on advanced track
+    //  showcases non animated racing lines on advanced track
     let mut track5_material = racing_line_material::make(&asset_server, track2.total_length);
-    track5_material.middle_line_width = -1.0; // no middle line
+    // track5_material.middle_line_width = -1.0; // no middle line
     track5_material.lateral_range = Vec2::new(-1.5, 1.5);
     let track5_transform =
         TRACK_ADVANCED_TRANSFORM * Transform::from_translation(1e-3 * track2.initial_up);
     commands.spawn((
-        AnimatedRacingLineMarker,
         Mesh3d(meshes.add(track2.track.clone())),
         MeshMaterial3d(materials.add(track5_material)),
         track5_transform,
