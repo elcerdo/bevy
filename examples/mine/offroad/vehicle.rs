@@ -17,14 +17,14 @@ use std::time::Duration;
 
 const COLOR_P1: Srgba = bevy::color::palettes::css::LIGHT_GRAY;
 const COLOR_P2: Srgba = bevy::color::palettes::css::LIGHT_PINK;
-const COLOR_P3: Srgba = bevy::color::palettes::basic::LIME;
-
-use bevy::color::palettes::css::GOLD;
-use std::f32::consts::PI;
+const COLOR_P3: Srgba = bevy::color::palettes::css::LIME;
 
 const MODEL_P1: &str = "models/offroad/boat_p1.glb";
 const MODEL_P2: &str = "models/offroad/boat_p2.glb";
 const MODEL_P3: &str = "models/offroad/boat_p3.glb";
+
+use bevy::color::palettes::css::GOLD;
+use std::f32::consts::PI;
 
 //////////////////////////////////////////////////////////////////////
 
