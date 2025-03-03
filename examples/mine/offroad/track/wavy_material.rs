@@ -1,7 +1,7 @@
 use bevy::asset::{AssetServer, Assets};
 use bevy::color::Srgba;
 use bevy::math::{Affine2, Mat2, Vec2};
-use bevy::pbr::StandardMaterial;
+use bevy::pbr::{StandardMaterial, UvChannel};
 
 use bevy::prelude::MeshMaterial3d;
 use bevy::prelude::{Component, Query, Res, ResMut, Time, With};
@@ -14,42 +14,28 @@ pub fn make(asset_server: &Res<AssetServer>, scale: f32, angle: f32) -> Standard
     use bevy::image::ImageLoaderSettings;
     use bevy::image::ImageSampler;
     use bevy::image::ImageSamplerDescriptor;
-    use bevy::pbr::UvChannel;
+    let make_tileable = |settings: &mut ImageLoaderSettings| -> () {
+        *settings = ImageLoaderSettings {
+            is_srgb: false,
+            sampler: ImageSampler::Descriptor(ImageSamplerDescriptor {
+                address_mode_u: ImageAddressMode::Repeat,
+                address_mode_v: ImageAddressMode::Repeat,
+                ..ImageSamplerDescriptor::default()
+            }),
+            ..ImageLoaderSettings::default()
+        }
+    };
+    let normal_map = asset_server.load_with_settings("textures/wavy_normal.png", make_tileable);
+    let depth_map = asset_server.load_with_settings("textures/wavy_depth.png", make_tileable);
+    let uv_transform = Mat2::from_diagonal(Vec2::ONE * scale) * Mat2::from_angle(angle);
     StandardMaterial {
         parallax_depth_scale: 0.1,
         perceptual_roughness: 0.2,
         base_color: Color::from(COLOR_WAVY),
         normal_map_channel: UvChannel::Uv1,
-        normal_map_texture: Some(asset_server.load_with_settings(
-            "textures/wavy_normal.png",
-            |settings: &mut ImageLoaderSettings| {
-                *settings = ImageLoaderSettings {
-                    is_srgb: false,
-                    sampler: ImageSampler::Descriptor(ImageSamplerDescriptor {
-                        address_mode_u: ImageAddressMode::Repeat,
-                        address_mode_v: ImageAddressMode::Repeat,
-                        ..ImageSamplerDescriptor::default()
-                    }),
-                    ..ImageLoaderSettings::default()
-                }
-            },
-        )),
-        depth_map: Some(asset_server.load_with_settings(
-            "textures/wavy_depth.png",
-            |settings: &mut ImageLoaderSettings| {
-                *settings = ImageLoaderSettings {
-                    sampler: ImageSampler::Descriptor(ImageSamplerDescriptor {
-                        address_mode_u: ImageAddressMode::Repeat,
-                        address_mode_v: ImageAddressMode::Repeat,
-                        ..ImageSamplerDescriptor::default()
-                    }),
-                    ..ImageLoaderSettings::default()
-                }
-            },
-        )),
-        uv_transform: Affine2::from_mat2(
-            Mat2::from_diagonal(Vec2::ONE * scale) * Mat2::from_angle(angle),
-        ),
+        normal_map_texture: Some(normal_map),
+        depth_map: Some(depth_map),
+        uv_transform: Affine2::from_mat2(uv_transform),
         ..StandardMaterial::default()
     }
 }
