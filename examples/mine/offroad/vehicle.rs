@@ -3,15 +3,13 @@ use crate::track::{RacingLineMaterial, Segment, Track, TRACK_CURRENT_HANDLE};
 use bevy::asset::{AssetServer, Assets};
 use bevy::color::Srgba;
 use bevy::math::{Mat2, Quat, Vec2, Vec3, Vec3Swizzles};
-use bevy::pbr::StandardMaterial;
-use bevy::render::mesh::Mesh;
 
+use bevy::prelude::MeshMaterial3d;
 use bevy::prelude::Text;
 use bevy::prelude::{info, warn};
 use bevy::prelude::{ButtonInput, KeyCode};
-use bevy::prelude::{Commands, Component, Handle, Query, Res, ResMut, Time, Transform, With};
+use bevy::prelude::{Commands, Component, Query, Res, ResMut, Time, Transform, With};
 use bevy::prelude::{Entity, Gamepad, GamepadAxis, GamepadButton};
-use bevy::prelude::{Mesh3d, MeshMaterial3d};
 
 use std::collections::HashMap;
 use std::fmt;
@@ -24,7 +22,9 @@ const COLOR_P3: Srgba = bevy::color::palettes::basic::LIME;
 use bevy::color::palettes::css::GOLD;
 use std::f32::consts::PI;
 
-const MODEL_ASSET_PATH: &str = "models/offroad/boat.glb#Mesh0/Primitive0";
+const MODEL_P1: &str = "models/offroad/boat_p1.glb";
+const MODEL_P2: &str = "models/offroad/boat_p2.glb";
+const MODEL_P3: &str = "models/offroad/boat_p3.glb";
 
 //////////////////////////////////////////////////////////////////////
 
@@ -132,13 +132,8 @@ struct StatusMarker;
 #[derive(Component)]
 struct FirstPlaceMarker;
 
-fn setup_vehicles(
-    mut commands: Commands,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    server: Res<AssetServer>,
-    tracks: Res<Assets<Track>>,
-) {
-    use bevy::color::Color;
+fn setup_vehicles(mut commands: Commands, server: Res<AssetServer>, tracks: Res<Assets<Track>>) {
+    use bevy::prelude::GltfAssetLabel;
     use bevy::prelude::JustifyText;
     use bevy::prelude::Node;
     use bevy::prelude::PositionType;
@@ -148,10 +143,15 @@ fn setup_vehicles(
     use bevy::prelude::TextLayout;
     use bevy::prelude::UiRect;
     use bevy::prelude::Val;
+    use bevy::prelude::*;
 
     info!("** setup_vehicles **");
 
-    let my_mesh: Handle<Mesh> = server.load(MODEL_ASSET_PATH);
+    let model_p1: Handle<Scene> = server.load(GltfAssetLabel::Scene(0).from_asset(MODEL_P1));
+    let model_p2: Handle<Scene> = server.load(GltfAssetLabel::Scene(0).from_asset(MODEL_P2));
+    let model_p3: Handle<Scene> = server.load(GltfAssetLabel::Scene(0).from_asset(MODEL_P3));
+
+    // let my_mesh: Handle<Mesh> = server.load(MODEL_ASSET_PATH);
 
     let Some(track) = tracks.get(&TRACK_CURRENT_HANDLE) else {
         return;
@@ -165,29 +165,17 @@ fn setup_vehicles(
     let pos_p3 = track.initial_position + initial_righthand * track.initial_right / 2.0;
 
     commands.spawn((
-        Mesh3d(my_mesh.clone()),
-        MeshMaterial3d(materials.add(StandardMaterial {
-            base_color: Color::from(COLOR_P1),
-            ..StandardMaterial::default()
-        })),
+        SceneRoot(model_p1),
         Transform::from_scale(Vec3::ONE * 0.15),
         BoatData::from_player_and_position(Player::One, pos_p1),
     ));
     commands.spawn((
-        Mesh3d(my_mesh.clone()),
-        MeshMaterial3d(materials.add(StandardMaterial {
-            base_color: Color::from(COLOR_P2),
-            ..StandardMaterial::default()
-        })),
+        SceneRoot(model_p2),
         Transform::from_scale(Vec3::ONE * 0.15),
         BoatData::from_player_and_position(Player::Two, pos_p2),
     ));
     commands.spawn((
-        Mesh3d(my_mesh),
-        MeshMaterial3d(materials.add(StandardMaterial {
-            base_color: Color::from(COLOR_P3),
-            ..StandardMaterial::default()
-        })),
+        SceneRoot(model_p3),
         Transform::from_scale(Vec3::ONE * 0.15),
         BoatData::from_player_and_position(Player::Three, pos_p3),
     ));
