@@ -17,9 +17,9 @@ use std::collections::HashMap;
 use std::fmt;
 use std::time::Duration;
 
-const COLOR_P3: Srgba = bevy::color::palettes::basic::LIME;
-const COLOR_P1: Srgba = bevy::color::palettes::css::GRAY;
+const COLOR_P1: Srgba = bevy::color::palettes::css::LIGHT_GRAY;
 const COLOR_P2: Srgba = bevy::color::palettes::css::LIGHT_PINK;
+const COLOR_P3: Srgba = bevy::color::palettes::basic::LIME;
 
 use bevy::color::palettes::css::GOLD;
 use std::f32::consts::PI;
@@ -98,6 +98,7 @@ struct BoatData {
     position_current: Vec2,
     angle_current: f32,
     current_stat: LapStat,
+    maybe_last_stat: Option<LapStat>,
     maybe_best_stat: Option<LapStat>,
     lap_count: u32,
 }
@@ -111,6 +112,7 @@ impl BoatData {
             position_current: pos.xz(),
             angle_current: PI,
             current_stat: LapStat::from(Duration::MAX),
+            maybe_last_stat: None,
             maybe_best_stat: None,
             lap_count: 0,
         }
@@ -202,7 +204,7 @@ fn setup_vehicles(
             font_size: 25.0,
             ..TextFont::default()
         },
-        TextLayout::new_with_justify(JustifyText::Center),
+        TextLayout::new_with_justify(JustifyText::Right),
         TextColor(GOLD.into()),
         FirstPlaceMarker,
     ));
@@ -232,6 +234,7 @@ fn setup_vehicles(
                 font.clone(),
                 layout,
                 node.clone(),
+                TextColor(COLOR_P1.into()),
                 StatusMarker,
             ));
             parent.spawn((
@@ -239,6 +242,7 @@ fn setup_vehicles(
                 font.clone(),
                 layout,
                 node.clone(),
+                TextColor(COLOR_P2.into()),
                 StatusMarker,
             ));
             parent.spawn((
@@ -246,6 +250,7 @@ fn setup_vehicles(
                 font.clone(),
                 layout,
                 node.clone(),
+                TextColor(COLOR_P3.into()),
                 StatusMarker,
             ));
         });
@@ -278,6 +283,9 @@ fn update_vehicle_rankings(
         let Some(best_stat) = &boat.maybe_best_stat else {
             continue;
         };
+        assert!(best_stat.top_start != Duration::MAX);
+        assert!(best_stat.top_finish != Duration::MAX);
+        assert!(best_stat.top_start < best_stat.top_finish);
         let lap_duration = best_stat.top_finish - best_stat.top_start;
         sorted_lap_duration_boats.push((lap_duration, boat));
     }
@@ -300,8 +308,13 @@ fn update_vehicle_rankings(
     const RANK_NAMES: [&str; 3] = ["1st", "2nd", "3rd"];
     assert!(sorted_lap_duration_boats.len() < RANK_NAMES.len());
     let mut rr = vec![];
-    for ((_, boat), rank_name) in sorted_lap_duration_boats.iter().zip(RANK_NAMES) {
-        rr.push(format!("{} {}", boat.player, rank_name));
+    for ((duration, boat), rank_name) in sorted_lap_duration_boats.iter().zip(RANK_NAMES) {
+        rr.push(format!(
+            "{} {:>6.3} {}",
+            boat.player,
+            duration.as_secs_f32(),
+            rank_name
+        ));
     }
     let label = format!("{}\nBEST LAP", rr.join("\n"));
     for mut first_place_label in first_place_labels {
@@ -360,6 +373,7 @@ fn resolve_checkpoints(
                             boat.player,
                             boat.current_stat.elapsed_secs(),
                         );
+                        boat.maybe_last_stat = Some(boat.current_stat.clone());
                         boat.maybe_best_stat = Some(match &boat.maybe_best_stat {
                             None => boat.current_stat.clone(),
                             Some(best_stat) => {
@@ -386,48 +400,64 @@ fn resolve_checkpoints(
     for (boat, mut status_label) in boats.iter().zip(status_labels) {
         let mut ss: Vec<String> = vec![];
         ss.push(format!(
-            "{} lap{} {:>6.3} {:>6.3}",
+            "{} lap{}\ncurrent   last   best\n{:>6.3} {:>6.3} {:>6.3}",
             boat.player,
             boat.lap_count,
             boat.current_stat.elapsed_secs(),
+            match &boat.maybe_last_stat {
+                None => 0.0,
+                Some(stat) => stat.elapsed_secs(),
+            },
             match &boat.maybe_best_stat {
                 None => 0.0,
                 Some(best_stat) => best_stat.elapsed_secs(),
             },
         ));
-        match &boat.maybe_best_stat {
-            None => {
-                for kk in 1..track.checkpoint_count {
-                    ss.push(match boat.current_stat.checkpoint_to_tops.get(&kk) {
-                        Some(duration) => format!(
-                            "#{} {:>6.3}       ",
-                            kk,
-                            (*duration - boat.current_stat.top_start).as_secs_f32()
-                        ),
-                        None => "_       ".into(),
-                    });
+
+        for kk in 1..track.checkpoint_count {
+            let foo = boat.current_stat.checkpoint_to_tops.get(&kk);
+            let aa: String = match foo {
+                Some(duration) => {
+                    let duration = (*duration - boat.current_stat.top_start).as_secs_f32();
+                    format!("#{} {:>6.3}", kk, duration)
                 }
-            }
-            Some(best_stat) => {
-                for kk in 1..track.checkpoint_count {
-                    let best_duration = best_stat.checkpoint_to_tops.get(&kk).unwrap();
-                    let best_delta = (*best_duration - best_stat.top_start).as_secs_f32();
-                    ss.push(match boat.current_stat.checkpoint_to_tops.get(&kk) {
-                        Some(current_duration) => {
-                            let current_delta =
-                                (*current_duration - boat.current_stat.top_start).as_secs_f32();
-                            format!(
-                                "#{} {:>6.3} {:>+5.3}",
-                                kk,
-                                current_delta,
-                                current_delta - best_delta,
-                            )
+                None => format!("#{}      C", kk),
+            };
+            let bb: String = match &boat.maybe_last_stat {
+                Some(stat) => {
+                    let stat_top = stat.checkpoint_to_tops.get(&kk).unwrap();
+                    let stat_duration = (*stat_top - stat.top_start).as_secs_f32();
+                    match foo {
+                        Some(duration) => {
+                            let duration = (*duration - boat.current_stat.top_start).as_secs_f32();
+                            format!("{:>+5.3}", duration - stat_duration)
                         }
-                        None => format!("_ {:>6.3}", best_delta),
-                    });
+                        None => {
+                            format!("{:>6.3}", stat_duration)
+                        }
+                    }
                 }
-            }
+                None => "     L".into(),
+            };
+            let cc: String = match &boat.maybe_best_stat {
+                Some(stat) => {
+                    let stat_top = stat.checkpoint_to_tops.get(&kk).unwrap();
+                    let stat_duration = (*stat_top - stat.top_start).as_secs_f32();
+                    match foo {
+                        Some(duration) => {
+                            let duration = (*duration - boat.current_stat.top_start).as_secs_f32();
+                            format!("{:>+5.3}", duration - stat_duration)
+                        }
+                        None => {
+                            format!("{:>6.3}", stat_duration)
+                        }
+                    }
+                }
+                None => "     B".into(),
+            };
+            ss.push(format!("{} {} {}", aa, bb, cc));
         }
+
         *status_label = ss.join("\n").into();
     }
 }
