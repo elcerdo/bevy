@@ -1,3 +1,4 @@
+use crate::global_state::GlobalState;
 use crate::track::{RacingLineMaterial, Segment, Track, TRACK_CURRENT_HANDLE};
 
 use bevy::asset::{AssetServer, Assets};
@@ -32,12 +33,19 @@ pub struct VehiclePlugin;
 
 impl bevy::prelude::Plugin for VehiclePlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
-        use bevy::prelude::{Startup, Update};
+        use bevy::prelude::*;
         app.add_systems(Startup, setup_vehicles);
-        app.add_systems(Update, update_vehicle_rankings);
-        app.add_systems(Update, reset_vehicle_positions);
-        app.add_systems(Update, resolve_checkpoints);
-        app.add_systems(Update, update_vehicle_physics);
+        app.add_systems(
+            Update,
+            (
+                reset_vehicle_positions,
+                update_vehicle_physics,
+                resolve_checkpoints,
+                update_vehicle_rankings,
+            )
+                .chain()
+                .run_if(in_state(GlobalState::InGame)),
+        );
     }
 }
 

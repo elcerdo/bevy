@@ -1,6 +1,6 @@
 use crate::global_state::{GlobalState, TrackNickname};
 
-use bevy::prelude::{Assets, Commands, NextState, Res, ResMut};
+use bevy::prelude::{Assets, Commands, Res, ResMut};
 
 use bevy::color::palettes::basic::SILVER;
 
