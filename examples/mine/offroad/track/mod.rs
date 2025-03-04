@@ -30,8 +30,8 @@ impl bevy::prelude::Plugin for TrackPlugin {
         app.init_asset::<Track>();
         app.add_plugins(MaterialPlugin::<RacingLineMaterial>::default());
         app.add_systems(PreStartup, data::prepare_tracks);
-        app.add_systems(Startup, populate_tracks_and_checkpoints);
-        app.add_systems(Startup, populate_overlays);
+        // app.add_systems(Startup, populate_tracks_and_checkpoints);
+        // app.add_systems(Startup, populate_overlays);
         app.add_systems(Update, wavy_material::animate);
         app.add_systems(Update, racing_line_material::animate);
     }

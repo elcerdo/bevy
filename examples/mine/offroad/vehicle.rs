@@ -389,7 +389,7 @@ fn resolve_checkpoints(
     }
 
     // prepare ui status label
-    for (boat, mut status_label) in boats.iter().zip(status_labels) {
+    for (ll, (boat, mut status_label)) in boats.iter().zip(status_labels).enumerate() {
         let mut ss: Vec<String> = vec![];
         ss.push(format!(
             "{} lap{}\ncurrent   last   best\n{:>6.3} {:>6.3} {:>6.3}",
@@ -408,7 +408,7 @@ fn resolve_checkpoints(
 
         for kk in 1..track.checkpoint_count {
             let foo = boat.current_stat.checkpoint_to_tops.get(&kk);
-            let aa = if boat.player == Player::One {
+            let aa = if ll == 0 {
                 format!("#{} ", kk)
             } else {
                 "".into()
