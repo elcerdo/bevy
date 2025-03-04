@@ -1,11 +1,7 @@
 use crate::global_state::{GlobalState, TrackNickname};
+use crate::ui::consts::*;
 
 use bevy::prelude::*;
-
-const COLOR_UI_BG: Srgba = bevy::color::palettes::css::WHITE;
-const COLOR_UI_FG: Srgba = bevy::color::palettes::css::BLACK;
-const COLOR_UI_HOOVER: Srgba = bevy::color::palettes::css::LIGHT_GRAY;
-const COLOR_UI_PRESSED: Srgba = bevy::color::palettes::css::DARK_GRAY;
 
 pub struct TrackSelectionPlugin;
 
