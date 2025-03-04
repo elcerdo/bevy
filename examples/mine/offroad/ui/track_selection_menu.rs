@@ -3,9 +3,9 @@ use crate::ui::consts::*;
 
 use bevy::prelude::*;
 
-pub struct TrackSelectionPlugin;
+pub struct TrackSelectionMenuPlugin;
 
-impl Plugin for TrackSelectionPlugin {
+impl Plugin for TrackSelectionMenuPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
             OnEnter(GlobalState::InitDone),

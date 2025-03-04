@@ -30,7 +30,8 @@ fn main() {
     }
 
     app.add_plugins(global_state::GlobalStatePlugin);
-    app.add_plugins(ui::TrackSelectionPlugin);
+    app.add_plugins(ui::TrackSelectionMenuPlugin);
+    app.add_plugins(ui::GameDoneScreenPlugin);
     app.add_plugins(scene::ScenePlugin);
     app.add_plugins(simu::SimuPlugin);
     app.add_plugins(track::TrackPlugin);
