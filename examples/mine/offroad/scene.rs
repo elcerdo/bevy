@@ -13,9 +13,9 @@ impl bevy::prelude::Plugin for ScenePlugin {
         use bevy::prelude::*;
         app.add_systems(
             OnEnter(GlobalState::TrackSelected(TrackNickname::Advanced)),
-            (populate_camera_and_lights, populate_background).chain(),
+            populate_camera_and_lights,
         );
-
+        app.add_systems(Startup, populate_background);
         app.add_systems(Update, move_camera.run_if(in_state(GlobalState::InGame)));
     }
 }
@@ -102,7 +102,6 @@ fn populate_background(
     mut meshes: ResMut<Assets<bevy::render::mesh::Mesh>>,
     mut images: ResMut<Assets<bevy::image::Image>>,
     mut materials: ResMut<Assets<bevy::pbr::StandardMaterial>>,
-    mut next_state: ResMut<NextState<GlobalState>>,
     asset_server: Res<bevy::asset::AssetServer>,
 ) {
     use bevy::prelude::*;
@@ -157,8 +156,6 @@ fn populate_background(
         MeshMaterial3d(parallal_material),
         Transform::from_xyz(3.0, 2.0, 18.0).with_scale(Vec3::ONE * 4.0),
     ));
-
-    next_state.set(GlobalState::InGame);
 }
 
 fn populate_camera_and_lights(mut commands: Commands) {
