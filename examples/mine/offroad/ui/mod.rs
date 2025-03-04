@@ -24,11 +24,11 @@ impl Plugin for TrackSelectionPlugin {
 }
 
 #[derive(Component)]
-struct TrackSelectionMarker;
+struct TrackSelectionMenuMarker;
 
 fn depopulate_track_selection_menu(
     mut commands: Commands,
-    query: Query<Entity, With<TrackSelectionMarker>>,
+    query: Query<Entity, With<TrackSelectionMenuMarker>>,
 ) {
     for entity in query {
         commands.entity(entity).despawn();
@@ -39,11 +39,11 @@ fn populate_track_selection_menu(
     mut commands: Commands,
     mut next_state: ResMut<NextState<GlobalState>>,
 ) {
-    commands.spawn((TrackSelectionMarker, Camera2d::default()));
+    commands.spawn((TrackSelectionMenuMarker, Camera2d::default()));
 
     commands
         .spawn((
-            TrackSelectionMarker,
+            TrackSelectionMenuMarker,
             Node {
                 position_type: PositionType::Absolute,
                 bottom: Val::Px(5.0),

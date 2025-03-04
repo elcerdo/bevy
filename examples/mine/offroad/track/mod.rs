@@ -53,6 +53,15 @@ impl bevy::prelude::Plugin for TrackPlugin {
 
 const TRACK_ADVANCED_TRANSFORM: Transform = Transform::from_xyz(0.0, 0.0, 0.0);
 
+// const TRACK_BEGINNER_TRANSFORM: Transform = Transform::from_xyz(22.0, 0.0, -14.0);
+// const TRACK_VERTICAL_TRANSFORM_AA: Transform = Transform::from_xyz(-1.0, 0.0, -8.0);
+// const TRACK_VERTICAL_TRANSFORM_BB: Transform = Transform {
+//     translation: Vec3::new(12.0, 0.0, 9.0),
+//     rotation: Quat::from_xyzw(-0.70710677, -0.0, -0.0, 0.70710677),
+//     scale: Vec3::ONE,
+// };
+
+
 fn populate_advanced_track_and_checkpoints(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -76,7 +85,7 @@ fn populate_advanced_track_and_checkpoints(
             ..ImageLoaderSettings::default()
         }
     };
-    use wavy_material::AnimatedWavyMarker;
+    // use wavy_material::AnimatedWavyMarker;
 
     info!("** populate_advanced_track_and_checkpoints **");
 
@@ -115,7 +124,8 @@ fn populate_advanced_track_and_checkpoints(
         Mesh3d(meshes.add(track.track.clone())),
         // AnimatedWavyMarker,
         // MeshMaterial3d(_wavy_material.clone()),
-        MeshMaterial3d(_checkerboard_material.clone()),
+        // MeshMaterial3d(_checkerboard_material.clone()),
+        MeshMaterial3d(_tiledflow_material.clone()),
         TRACK_ADVANCED_TRANSFORM,
     ));
 }
@@ -149,56 +159,3 @@ fn populate_advanced_overlay(
     next_state.set(GlobalState::InGame);
 }
 
-// const TRACK_BEGINNER_TRANSFORM: Transform = Transform::from_xyz(22.0, 0.0, -14.0);
-// const TRACK_VERTICAL_TRANSFORM_AA: Transform = Transform::from_xyz(-1.0, 0.0, -8.0);
-// const TRACK_VERTICAL_TRANSFORM_BB: Transform = Transform {
-//     translation: Vec3::new(12.0, 0.0, 9.0),
-//     rotation: Quat::from_xyzw(-0.70710677, -0.0, -0.0, 0.70710677),
-//     scale: Vec3::ONE,
-// };
-
-/*
-fn populate_tracks_and_checkpoints(
-) {
-
-    // beginner track showcases water effect
-    commands.spawn((
-        Mesh3d(meshes.add(track0.checkpoint.clone())),
-        MeshMaterial3d(checkpoint_material.clone()),
-        TRACK_BEGINNER_TRANSFORM,
-    ));
-    commands.spawn((
-        AnimatedWavyMarker,
-        Mesh3d(meshes.add(track0.track.clone())),
-        MeshMaterial3d(wavy_material.clone()),
-        TRACK_BEGINNER_TRANSFORM,
-    ));
-
-    // vertical track showcases projected parametrization wo checkpoints
-    commands.spawn((
-        Mesh3d(meshes.add(track1.track.clone())),
-        MeshMaterial3d(checkerboard_material.clone()),
-        TRACK_VERTICAL_TRANSFORM_AA,
-    ));
-
-    // transformed vertical track showcases flow parametrization wo checkpoints
-    commands.spawn((
-        Mesh3d(meshes.add(track1.track.clone())),
-        MeshMaterial3d(tiledflow_material.clone()),
-        TRACK_VERTICAL_TRANSFORM_BB,
-    ));
-
-    // advanced showcases water effect
-    commands.spawn((
-        Mesh3d(meshes.add(track2.checkpoint.clone())),
-        MeshMaterial3d(checkpoint_material.clone()),
-        TRACK_ADVANCED_TRANSFORM,
-    ));
-    commands.spawn((
-        AnimatedWavyMarker,
-        Mesh3d(meshes.add(track2.track.clone())),
-        MeshMaterial3d(wavy_material.clone()),
-        TRACK_ADVANCED_TRANSFORM,
-    ));
-}
-*/

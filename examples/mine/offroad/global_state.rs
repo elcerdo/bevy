@@ -16,6 +16,7 @@ pub enum GlobalState {
     TrackSelectionHoovered(TrackNickname),
     TrackSelected(TrackNickname),
     InGame,
+    GameDone,
 }
 
 pub struct GlobalStatePlugin;
@@ -41,6 +42,9 @@ impl Plugin for GlobalStatePlugin {
         );
         app.add_systems(OnEnter(GlobalState::InGame), || {
             info!("!!!! InGame !!!!");
+        });
+        app.add_systems(OnEnter(GlobalState::GameDone), || {
+            info!("!!!! GameDone !!!!");
         });
     }
     fn finish(&self, app: &mut App) {

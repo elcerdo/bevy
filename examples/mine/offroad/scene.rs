@@ -1,6 +1,6 @@
-use crate::global_state::{GlobalState, TrackNickname};
+use crate::global_state::GlobalState;
 
-use bevy::prelude::{Assets, Commands, Res, ResMut};
+use bevy::prelude::{Assets, Commands, Entity, Query, Res, ResMut};
 
 use bevy::color::palettes::basic::SILVER;
 
@@ -11,10 +11,8 @@ pub struct ScenePlugin;
 impl bevy::prelude::Plugin for ScenePlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         use bevy::prelude::*;
-        app.add_systems(
-            OnEnter(GlobalState::TrackSelected(TrackNickname::Advanced)),
-            populate_camera_and_lights,
-        );
+        app.add_systems(OnEnter(GlobalState::InGame), populate_camera_and_lights);
+        app.add_systems(OnExit(GlobalState::InGame), depopulate_camera_and_lights);
         app.add_systems(Startup, populate_background);
         app.add_systems(Update, move_camera.run_if(in_state(GlobalState::InGame)));
     }
@@ -158,6 +156,20 @@ fn populate_background(
     ));
 }
 
+use bevy::prelude::Component;
+
+#[derive(Component)]
+struct SceneCameraAndLightsMarker;
+
+fn depopulate_camera_and_lights(
+    mut commands: Commands,
+    query: Query<Entity, With<SceneCameraAndLightsMarker>>,
+) {
+    for entity in query {
+        commands.entity(entity).despawn();
+    }
+}
+
 fn populate_camera_and_lights(mut commands: Commands) {
     use bevy::prelude::*;
     use bevy::render::camera::ScalingMode;
@@ -166,6 +178,7 @@ fn populate_camera_and_lights(mut commands: Commands) {
 
     // lights
     commands.spawn((
+        SceneCameraAndLightsMarker,
         PointLight {
             shadows_enabled: true,
             intensity: 5.0e6,
@@ -176,6 +189,7 @@ fn populate_camera_and_lights(mut commands: Commands) {
         Transform::from_xyz(-4.0, 16.0, 8.0),
     ));
     commands.spawn((
+        SceneCameraAndLightsMarker,
         DirectionalLight {
             color: Color::WHITE,
             shadows_enabled: true,
@@ -187,6 +201,7 @@ fn populate_camera_and_lights(mut commands: Commands) {
 
     // camera
     commands.spawn((
+        SceneCameraAndLightsMarker,
         Camera3d::default(),
         Projection::from(OrthographicProjection {
             // 20 world units per pixel of window height.

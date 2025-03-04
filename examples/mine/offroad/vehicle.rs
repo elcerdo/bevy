@@ -9,7 +9,7 @@ use bevy::prelude::MeshMaterial3d;
 use bevy::prelude::Text;
 use bevy::prelude::{info, warn};
 use bevy::prelude::{ButtonInput, KeyCode};
-use bevy::prelude::{Commands, Component, Query, Res, ResMut, Time, Transform, With};
+use bevy::prelude::{Commands, Component, NextState, Query, Res, ResMut, Time, Transform, With};
 use bevy::prelude::{Entity, Gamepad, GamepadAxis, GamepadButton};
 
 use std::collections::HashMap;
@@ -34,7 +34,9 @@ pub struct VehiclePlugin;
 impl bevy::prelude::Plugin for VehiclePlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         use bevy::prelude::*;
-        app.add_systems(Startup, setup_vehicles);
+        app.add_systems(Startup, populate_vehicles);
+        app.add_systems(OnEnter(GlobalState::InGame), populate_boards);
+        app.add_systems(OnExit(GlobalState::InGame), depopulate_boards);
         app.add_systems(
             Update,
             (
@@ -42,6 +44,7 @@ impl bevy::prelude::Plugin for VehiclePlugin {
                 update_vehicle_physics,
                 resolve_checkpoints,
                 update_vehicle_rankings,
+                exit_to_track_selection_menu,
             )
                 .chain()
                 .run_if(in_state(GlobalState::InGame)),
@@ -140,53 +143,13 @@ struct StatusMarker;
 #[derive(Component)]
 struct FirstPlaceMarker;
 
-fn setup_vehicles(mut commands: Commands, server: Res<AssetServer>, tracks: Res<Assets<Track>>) {
-    use bevy::prelude::GltfAssetLabel;
-    use bevy::prelude::JustifyText;
-    use bevy::prelude::Node;
-    use bevy::prelude::PositionType;
-    use bevy::prelude::Text;
-    use bevy::prelude::TextColor;
-    use bevy::prelude::TextFont;
-    use bevy::prelude::TextLayout;
-    use bevy::prelude::UiRect;
-    use bevy::prelude::Val;
+#[derive(Component)]
+struct VehiculeBoardMarker;
+
+fn populate_boards(mut commands: Commands) {
     use bevy::prelude::*;
 
-    info!("** setup_vehicles **");
-
-    let model_p1: Handle<Scene> = server.load(GltfAssetLabel::Scene(0).from_asset(MODEL_P1));
-    let model_p2: Handle<Scene> = server.load(GltfAssetLabel::Scene(0).from_asset(MODEL_P2));
-    let model_p3: Handle<Scene> = server.load(GltfAssetLabel::Scene(0).from_asset(MODEL_P3));
-
-    // let my_mesh: Handle<Mesh> = server.load(MODEL_ASSET_PATH);
-
-    let Some(track) = tracks.get(&TRACK_CURRENT_HANDLE) else {
-        return;
-    };
-
-    assert!(track.is_looping);
-
-    let initial_righthand = track.initial_forward.cross(track.initial_up);
-    let pos_p1 = track.initial_position;
-    let pos_p2 = track.initial_position + initial_righthand * track.initial_left / 2.0;
-    let pos_p3 = track.initial_position + initial_righthand * track.initial_right / 2.0;
-
-    commands.spawn((
-        SceneRoot(model_p1),
-        Transform::from_scale(Vec3::ONE * 0.15),
-        BoatData::from_player_and_position(Player::One, pos_p1),
-    ));
-    commands.spawn((
-        SceneRoot(model_p2),
-        Transform::from_scale(Vec3::ONE * 0.15),
-        BoatData::from_player_and_position(Player::Two, pos_p2),
-    ));
-    commands.spawn((
-        SceneRoot(model_p3),
-        Transform::from_scale(Vec3::ONE * 0.15),
-        BoatData::from_player_and_position(Player::Three, pos_p3),
-    ));
+    info!("** populate_boards **");
 
     commands.spawn((
         Text::new("$$best_lap_leaderboard$$"),
@@ -203,15 +166,19 @@ fn setup_vehicles(mut commands: Commands, server: Res<AssetServer>, tracks: Res<
         TextLayout::new_with_justify(JustifyText::Right),
         TextColor(GOLD.into()),
         FirstPlaceMarker,
+        VehiculeBoardMarker,
     ));
 
     commands
-        .spawn(Node {
-            position_type: PositionType::Absolute,
-            top: Val::Px(5.0),
-            right: Val::Px(5.0),
-            ..Node::default()
-        })
+        .spawn((
+            VehiculeBoardMarker,
+            Node {
+                position_type: PositionType::Absolute,
+                top: Val::Px(5.0),
+                right: Val::Px(5.0),
+                ..Node::default()
+            },
+        ))
         .with_children(|parent| {
             let node = Node {
                 margin: UiRect {
@@ -250,6 +217,58 @@ fn setup_vehicles(mut commands: Commands, server: Res<AssetServer>, tracks: Res<
                 StatusMarker,
             ));
         });
+}
+
+fn depopulate_boards(mut commands: Commands, query: Query<Entity, With<VehiculeBoardMarker>>) {
+    for entity in query {
+        commands.entity(entity).despawn();
+    }
+}
+
+fn populate_vehicles(mut commands: Commands, server: Res<AssetServer>, tracks: Res<Assets<Track>>) {
+    use bevy::prelude::*;
+
+    info!("** populate_vehicles **");
+
+    let Some(track) = tracks.get(&TRACK_CURRENT_HANDLE) else {
+        return;
+    };
+
+    assert!(track.is_looping);
+
+    let model_p1: Handle<Scene> = server.load(GltfAssetLabel::Scene(0).from_asset(MODEL_P1));
+    let model_p2: Handle<Scene> = server.load(GltfAssetLabel::Scene(0).from_asset(MODEL_P2));
+    let model_p3: Handle<Scene> = server.load(GltfAssetLabel::Scene(0).from_asset(MODEL_P3));
+
+    let initial_righthand = track.initial_forward.cross(track.initial_up);
+    let pos_p1 = track.initial_position;
+    let pos_p2 = track.initial_position + initial_righthand * track.initial_left / 2.0;
+    let pos_p3 = track.initial_position + initial_righthand * track.initial_right / 2.0;
+
+    commands.spawn((
+        SceneRoot(model_p1),
+        Transform::from_scale(Vec3::ONE * 0.15),
+        BoatData::from_player_and_position(Player::One, pos_p1),
+    ));
+    commands.spawn((
+        SceneRoot(model_p2),
+        Transform::from_scale(Vec3::ONE * 0.15),
+        BoatData::from_player_and_position(Player::Two, pos_p2),
+    ));
+    commands.spawn((
+        SceneRoot(model_p3),
+        Transform::from_scale(Vec3::ONE * 0.15),
+        BoatData::from_player_and_position(Player::Three, pos_p3),
+    ));
+}
+
+fn exit_to_track_selection_menu(
+    mut next_state: ResMut<NextState<GlobalState>>,
+    keyboard: Res<ButtonInput<KeyCode>>,
+) {
+    if keyboard.just_pressed(KeyCode::Escape) {
+        next_state.set(GlobalState::GameDone);
+    }
 }
 
 fn reset_vehicle_positions(mut boats: Query<&mut BoatData>, keyboard: Res<ButtonInput<KeyCode>>) {
