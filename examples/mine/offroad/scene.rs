@@ -9,10 +9,10 @@ pub struct ScenePlugin;
 impl bevy::prelude::Plugin for ScenePlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         use bevy::prelude::Startup;
-        // use bevy::prelude::Update;
-        // app.add_systems(Startup, populate_background);
+        use bevy::prelude::Update;
+        app.add_systems(Startup, populate_background);
         app.add_systems(Startup, populate_camera_and_lights);
-        // app.add_systems(Update, move_camera);
+        app.add_systems(Update, move_camera);
     }
 }
 
