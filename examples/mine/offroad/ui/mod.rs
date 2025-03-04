@@ -11,21 +11,35 @@ pub struct TrackSelectionPlugin;
 
 impl Plugin for TrackSelectionPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, populate_track_menu);
+        app.add_systems(OnEnter(GlobalState::InitDone), populate_track_menu);
+        app.add_systems(
+            OnEnter(GlobalState::TrackSelected(TrackNickname::Advanced)),
+            depopulate_track_menu,
+        );
         app.add_systems(Update, update_track_menu);
     }
 }
 
-fn populate_track_menu(mut commands: Commands) {
-    commands.spawn(Camera2d::default());
+#[derive(Component)]
+struct TrackSelectionMarker;
 
+fn depopulate_track_menu(mut commands: Commands, query: Query<Entity, With<TrackSelectionMarker>>) {
+    for entity in query {
+        commands.entity(entity).despawn();
+    }
+}
+
+fn populate_track_menu(mut commands: Commands, mut next_state: ResMut<NextState<GlobalState>>) {
     commands
-        .spawn(Node {
-            position_type: PositionType::Absolute,
-            bottom: Val::Px(5.0),
-            left: Val::Px(5.0),
-            ..Node::default()
-        })
+        .spawn((
+            TrackSelectionMarker,
+            Node {
+                position_type: PositionType::Absolute,
+                bottom: Val::Px(5.0),
+                left: Val::Px(5.0),
+                ..Node::default()
+            },
+        ))
         .with_children(|parent| {
             let mut add_button = |label: &str, track: TrackNickname| -> () {
                 parent
@@ -59,6 +73,8 @@ fn populate_track_menu(mut commands: Commands) {
             add_button("Vertical", TrackNickname::Vertical);
             add_button("Advanced", TrackNickname::Advanced);
         });
+
+    next_state.set(GlobalState::TrackSelectionIdle);
 }
 
 fn update_track_menu(

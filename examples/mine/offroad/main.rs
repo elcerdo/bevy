@@ -29,6 +29,10 @@ fn main() {
         });
     }
 
+    app.add_systems(Startup, |mut commands: Commands| {
+        commands.spawn(Camera2d::default());
+    });
+
     app.add_plugins(global_state::GlobalStatePlugin);
     app.add_plugins(ui::TrackSelectionPlugin);
     // app.add_plugins(scene::ScenePlugin);

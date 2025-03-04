@@ -10,7 +10,8 @@ pub enum TrackNickname {
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Default, States)]
 pub enum GlobalState {
     #[default]
-    Init,
+    InitStarted,
+    InitDone,
     TrackSelectionIdle,
     TrackSelectionHoovered(TrackNickname),
     TrackSelected(TrackNickname),
@@ -21,7 +22,8 @@ pub struct GlobalStatePlugin;
 
 impl Plugin for GlobalStatePlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(OnEnter(GlobalState::Init), dump_init);
+        app.init_state::<GlobalState>();
+        app.add_systems(OnEnter(GlobalState::InitDone), dump_init_done);
         app.add_systems(OnEnter(GlobalState::TrackSelectionIdle), || {
             info!("!!!! idle !!!!");
         });
@@ -37,13 +39,12 @@ impl Plugin for GlobalStatePlugin {
                 info!("!!!! selected_advanced !!!!");
             },
         );
-        app.init_state::<GlobalState>();
     }
     fn finish(&self, app: &mut App) {
-        app.insert_state(GlobalState::TrackSelectionIdle);
+        app.insert_state(GlobalState::InitDone);
     }
 }
 
-fn dump_init() {
-    info!("!!!! dump_init !!!!");
+fn dump_init_done() {
+    info!("!!!! init_done !!!!");
 }
