@@ -1,4 +1,4 @@
-use crate::global_state::GlobalState;
+use crate::global_state::{GlobalState, TrackNickname};
 
 use bevy::prelude::*;
 
@@ -27,9 +27,10 @@ fn populate_track_menu(mut commands: Commands) {
             ..Node::default()
         })
         .with_children(|parent| {
-            let mut add_button = |label: &str| -> () {
+            let mut add_button = |label: &str, track: TrackNickname| -> () {
                 parent
                     .spawn((
+                        track,
                         Button,
                         Node {
                             width: Val::Px(170.0),
@@ -54,24 +55,28 @@ fn populate_track_menu(mut commands: Commands) {
                     ));
             };
 
-            add_button("Beginner");
-            add_button("Vertical");
-            add_button("Advanced");
+            add_button("Beginner", TrackNickname::Beginner);
+            add_button("Vertical", TrackNickname::Vertical);
+            add_button("Advanced", TrackNickname::Advanced);
         });
 }
 
 fn update_track_menu(
-    query: Query<(&Interaction, &mut BackgroundColor), (Changed<Interaction>, With<Button>)>,
+    query: Query<
+        (&Interaction, &TrackNickname, &mut BackgroundColor),
+        (Changed<Interaction>, With<Button>),
+    >,
     mut next_state: ResMut<NextState<GlobalState>>,
 ) {
-    for (interaction, mut bg_color) in query {
+    for (interaction, track, mut bg_color) in query {
         match *interaction {
             Interaction::Pressed => {
                 *bg_color = COLOR_UI_PRESSED.into();
+                next_state.set(GlobalState::TrackSelected(*track));
             }
             Interaction::Hovered => {
                 *bg_color = COLOR_UI_HOOVER.into();
-                next_state.set(GlobalState::TrackSelectionHoover(0));
+                next_state.set(GlobalState::TrackSelectionHoovered(*track));
             }
             Interaction::None => {
                 *bg_color = COLOR_UI_BG.into();

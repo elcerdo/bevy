@@ -1,11 +1,19 @@
 use bevy::prelude::*;
 
+#[derive(Component, Clone, Debug, Copy, PartialEq, Eq, Hash)]
+pub enum TrackNickname {
+    Beginner,
+    Vertical,
+    Advanced,
+}
+
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Default, States)]
 pub enum GlobalState {
     #[default]
     Init,
     TrackSelectionIdle,
-    TrackSelectionHoover(u8),
+    TrackSelectionHoovered(TrackNickname),
+    TrackSelected(TrackNickname),
     InGame,
 }
 
@@ -14,13 +22,20 @@ pub struct GlobalStatePlugin;
 impl Plugin for GlobalStatePlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(OnEnter(GlobalState::Init), dump_init);
+        app.add_systems(OnEnter(GlobalState::TrackSelectionIdle), || {
+            info!("!!!! idle !!!!");
+        });
         app.add_systems(
-            OnEnter(GlobalState::TrackSelectionIdle),
-            dump_track_selection_idle,
+            OnEnter(GlobalState::TrackSelectionHoovered(TrackNickname::Beginner)),
+            || {
+                info!("!!!! hoover_beginner !!!!");
+            },
         );
         app.add_systems(
-            OnEnter(GlobalState::TrackSelectionHoover(0)),
-            dump_track_selection_hoover,
+            OnEnter(GlobalState::TrackSelected(TrackNickname::Advanced)),
+            || {
+                info!("!!!! selected_advanced !!!!");
+            },
         );
         app.init_state::<GlobalState>();
     }
@@ -31,12 +46,4 @@ impl Plugin for GlobalStatePlugin {
 
 fn dump_init() {
     info!("!!!! dump_init !!!!");
-}
-
-fn dump_track_selection_idle() {
-    info!("!!!! dump_track_selection_idle !!!!");
-}
-
-fn dump_track_selection_hoover() {
-    info!("!!!! dump_track_selection_hoover !!!!");
 }
