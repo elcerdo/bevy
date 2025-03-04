@@ -25,20 +25,23 @@ impl Plugin for GlobalStatePlugin {
         app.init_state::<GlobalState>();
         app.add_systems(OnEnter(GlobalState::InitDone), dump_init_done);
         app.add_systems(OnEnter(GlobalState::TrackSelectionIdle), || {
-            info!("!!!! idle !!!!");
+            info!("!!!! TrackSelectionIdle !!!!");
         });
         app.add_systems(
-            OnEnter(GlobalState::TrackSelectionHoovered(TrackNickname::Beginner)),
+            OnEnter(GlobalState::TrackSelectionHoovered(TrackNickname::Advanced)),
             || {
-                info!("!!!! hoover_beginner !!!!");
+                info!("!!!! TrackSelectionHoovered(Advanced) !!!!");
             },
         );
         app.add_systems(
             OnEnter(GlobalState::TrackSelected(TrackNickname::Advanced)),
             || {
-                info!("!!!! selected_advanced !!!!");
+                info!("!!!! TrackSelected(Advanced) !!!!");
             },
         );
+        app.add_systems(OnEnter(GlobalState::InGame), || {
+            info!("!!!! InGame !!!!");
+        });
     }
     fn finish(&self, app: &mut App) {
         app.insert_state(GlobalState::InitDone);

@@ -11,25 +11,36 @@ pub struct TrackSelectionPlugin;
 
 impl Plugin for TrackSelectionPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(OnEnter(GlobalState::InitDone), populate_track_menu);
+        app.add_systems(
+            OnEnter(GlobalState::InitDone),
+            populate_track_selection_menu,
+        );
         app.add_systems(
             OnEnter(GlobalState::TrackSelected(TrackNickname::Advanced)),
-            depopulate_track_menu,
+            depopulate_track_selection_menu,
         );
-        app.add_systems(Update, update_track_menu);
+        app.add_systems(Update, update_track_selection_menu);
     }
 }
 
 #[derive(Component)]
 struct TrackSelectionMarker;
 
-fn depopulate_track_menu(mut commands: Commands, query: Query<Entity, With<TrackSelectionMarker>>) {
+fn depopulate_track_selection_menu(
+    mut commands: Commands,
+    query: Query<Entity, With<TrackSelectionMarker>>,
+) {
     for entity in query {
         commands.entity(entity).despawn();
     }
 }
 
-fn populate_track_menu(mut commands: Commands, mut next_state: ResMut<NextState<GlobalState>>) {
+fn populate_track_selection_menu(
+    mut commands: Commands,
+    mut next_state: ResMut<NextState<GlobalState>>,
+) {
+    commands.spawn((TrackSelectionMarker, Camera2d::default()));
+
     commands
         .spawn((
             TrackSelectionMarker,
@@ -77,7 +88,7 @@ fn populate_track_menu(mut commands: Commands, mut next_state: ResMut<NextState<
     next_state.set(GlobalState::TrackSelectionIdle);
 }
 
-fn update_track_menu(
+fn update_track_selection_menu(
     query: Query<
         (&Interaction, &TrackNickname, &mut BackgroundColor),
         (Changed<Interaction>, With<Button>),

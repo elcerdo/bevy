@@ -1,4 +1,6 @@
-use bevy::prelude::{Assets, Commands, Res, ResMut};
+use crate::global_state::{GlobalState, TrackNickname};
+
+use bevy::prelude::{Assets, Commands, NextState, Res, ResMut};
 
 use bevy::color::palettes::basic::SILVER;
 
@@ -8,11 +10,13 @@ pub struct ScenePlugin;
 
 impl bevy::prelude::Plugin for ScenePlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
-        use bevy::prelude::Startup;
-        use bevy::prelude::Update;
-        app.add_systems(Startup, populate_background);
-        app.add_systems(Startup, populate_camera_and_lights);
-        app.add_systems(Update, move_camera);
+        use bevy::prelude::*;
+        app.add_systems(
+            OnEnter(GlobalState::TrackSelected(TrackNickname::Advanced)),
+            (populate_camera_and_lights, populate_background).chain(),
+        );
+
+        app.add_systems(Update, move_camera.run_if(in_state(GlobalState::InGame)));
     }
 }
 
@@ -30,21 +34,21 @@ const CAMERA_ROTATION: Quat = Quat::from_xyzw(-0.24781081, -0.2946635, -0.079414
 const CAMERA_DATA: &[(Transform, f32)] = &[
     (
         Transform {
-            translation: Vec3::new(-18.0, 10.0, 16.0),
-            rotation: CAMERA_ROTATION,
-            scale: Vec3::ONE,
-        },
-        // 14.0 world units per pixel of window height.
-        14.0,
-    ),
-    (
-        Transform {
             translation: Vec3::new(-10.0, 10.0, 14.0),
             rotation: CAMERA_ROTATION,
             scale: Vec3::ONE,
         },
         // 20 world units per pixel of window height.
         20.0,
+    ),
+    (
+        Transform {
+            translation: Vec3::new(-18.0, 10.0, 16.0),
+            rotation: CAMERA_ROTATION,
+            scale: Vec3::ONE,
+        },
+        // 14.0 world units per pixel of window height.
+        14.0,
     ),
 ];
 
@@ -98,6 +102,7 @@ fn populate_background(
     mut meshes: ResMut<Assets<bevy::render::mesh::Mesh>>,
     mut images: ResMut<Assets<bevy::image::Image>>,
     mut materials: ResMut<Assets<bevy::pbr::StandardMaterial>>,
+    mut next_state: ResMut<NextState<GlobalState>>,
     asset_server: Res<bevy::asset::AssetServer>,
 ) {
     use bevy::prelude::*;
@@ -106,7 +111,14 @@ fn populate_background(
 
     // ground plane
     commands.spawn((
-        Mesh3d(meshes.add(Plane3d::default().mesh().size(50.0, 50.0).subdivisions(10))),
+        Mesh3d(
+            meshes.add(
+                Plane3d::default()
+                    .mesh()
+                    .size(100.0, 100.0)
+                    .subdivisions(20),
+            ),
+        ),
         MeshMaterial3d(materials.add(Color::from(SILVER))),
         Transform::from_xyz(0.0, -0.25, 0.0),
     ));
@@ -145,6 +157,8 @@ fn populate_background(
         MeshMaterial3d(parallal_material),
         Transform::from_xyz(3.0, 2.0, 18.0).with_scale(Vec3::ONE * 4.0),
     ));
+
+    next_state.set(GlobalState::InGame);
 }
 
 fn populate_camera_and_lights(mut commands: Commands) {
