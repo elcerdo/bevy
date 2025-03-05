@@ -10,10 +10,10 @@ pub enum TrackNickname {
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Default, States)]
 pub enum GlobalState {
     #[default]
-    InitStarted,
-    InitDone,
+    Init,
+    TrackSelectionInit,
     TrackSelectionIdle,
-    TrackSelectionHoovered,
+    TrackSelectionHoovered(TrackNickname),
     TrackSelected(TrackNickname),
     InGame,
     GameDone,
@@ -24,29 +24,16 @@ pub struct GlobalStatePlugin;
 impl Plugin for GlobalStatePlugin {
     fn build(&self, app: &mut App) {
         app.init_state::<GlobalState>();
-        app.add_systems(OnEnter(GlobalState::InitDone), || {
-            info!("!!!! InitDone !!!!");
-        });
-        app.add_systems(OnEnter(GlobalState::TrackSelectionIdle), || {
-            info!("!!!! TrackSelectionIdle !!!!");
-        });
-        app.add_systems(OnEnter(GlobalState::TrackSelectionHoovered), || {
-            info!("!!!! TrackSelectionHoovered !!!!");
-        });
         app.add_systems(
-            OnEnter(GlobalState::TrackSelected(TrackNickname::Advanced)),
-            || {
-                info!("!!!! TrackSelected(Advanced) !!!!");
-            },
+            Update,
+            dump_global_state.run_if(state_changed::<GlobalState>),
         );
-        app.add_systems(OnEnter(GlobalState::InGame), || {
-            info!("!!!! InGame !!!!");
-        });
-        app.add_systems(OnEnter(GlobalState::GameDone), || {
-            info!("!!!! GameDone !!!!");
-        });
     }
     fn finish(&self, app: &mut App) {
-        app.insert_state(GlobalState::InitDone);
+        app.insert_state(GlobalState::TrackSelectionInit);
     }
+}
+
+fn dump_global_state(state: Res<State<GlobalState>>) {
+    info!("!!!! {:?} !!!!", state.get());
 }

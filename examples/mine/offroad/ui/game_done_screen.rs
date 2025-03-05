@@ -65,6 +65,6 @@ fn exit_to_track_selection_menu(
     keyboard: Res<ButtonInput<KeyCode>>,
 ) {
     if keyboard.just_pressed(KeyCode::Escape) {
-        next_state.set(GlobalState::InitDone);
+        next_state.set(GlobalState::TrackSelectionInit);
     }
 }
