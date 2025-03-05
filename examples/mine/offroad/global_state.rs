@@ -21,7 +21,7 @@ pub enum GlobalState {
     TrackSelectionIdle,
     TrackSelectionHoovered(TrackNickname),
     TrackSelected(TrackNickname),
-    InGame,
+    InGame(TrackNickname),
     GameDone,
 }
 

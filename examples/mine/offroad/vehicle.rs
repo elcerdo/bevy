@@ -1,12 +1,14 @@
-use crate::global_state::GlobalState;
+use crate::global_state::{GlobalState, TrackNickname, TRACK_NICKNAMES};
 use crate::material::racing_line_material;
 use crate::track::{Segment, Track, TRACK_HANDLES};
 
 use bevy::asset::{AssetServer, Assets};
 use bevy::color::Srgba;
+use bevy::math::ops;
 use bevy::math::{Mat2, Quat, Vec2, Vec3, Vec3Swizzles};
 
 use bevy::prelude::MeshMaterial3d;
+use bevy::prelude::State;
 use bevy::prelude::Text;
 use bevy::prelude::{info, warn};
 use bevy::prelude::{ButtonInput, KeyCode};
@@ -35,23 +37,23 @@ pub struct VehiclePlugin;
 impl bevy::prelude::Plugin for VehiclePlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         use bevy::prelude::*;
-        app.add_systems(
-            OnEnter(GlobalState::InGame),
-            (populate_boards, populate_vehicles),
-        );
-        app.add_systems(OnExit(GlobalState::InGame), depopulate_all);
-        app.add_systems(
-            Update,
-            (
-                reset_vehicle_positions,
-                update_vehicle_physics,
-                resolve_checkpoints,
-                update_vehicle_rankings,
-                exit_to_track_selection_menu,
-            )
-                .chain()
-                .run_if(in_state(GlobalState::InGame)),
-        );
+        for track_nickname in TRACK_NICKNAMES {
+            let state = GlobalState::InGame(*track_nickname);
+            app.add_systems(OnEnter(state), (populate_boards, populate_vehicles));
+            app.add_systems(OnExit(state), depopulate_all);
+            app.add_systems(
+                Update,
+                (
+                    reset_vehicle_positions,
+                    update_vehicle_physics,
+                    resolve_checkpoints,
+                    update_vehicle_rankings,
+                    exit_to_track_selection_menu,
+                )
+                    .chain()
+                    .run_if(in_state(state)),
+            );
+        }
     }
 }
 
@@ -110,6 +112,7 @@ struct BoatData {
     position_initial: Vec2,
     position_previous: Vec2,
     position_current: Vec2,
+    angle_initial: f32,
     angle_current: f32,
     current_stat: LapStat,
     maybe_last_stat: Option<LapStat>,
@@ -118,13 +121,16 @@ struct BoatData {
 }
 
 impl BoatData {
-    fn from_player_and_position(player: Player, pos: Vec3) -> Self {
+    fn from_player_position_and_forward(player: Player, pos: Vec3, fwd: Vec3) -> Self {
+        let angle = ops::atan2(fwd.x, fwd.z);
+        let pos = pos.xz();
         Self {
             player,
-            position_initial: pos.xz(),
-            position_previous: pos.xz(),
-            position_current: pos.xz(),
-            angle_current: 0.0,
+            position_initial: pos,
+            position_previous: pos,
+            position_current: pos,
+            angle_initial: angle,
+            angle_current: angle,
             current_stat: LapStat::from(Duration::MAX),
             maybe_last_stat: None,
             maybe_best_stat: None,
@@ -134,7 +140,7 @@ impl BoatData {
     fn reset(&mut self) {
         self.position_previous = self.position_initial.clone();
         self.position_current = self.position_initial.clone();
-        self.angle_current = 0.0;
+        self.angle_current = self.angle_initial;
         self.current_stat = LapStat::from(Duration::MAX);
         self.lap_count = 0;
     }
@@ -229,14 +235,23 @@ fn depopulate_all(mut commands: Commands, query: Query<Entity, With<VehiculeScen
     }
 }
 
-fn populate_vehicles(mut commands: Commands, server: Res<AssetServer>, tracks: Res<Assets<Track>>) {
+fn populate_vehicles(
+    mut commands: Commands,
+    server: Res<AssetServer>,
+    tracks: Res<Assets<Track>>,
+    state: Res<State<GlobalState>>,
+) {
     use bevy::prelude::*;
 
     info!("** populate_vehicles **");
 
-    let Some(track) = tracks.get(&TRACK_HANDLES[2]) else {
-        return;
-    };
+    let track = match state.get() {
+        GlobalState::InGame(TrackNickname::Beginner) => tracks.get(&TRACK_HANDLES[0]),
+        GlobalState::InGame(TrackNickname::Vertical) => tracks.get(&TRACK_HANDLES[1]),
+        GlobalState::InGame(TrackNickname::Advanced) => tracks.get(&TRACK_HANDLES[2]),
+        _ => unreachable!(),
+    }
+    .unwrap();
 
     assert!(track.is_looping);
 
@@ -252,19 +267,19 @@ fn populate_vehicles(mut commands: Commands, server: Res<AssetServer>, tracks: R
     commands.spawn((
         SceneRoot(model_p1),
         Transform::from_scale(Vec3::ONE * 0.15),
-        BoatData::from_player_and_position(Player::One, pos_p1),
+        BoatData::from_player_position_and_forward(Player::One, pos_p1, track.initial_forward),
         VehiculeSceneMarker,
     ));
     commands.spawn((
         SceneRoot(model_p2),
         Transform::from_scale(Vec3::ONE * 0.15),
-        BoatData::from_player_and_position(Player::Two, pos_p2),
+        BoatData::from_player_position_and_forward(Player::Two, pos_p2, track.initial_forward),
         VehiculeSceneMarker,
     ));
     commands.spawn((
         SceneRoot(model_p3),
         Transform::from_scale(Vec3::ONE * 0.15),
-        BoatData::from_player_and_position(Player::Three, pos_p3),
+        BoatData::from_player_position_and_forward(Player::Three, pos_p3, track.initial_forward),
         VehiculeSceneMarker,
     ));
 }
@@ -286,13 +301,13 @@ fn reset_vehicle_positions(mut boats: Query<&mut BoatData>, keyboard: Res<Button
     }
 }
 
-fn update_vehicle_rankings(
-    mut materials: ResMut<Assets<racing_line_material::RacingLineMaterial>>,
-    material_handles: Query<&MeshMaterial3d<racing_line_material::RacingLineMaterial>>,
-    boats: Query<&BoatData>,
-    first_place_labels: Query<&mut Text, With<FirstPlaceMarker>>,
-    tracks: Res<Assets<Track>>,
+fn update_vehicle_rankings(// mut materials: ResMut<Assets<racing_line_material::RacingLineMaterial>>,
+    // material_handles: Query<&MeshMaterial3d<racing_line_material::RacingLineMaterial>>,
+    // boats: Query<&BoatData>,
+    // first_place_labels: Query<&mut Text, With<FirstPlaceMarker>>,
+    // tracks: Res<Assets<Track>>,
 ) {
+    /*
     let Some(track) = tracks.get(&TRACK_HANDLES[2]) else {
         return;
     };
@@ -342,14 +357,15 @@ fn update_vehicle_rankings(
     for mut first_place_label in first_place_labels {
         *first_place_label = label.clone().into();
     }
+    */
 }
 
-fn resolve_checkpoints(
-    mut boats: Query<&mut BoatData>,
-    status_labels: Query<&mut Text, With<StatusMarker>>,
-    tracks: Res<Assets<Track>>,
-    time: Res<Time>,
+fn resolve_checkpoints(// mut boats: Query<&mut BoatData>,
+    // status_labels: Query<&mut Text, With<StatusMarker>>,
+    // tracks: Res<Assets<Track>>,
+    // time: Res<Time>,
 ) {
+    /*
     let Some(track) = tracks.get(&TRACK_HANDLES[2]) else {
         return;
     };
@@ -491,6 +507,7 @@ fn resolve_checkpoints(
 
         *status_label = ss.join("\n").into();
     }
+    */
 }
 
 struct BoatPhysics {
