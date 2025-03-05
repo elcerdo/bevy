@@ -1,6 +1,7 @@
 //! offroad ftw
 
 mod global_state;
+mod material;
 mod scene;
 mod simu;
 mod track;
@@ -29,6 +30,7 @@ fn main() {
         });
     }
 
+    app.add_plugins(material::CustomMaterialPlugin);
     app.add_plugins(global_state::GlobalStatePlugin);
     app.add_plugins(ui::TrackSelectionMenuPlugin);
     app.add_plugins(ui::GameDoneScreenPlugin);

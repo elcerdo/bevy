@@ -86,7 +86,7 @@ static TRACK_BEGINNER_PIECES: &[TrackPiece] = &[
 
 static TRACK_BEGINNER_DATA: TrackData = TrackData {
     pieces: &TRACK_BEGINNER_PIECES,
-    initial_position: Vec3::new(-12.0, 0.0, 0.0),
+    initial_position: Vec3::new(-8.0, 0.0, 4.0),
     initial_forward: Vec3::Z,
     initial_up: Vec3::Y,
     initial_left: -1.0,
@@ -118,9 +118,9 @@ static TRACK_VERTICAL_PIECES: &[TrackPiece] = &[
 
 static TRACK_VERTICAL_DATA: TrackData = TrackData {
     pieces: &TRACK_VERTICAL_PIECES,
-    initial_position: Vec3::new(1.0, 2.0, 0.0),
-    initial_forward: Vec3::new(-1.0, 0.0, 0.0),
-    initial_up: Vec3::Z,
+    initial_position: Vec3::ZERO,
+    initial_forward: Vec3::X,
+    initial_up: Vec3::Y,
     initial_left: -2.0,
     initial_right: 1.0,
     num_segments: 4,
@@ -130,6 +130,12 @@ pub const TRACK_VERTICAL_HANDLE: Handle<Track> =
     weak_handle!("1347c9b7-c46a-48e7-2222-023a354b7cac");
 
 //////////////////////////////////////////////////////////////////////
+
+pub const TRACK_HANDLES: &[Handle<Track>] = &[
+    TRACK_BEGINNER_HANDLE,
+    TRACK_VERTICAL_HANDLE,
+    TRACK_ADVANCED_HANDLE,
+];
 
 pub fn prepare_tracks(mut tracks: ResMut<Assets<Track>>) {
     info!("** prepare_tracks **");

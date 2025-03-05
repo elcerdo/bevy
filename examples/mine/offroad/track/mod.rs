@@ -1,14 +1,16 @@
 use crate::global_state::{GlobalState, TrackNickname};
+use crate::material::racing_line_material;
+use crate::material::wavy_material;
 
 use bevy::asset::{AssetServer, Assets};
 use bevy::color::Srgba;
-use bevy::math::{Affine2, Vec2};
-use bevy::pbr::{StandardMaterial, UvChannel};
+use bevy::math::Vec2;
+use bevy::pbr::StandardMaterial;
 use bevy::render::mesh::Mesh;
 
 use bevy::prelude::info;
 use bevy::prelude::NextState;
-use bevy::prelude::{Commands, Handle, Res, ResMut, Transform};
+use bevy::prelude::{Commands, Res, ResMut, Transform};
 use bevy::prelude::{Component, Entity, Query, With};
 use bevy::prelude::{Mesh3d, MeshMaterial3d};
 
@@ -16,18 +18,10 @@ use std::f32::consts::PI;
 
 mod data;
 mod piece;
-mod racing_line_material;
-mod wavy_material;
 
+pub use data::TRACK_HANDLES;
 pub use piece::Segment;
 pub use piece::Track;
-pub use racing_line_material::RacingLineMaterial;
-
-pub const TRACK_HANDLES: &[Handle<Track>] = &[
-    data::TRACK_BEGINNER_HANDLE,
-    data::TRACK_VERTICAL_HANDLE,
-    data::TRACK_ADVANCED_HANDLE,
-];
 
 const TRACK_GROUND_COLOR: Srgba = bevy::color::palettes::basic::SILVER;
 const EPSILON: f32 = 5e-2;
@@ -40,24 +34,18 @@ impl bevy::prelude::Plugin for TrackPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         use bevy::prelude::*;
         app.init_asset::<Track>();
-        app.add_plugins(MaterialPlugin::<RacingLineMaterial>::default());
         app.add_systems(PreStartup, data::prepare_tracks);
         app.add_systems(
             OnEnter(GlobalState::TrackSelected(TrackNickname::Advanced)),
             (
                 populate_advanced_track_and_checkpoints,
                 populate_advanced_overlay,
-                exit_to_in_game,
+                start_game,
             )
                 .chain(),
         );
         app.add_systems(OnEnter(GlobalState::InGame), populate_camera_and_lights);
         app.add_systems(OnExit(GlobalState::InGame), depopulate_all);
-        app.add_systems(
-            Update,
-            (racing_line_material::animate, wavy_material::animate)
-                .run_if(in_state(GlobalState::InGame)),
-        );
     }
 }
 
@@ -131,24 +119,8 @@ fn populate_advanced_track_and_checkpoints(
     asset_server: Res<AssetServer>,
 ) {
     use bevy::color::Color;
-    use bevy::image::ImageAddressMode;
-    use bevy::image::ImageLoaderSettings;
-    use bevy::image::ImageSampler;
-    use bevy::image::ImageSamplerDescriptor;
     use bevy::prelude::*;
     use wavy_material::AnimatedWavyMarker;
-
-    let make_tileable = |settings: &mut ImageLoaderSettings| -> () {
-        *settings = ImageLoaderSettings {
-            is_srgb: false,
-            sampler: ImageSampler::Descriptor(ImageSamplerDescriptor {
-                address_mode_u: ImageAddressMode::Repeat,
-                address_mode_v: ImageAddressMode::Repeat,
-                ..ImageSamplerDescriptor::default()
-            }),
-            ..ImageLoaderSettings::default()
-        }
-    };
 
     info!("** populate_advanced_track_and_checkpoints **");
 
@@ -160,22 +132,6 @@ fn populate_advanced_track_and_checkpoints(
         ..StandardMaterial::default()
     });
     let wavy_material = materials.add(wavy_material::make(&asset_server, 0.6, PI / 3.0));
-    let _checkerboard_material = materials.add(StandardMaterial {
-        base_color_channel: UvChannel::Uv1,
-        base_color_texture: Some(
-            asset_server.load_with_settings("textures/uv_checker_bw.png", make_tileable),
-        ),
-        uv_transform: Affine2::from_scale(Vec2::new(1.0 / 8.0, 1.0 / 8.0)),
-        ..StandardMaterial::default()
-    });
-    let _tiledflow_material = materials.add(StandardMaterial {
-        base_color_channel: UvChannel::Uv0,
-        base_color_texture: Some(asset_server.load_with_settings(
-            "textures/fantasy_ui_borders/panel-border-010.png",
-            make_tileable,
-        )),
-        ..StandardMaterial::default()
-    });
 
     // ground plane
     commands.spawn((
@@ -199,15 +155,13 @@ fn populate_advanced_track_and_checkpoints(
         Mesh3d(meshes.add(track.track.clone())),
         AnimatedWavyMarker,
         MeshMaterial3d(wavy_material.clone()),
-        // MeshMaterial3d(_checkerboard_material.clone()),
-        // MeshMaterial3d(_tiledflow_material.clone()),
     ));
 }
 
 fn populate_advanced_overlay(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<RacingLineMaterial>>,
+    mut materials: ResMut<Assets<racing_line_material::RacingLineMaterial>>,
     tracks: Res<Assets<Track>>,
     asset_server: Res<AssetServer>,
 ) {
@@ -229,6 +183,6 @@ fn populate_advanced_overlay(
     ));
 }
 
-fn exit_to_in_game(mut next_state: ResMut<NextState<GlobalState>>) {
+fn start_game(mut next_state: ResMut<NextState<GlobalState>>) {
     next_state.set(GlobalState::InGame);
 }

@@ -1,11 +1,12 @@
 use crate::global_state::{GlobalState, TrackNickname};
+use crate::material::racing_line_material;
 use crate::track::{Track, TRACK_HANDLES};
 use crate::ui::consts::*;
 
-use bevy::asset::Handle;
+use bevy::math::{Affine2, Vec2};
+use bevy::pbr::{StandardMaterial, UvChannel};
 use bevy::prelude::*;
 
-use bevy::color::palettes::css::GRAY;
 use std::f32::consts::PI;
 
 pub struct TrackSelectionMenuPlugin;
@@ -20,7 +21,6 @@ impl Plugin for TrackSelectionMenuPlugin {
             GlobalState::TrackSelectionHoovered(TrackNickname::Advanced),
         ] {
             app.add_systems(OnEnter(state), update_selected_model);
-            app.add_systems(Update, animate_selected_model.run_if(in_state(state)));
         }
 
         app.add_systems(
@@ -28,6 +28,7 @@ impl Plugin for TrackSelectionMenuPlugin {
             depopulate_all,
         );
 
+        app.add_systems(Update, animate_selected_model);
         app.add_systems(Update, update_menu);
     }
 }
@@ -39,37 +40,84 @@ fn update_selected_model(
     mut commands: Commands,
     entities: Query<Entity, With<TrackSelectionModelMarker>>,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut racing_line_materials: ResMut<Assets<racing_line_material::RacingLineMaterial>>,
+    mut standard_materials: ResMut<Assets<StandardMaterial>>,
     tracks: Res<Assets<Track>>,
     state: Res<State<GlobalState>>,
+    asset_server: Res<AssetServer>,
 ) {
+    use bevy::image::ImageAddressMode;
+    use bevy::image::ImageLoaderSettings;
+    use bevy::image::ImageSampler;
+    use bevy::image::ImageSamplerDescriptor;
+    use racing_line_material::AnimatedRacingLineMarker;
+
     for entity in entities {
         commands.entity(entity).despawn();
     }
 
-    let mesh_handle: Handle<Mesh> = match state.get() {
+    let (track, mesh) = match state.get() {
         GlobalState::TrackSelectionHoovered(TrackNickname::Beginner) => {
             let track = tracks.get(&TRACK_HANDLES[0]).unwrap();
-            meshes.add(track.track.clone())
+            (track, meshes.add(track.track.clone()))
         }
         GlobalState::TrackSelectionHoovered(TrackNickname::Vertical) => {
             let track = tracks.get(&TRACK_HANDLES[1]).unwrap();
-            meshes.add(track.track.clone())
+            (track, meshes.add(track.track.clone()))
         }
         GlobalState::TrackSelectionHoovered(TrackNickname::Advanced) => {
             let track = tracks.get(&TRACK_HANDLES[2]).unwrap();
-            meshes.add(track.track.clone())
+            (track, meshes.add(track.track.clone()))
         }
         _ => unreachable!(),
     };
 
+    // materials
+    let make_tileable = |settings: &mut ImageLoaderSettings| -> () {
+        *settings = ImageLoaderSettings {
+            is_srgb: false,
+            sampler: ImageSampler::Descriptor(ImageSamplerDescriptor {
+                address_mode_u: ImageAddressMode::Repeat,
+                address_mode_v: ImageAddressMode::Repeat,
+                ..ImageSamplerDescriptor::default()
+            }),
+            ..ImageLoaderSettings::default()
+        }
+    };
+    let checkerboard_material = standard_materials.add(StandardMaterial {
+        base_color_channel: UvChannel::Uv1,
+        base_color_texture: Some(
+            asset_server.load_with_settings("textures/uv_checker_bw.png", make_tileable),
+        ),
+        uv_transform: Affine2::from_scale(Vec2::new(1.0 / 8.0, 1.0 / 8.0)),
+        ..StandardMaterial::default()
+    });
+    // let _tiledflow_material = materials.add(StandardMaterial {
+    //     base_color_channel: UvChannel::Uv0,
+    //     base_color_texture: Some(asset_server.load_with_settings(
+    //         "textures/fantasy_ui_borders/panel-border-010.png",
+    //         make_tileable,
+    //     )),
+    //     ..StandardMaterial::default()
+    // });
+    let racing_line_material = racing_line_materials.add(racing_line_material::make(
+        &asset_server,
+        track.total_length,
+    ));
+
+    // models
     commands.spawn((
         TrackSelectionModelMarker,
-        Mesh3d(mesh_handle),
-        MeshMaterial3d(materials.add(StandardMaterial {
-            base_color: Color::from(GRAY),
-            ..StandardMaterial::default()
-        })),
+        Mesh3d(mesh.clone()),
+        MeshMaterial3d(checkerboard_material),
+        AnimatedRacingLineMarker,
+    ));
+    commands.spawn((
+        TrackSelectionModelMarker,
+        Mesh3d(mesh),
+        MeshMaterial3d(racing_line_material),
+        AnimatedRacingLineMarker,
+        Transform::from_translation(track.initial_up * 1e-3),
     ));
 }
 
@@ -156,13 +204,22 @@ fn populate_scene(mut commands: Commands, mut next_state: ResMut<NextState<Globa
 }
 
 fn update_menu(
-    query: Query<
+    mut query: Query<
         (&Interaction, &TrackNickname, &mut BackgroundColor),
         (Changed<Interaction>, With<Button>),
     >,
     mut next_state: ResMut<NextState<GlobalState>>,
 ) {
-    for (interaction, track, mut bg_color) in query {
+    for (interaction, _, mut bg_color) in &mut query {
+        match *interaction {
+            Interaction::None => {
+                *bg_color = COLOR_UI_BG.into();
+                next_state.set(GlobalState::TrackSelectionIdle);
+            }
+            _ => {}
+        }
+    }
+    for (interaction, track, mut bg_color) in &mut query {
         match *interaction {
             Interaction::Pressed => {
                 *bg_color = COLOR_UI_PRESSED.into();
@@ -172,10 +229,7 @@ fn update_menu(
                 *bg_color = COLOR_UI_HOOVER.into();
                 next_state.set(GlobalState::TrackSelectionHoovered(*track));
             }
-            Interaction::None => {
-                *bg_color = COLOR_UI_BG.into();
-                next_state.set(GlobalState::TrackSelectionIdle);
-            }
+            _ => {}
         }
     }
 }

@@ -1,5 +1,6 @@
 use crate::global_state::GlobalState;
-use crate::track::{RacingLineMaterial, Segment, Track, TRACK_HANDLES};
+use crate::material::racing_line_material;
+use crate::track::{Segment, Track, TRACK_HANDLES};
 
 use bevy::asset::{AssetServer, Assets};
 use bevy::color::Srgba;
@@ -286,8 +287,8 @@ fn reset_vehicle_positions(mut boats: Query<&mut BoatData>, keyboard: Res<Button
 }
 
 fn update_vehicle_rankings(
-    mut materials: ResMut<Assets<RacingLineMaterial>>,
-    material_handles: Query<&MeshMaterial3d<RacingLineMaterial>>,
+    mut materials: ResMut<Assets<racing_line_material::RacingLineMaterial>>,
+    material_handles: Query<&MeshMaterial3d<racing_line_material::RacingLineMaterial>>,
     boats: Query<&BoatData>,
     first_place_labels: Query<&mut Text, With<FirstPlaceMarker>>,
     tracks: Res<Assets<Track>>,
