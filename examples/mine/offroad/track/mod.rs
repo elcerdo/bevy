@@ -192,7 +192,7 @@ fn populate_track(
     // ground plane
     commands.spawn((
         GameSceneMarker,
-        Mesh3d(meshes.add(Plane3d::default().mesh().size(50.0, 50.0).subdivisions(20))),
+        Mesh3d(meshes.add(Plane3d::default().mesh().size(30.0, 40.0).subdivisions(20))),
         MeshMaterial3d(standard_materials.add(Color::from(TRACK_GROUND_COLOR))),
         Transform::from_translation(-1.0 * TRACK_EPSILON * track_up),
     ));

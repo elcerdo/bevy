@@ -107,20 +107,6 @@ fn populate_background(
 
     info!("** populate_background **");
 
-    // ground plane
-    commands.spawn((
-        Mesh3d(
-            meshes.add(
-                Plane3d::default()
-                    .mesh()
-                    .size(100.0, 100.0)
-                    .subdivisions(20),
-            ),
-        ),
-        MeshMaterial3d(materials.add(Color::from(SILVER))),
-        Transform::from_xyz(0.0, -0.25, 0.0),
-    ));
-
     // tower
     let debug_material = materials.add(StandardMaterial {
         base_color_texture: Some(images.add(make_uv_debug_texture())),
