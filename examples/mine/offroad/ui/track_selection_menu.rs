@@ -99,14 +99,14 @@ fn update_selected_model(
         uv_transform: Affine2::from_scale(Vec2::new(1.0 / 8.0, 1.0 / 8.0)),
         ..StandardMaterial::default()
     });
-    // let _tiledflow_material = materials.add(StandardMaterial {
-    //     base_color_channel: UvChannel::Uv0,
-    //     base_color_texture: Some(asset_server.load_with_settings(
-    //         "textures/fantasy_ui_borders/panel-border-010.png",
-    //         make_tileable,
-    //     )),
-    //     ..StandardMaterial::default()
-    // });
+    let _tiledflow_material = standard_materials.add(StandardMaterial {
+        base_color_channel: UvChannel::Uv0,
+        base_color_texture: Some(asset_server.load_with_settings(
+            "textures/fantasy_ui_borders/panel-border-010.png",
+            make_tileable,
+        )),
+        ..StandardMaterial::default()
+    });
     let racing_line_material = racing_line_materials.add(racing_line_material::make(
         &asset_server,
         track.total_length,

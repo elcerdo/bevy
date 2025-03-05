@@ -227,7 +227,6 @@ fn populate_boards(mut commands: Commands) {
         StatusMarker,
         VehicleSceneMarker,
     ));
-    // });
 }
 
 fn depopulate_all(mut commands: Commands, query: Query<Entity, With<VehicleSceneMarker>>) {
