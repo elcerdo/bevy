@@ -1,5 +1,5 @@
 use crate::global_state::GlobalState;
-use crate::track::{RacingLineMaterial, Segment, Track, TRACK_CURRENT_HANDLE};
+use crate::track::{RacingLineMaterial, Segment, Track, TRACK_HANDLES};
 
 use bevy::asset::{AssetServer, Assets};
 use bevy::color::Srgba;
@@ -233,7 +233,7 @@ fn populate_vehicles(mut commands: Commands, server: Res<AssetServer>, tracks: R
 
     info!("** populate_vehicles **");
 
-    let Some(track) = tracks.get(&TRACK_CURRENT_HANDLE) else {
+    let Some(track) = tracks.get(&TRACK_HANDLES[2]) else {
         return;
     };
 
@@ -292,7 +292,7 @@ fn update_vehicle_rankings(
     first_place_labels: Query<&mut Text, With<FirstPlaceMarker>>,
     tracks: Res<Assets<Track>>,
 ) {
-    let Some(track) = tracks.get(&TRACK_CURRENT_HANDLE) else {
+    let Some(track) = tracks.get(&TRACK_HANDLES[2]) else {
         return;
     };
 
@@ -349,7 +349,7 @@ fn resolve_checkpoints(
     tracks: Res<Assets<Track>>,
     time: Res<Time>,
 ) {
-    let Some(track) = tracks.get(&TRACK_CURRENT_HANDLE) else {
+    let Some(track) = tracks.get(&TRACK_HANDLES[2]) else {
         return;
     };
 

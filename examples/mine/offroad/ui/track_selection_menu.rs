@@ -1,9 +1,11 @@
 use crate::global_state::{GlobalState, TrackNickname};
-use crate::track::{Track, TRACK_CURRENT_HANDLE};
+use crate::track::{Track, TRACK_HANDLES};
 use crate::ui::consts::*;
 
-use bevy::color::palettes::css::GRAY;
+use bevy::asset::Handle;
 use bevy::prelude::*;
+
+use bevy::color::palettes::css::GRAY;
 use std::f32::consts::PI;
 
 pub struct TrackSelectionMenuPlugin;
@@ -11,33 +13,21 @@ pub struct TrackSelectionMenuPlugin;
 impl Plugin for TrackSelectionMenuPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(OnEnter(GlobalState::TrackSelectionInit), populate_scene);
-        app.add_systems(
-            OnEnter(GlobalState::TrackSelectionIdle),
-            update_selected_model,
-        );
-        app.add_systems(
-            OnEnter(GlobalState::TrackSelectionHoovered(TrackNickname::Beginner)),
-            update_selected_model,
-        );
-        app.add_systems(
-            OnEnter(GlobalState::TrackSelectionHoovered(TrackNickname::Vertical)),
-            update_selected_model,
-        );
-        app.add_systems(
-            OnEnter(GlobalState::TrackSelectionHoovered(TrackNickname::Advanced)),
-            update_selected_model,
-        );
+
+        for state in [
+            GlobalState::TrackSelectionHoovered(TrackNickname::Beginner),
+            GlobalState::TrackSelectionHoovered(TrackNickname::Vertical),
+            GlobalState::TrackSelectionHoovered(TrackNickname::Advanced),
+        ] {
+            app.add_systems(OnEnter(state), update_selected_model);
+            app.add_systems(Update, animate_selected_model.run_if(in_state(state)));
+        }
 
         app.add_systems(
             OnEnter(GlobalState::TrackSelected(TrackNickname::Advanced)),
             depopulate_all,
         );
-        app.add_systems(
-            Update,
-            animate_selected_model.run_if(in_state(GlobalState::TrackSelectionHoovered(
-                TrackNickname::Advanced,
-            ))),
-        );
+
         app.add_systems(Update, update_menu);
     }
 }
@@ -59,10 +49,18 @@ fn update_selected_model(
 
     let mesh_handle: Handle<Mesh> = match state.get() {
         GlobalState::TrackSelectionHoovered(TrackNickname::Beginner) => {
-            let track = tracks.get(&TRACK_CURRENT_HANDLE).unwrap();
+            let track = tracks.get(&TRACK_HANDLES[0]).unwrap();
             meshes.add(track.track.clone())
         }
-        _ => meshes.add(Cuboid::from_length(2.0)),
+        GlobalState::TrackSelectionHoovered(TrackNickname::Vertical) => {
+            let track = tracks.get(&TRACK_HANDLES[1]).unwrap();
+            meshes.add(track.track.clone())
+        }
+        GlobalState::TrackSelectionHoovered(TrackNickname::Advanced) => {
+            let track = tracks.get(&TRACK_HANDLES[2]).unwrap();
+            meshes.add(track.track.clone())
+        }
+        _ => unreachable!(),
     };
 
     commands.spawn((
@@ -80,7 +78,7 @@ fn animate_selected_model(
     time: Res<Time>,
 ) {
     for mut transform in query {
-        transform.rotation *= Quat::from_axis_angle(Vec3::Y, 2.0 * PI * time.delta_secs());
+        transform.rotation *= Quat::from_axis_angle(Vec3::Y, 0.5 * PI * time.delta_secs());
     }
 }
 
@@ -121,10 +119,10 @@ fn populate_scene(mut commands: Commands, mut next_state: ResMut<NextState<Globa
             },
         ))
         .with_children(|parent| {
-            let mut add_button = |label: &str, track: TrackNickname| -> () {
+            let mut add_button = |track_nickname: TrackNickname| -> () {
                 parent
                     .spawn((
-                        track,
+                        track_nickname,
                         Button,
                         Node {
                             width: Val::Px(170.0),
@@ -140,7 +138,7 @@ fn populate_scene(mut commands: Commands, mut next_state: ResMut<NextState<Globa
                         BackgroundColor(COLOR_UI_BG.into()),
                     ))
                     .with_child((
-                        Text::new(label),
+                        Text::new(format!("{:?}", track_nickname)),
                         TextFont {
                             font_size: 25.0,
                             ..TextFont::default()
@@ -149,9 +147,9 @@ fn populate_scene(mut commands: Commands, mut next_state: ResMut<NextState<Globa
                     ));
             };
 
-            add_button("Beginner", TrackNickname::Beginner);
-            add_button("Vertical", TrackNickname::Vertical);
-            add_button("Advanced", TrackNickname::Advanced);
+            add_button(TrackNickname::Beginner);
+            add_button(TrackNickname::Vertical);
+            add_button(TrackNickname::Advanced);
         });
 
     next_state.set(GlobalState::TrackSelectionIdle);

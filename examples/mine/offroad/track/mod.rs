@@ -23,8 +23,13 @@ pub use piece::Segment;
 pub use piece::Track;
 pub use racing_line_material::RacingLineMaterial;
 
-pub const TRACK_CURRENT_HANDLE: Handle<Track> = data::TRACK_ADVANCED_HANDLE;
-pub const TRACK_GROUND_COLOR: Srgba = bevy::color::palettes::basic::SILVER;
+pub const TRACK_HANDLES: &[Handle<Track>] = &[
+    data::TRACK_BEGINNER_HANDLE,
+    data::TRACK_VERTICAL_HANDLE,
+    data::TRACK_ADVANCED_HANDLE,
+];
+
+const TRACK_GROUND_COLOR: Srgba = bevy::color::palettes::basic::SILVER;
 const EPSILON: f32 = 5e-2;
 
 //////////////////////////////////////////////////////////////////////
