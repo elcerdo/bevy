@@ -19,11 +19,22 @@ impl Plugin for TrackSelectionMenuPlugin {
             let state = GlobalState::TrackSelectionHoovered(*track_nickname);
             let state_ = GlobalState::TrackSelected(*track_nickname);
             app.add_systems(OnEnter(state), update_selected_model);
+            app.add_systems(Update, quit_with_escape.run_if(in_state(state)));
             app.add_systems(OnEnter(state_), depopulate_all);
         }
 
         app.add_systems(Update, animate_selected_model);
         app.add_systems(Update, update_menu);
+        app.add_systems(
+            Update,
+            quit_with_escape.run_if(in_state(GlobalState::TrackSelectionIdle)),
+        );
+    }
+}
+
+fn quit_with_escape(mut writer: EventWriter<AppExit>, keyboard: Res<ButtonInput<KeyCode>>) {
+    if keyboard.just_pressed(KeyCode::Escape) {
+        writer.send(AppExit::Success);
     }
 }
 

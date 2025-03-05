@@ -12,7 +12,7 @@ impl Plugin for GameDoneScreenPlugin {
         app.add_systems(OnExit(GlobalState::GameDone), depopulate_screen);
         app.add_systems(
             Update,
-            exit_to_track_selection_menu.run_if(in_state(GlobalState::GameDone)),
+            to_track_selection_menu.run_if(in_state(GlobalState::GameDone)),
         );
     }
 }
@@ -60,7 +60,7 @@ fn populate_screen(mut commands: Commands) {
         });
 }
 
-fn exit_to_track_selection_menu(
+fn to_track_selection_menu(
     mut next_state: ResMut<NextState<GlobalState>>,
     keyboard: Res<ButtonInput<KeyCode>>,
 ) {

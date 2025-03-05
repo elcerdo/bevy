@@ -160,7 +160,7 @@ fn populate_boards(mut commands: Commands) {
 
     info!("** populate_boards **");
 
-    // ui
+    // ui learderboard
     commands.spawn((
         Text::new("$$best_lap_leaderboard$$"),
         Node {
@@ -179,54 +179,55 @@ fn populate_boards(mut commands: Commands) {
         VehiculeSceneMarker,
     ));
 
-    commands
-        .spawn((
-            VehiculeSceneMarker,
-            Node {
-                position_type: PositionType::Absolute,
-                top: Val::Px(5.0),
-                right: Val::Px(5.0),
-                ..Node::default()
-            },
-        ))
-        .with_children(|parent| {
-            let node = Node {
-                margin: UiRect {
-                    left: Val::Px(15.0),
-                    ..UiRect::default()
-                },
-                ..Node::default()
-            };
-            let font = TextFont {
-                font_size: 16.0,
-                ..TextFont::default()
-            };
-            let layout = TextLayout::new_with_justify(JustifyText::Right);
-            parent.spawn((
-                Text::new("$$status_p1$$"),
-                font.clone(),
-                layout,
-                node.clone(),
-                TextColor(COLOR_P1.into()),
-                StatusMarker,
-            ));
-            parent.spawn((
-                Text::new("$$status_p2$$"),
-                font.clone(),
-                layout,
-                node.clone(),
-                TextColor(COLOR_P2.into()),
-                StatusMarker,
-            ));
-            parent.spawn((
-                Text::new("$$status_p3$"),
-                font.clone(),
-                layout,
-                node.clone(),
-                TextColor(COLOR_P3.into()),
-                StatusMarker,
-            ));
-        });
+    // ui player status
+    let layout = TextLayout::new_with_justify(JustifyText::Right);
+    let font = TextFont {
+        font_size: 16.0,
+        ..TextFont::default()
+    };
+    commands.spawn((
+        Text::new("$$status_p1$$"),
+        font.clone(),
+        layout,
+        Node {
+            position_type: PositionType::Absolute,
+            top: Val::Px(5.0),
+            left: Val::Px(5.0),
+            ..Node::default()
+        },
+        TextColor(COLOR_P1.into()),
+        StatusMarker,
+        VehiculeSceneMarker,
+    ));
+    commands.spawn((
+        Text::new("$$status_p2$$"),
+        font.clone(),
+        layout,
+        Node {
+            position_type: PositionType::Absolute,
+            top: Val::Px(5.0),
+            right: Val::Px(5.0),
+            ..Node::default()
+        },
+        TextColor(COLOR_P2.into()),
+        StatusMarker,
+        VehiculeSceneMarker,
+    ));
+    commands.spawn((
+        Text::new("$$status_p3$"),
+        font,
+        layout,
+        Node {
+            position_type: PositionType::Absolute,
+            bottom: Val::Px(5.0),
+            left: Val::Px(5.0),
+            ..Node::default()
+        },
+        TextColor(COLOR_P3.into()),
+        StatusMarker,
+        VehiculeSceneMarker,
+    ));
+    // });
 }
 
 fn depopulate_all(mut commands: Commands, query: Query<Entity, With<VehiculeSceneMarker>>) {
@@ -445,7 +446,7 @@ fn resolve_checkpoints(
     }
 
     // prepare ui status label
-    for (ll, (boat, mut status_label)) in boats.iter().zip(status_labels).enumerate() {
+    for (boat, mut status_label) in boats.iter().zip(status_labels) {
         let mut ss: Vec<String> = vec![];
         ss.push(format!(
             "{} lap{}\ncurrent   last   best\n{:>6.3} {:>6.3} {:>6.3}",
@@ -464,19 +465,14 @@ fn resolve_checkpoints(
 
         for kk in 1..track.checkpoint_count {
             let foo = boat.current_stat.checkpoint_to_tops.get(&kk);
-            let aa = if ll == 0 {
-                format!("#{} ", kk)
-            } else {
-                "".into()
-            };
-            let bb: String = match foo {
+            let aa: String = match foo {
                 Some(duration) => {
                     let duration = (*duration - boat.current_stat.top_start).as_secs_f32();
                     format!("{:>6.3}", duration)
                 }
                 None => "     _".into(),
             };
-            let cc: String = match &boat.maybe_last_stat {
+            let bb: String = match &boat.maybe_last_stat {
                 Some(stat) => {
                     let stat_top = stat.checkpoint_to_tops.get(&kk).unwrap();
                     let stat_duration = (*stat_top - stat.top_start).as_secs_f32();
@@ -492,7 +488,7 @@ fn resolve_checkpoints(
                 }
                 None => "     _".into(),
             };
-            let dd: String = match &boat.maybe_best_stat {
+            let cc: String = match &boat.maybe_best_stat {
                 Some(stat) => {
                     let stat_top = stat.checkpoint_to_tops.get(&kk).unwrap();
                     let stat_duration = (*stat_top - stat.top_start).as_secs_f32();
@@ -508,7 +504,7 @@ fn resolve_checkpoints(
                 }
                 None => "     _".into(),
             };
-            ss.push(format!("{}{} {} {}", aa, bb, cc, dd));
+            ss.push(format!("#{} {} {} {}", kk, aa, bb, cc));
         }
 
         *status_label = ss.join("\n").into();

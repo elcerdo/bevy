@@ -86,7 +86,7 @@ static TRACK_BEGINNER_PIECES: &[TrackPiece] = &[
 
 static TRACK_BEGINNER_DATA: TrackData = TrackData {
     pieces: &TRACK_BEGINNER_PIECES,
-    initial_position: Vec3::new(-2.0, 0.0, -4.0),
+    initial_position: Vec3::new(-3.0, 0.0, -2.0),
     initial_forward: Vec3::Z,
     initial_up: Vec3::Y,
     initial_left: -1.0,

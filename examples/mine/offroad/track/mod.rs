@@ -37,7 +37,7 @@ impl bevy::prelude::Plugin for TrackPlugin {
         for track_nickname in TRACK_NICKNAMES {
             let state = GlobalState::TrackSelected(*track_nickname);
             let state_ = GlobalState::InGame(*track_nickname);
-            app.add_systems(OnEnter(state), populate_track);
+            app.add_systems(OnEnter(state), (populate_track, to_game).chain());
             app.add_systems(OnEnter(state_), populate_camera_and_lights);
             app.add_systems(OnExit(state_), depopulate_all);
         }
@@ -106,7 +106,6 @@ fn populate_track(
     tracks: Res<Assets<Track>>,
     asset_server: Res<AssetServer>,
     state: Res<State<GlobalState>>,
-    mut next_state: ResMut<NextState<GlobalState>>,
 ) {
     use racing_line_material::AnimatedRacingLineMarker;
     use wavy_material::AnimatedWavyMarker;
@@ -197,7 +196,9 @@ fn populate_track(
         MeshMaterial3d(standard_materials.add(Color::from(TRACK_GROUND_COLOR))),
         Transform::from_translation(-1.0 * TRACK_EPSILON * track_up),
     ));
+}
 
+fn to_game(state: Res<State<GlobalState>>, mut next_state: ResMut<NextState<GlobalState>>) {
     match state.get() {
         GlobalState::TrackSelected(track_nickname) => {
             next_state.set(GlobalState::InGame(*track_nickname));
