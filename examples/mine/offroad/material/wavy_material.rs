@@ -14,7 +14,7 @@ pub fn make(asset_server: &Res<AssetServer>, scale: f32, angle: f32) -> Standard
     use bevy::image::ImageLoaderSettings;
     use bevy::image::ImageSampler;
     use bevy::image::ImageSamplerDescriptor;
-    let make_tileable = |settings: &mut ImageLoaderSettings| -> () {
+    let make_tileable = |settings: &mut ImageLoaderSettings| {
         *settings = ImageLoaderSettings {
             is_srgb: false,
             sampler: ImageSampler::Descriptor(ImageSamplerDescriptor {

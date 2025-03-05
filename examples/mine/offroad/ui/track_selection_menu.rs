@@ -80,7 +80,7 @@ fn update_selected_model(
     };
 
     // materials
-    let make_tileable = |settings: &mut ImageLoaderSettings| -> () {
+    let make_tileable = |settings: &mut ImageLoaderSettings| {
         *settings = ImageLoaderSettings {
             // is_srgb: false,
             sampler: ImageSampler::Descriptor(ImageSamplerDescriptor {
@@ -175,7 +175,7 @@ fn populate_scene(mut commands: Commands, mut next_state: ResMut<NextState<Globa
             },
         ))
         .with_children(|parent| {
-            let mut add_button = |track_nickname: TrackNickname| -> () {
+            let mut add_button = |track_nickname: TrackNickname| {
                 parent
                     .spawn((
                         track_nickname,
@@ -219,12 +219,9 @@ fn update_menu(
     mut next_state: ResMut<NextState<GlobalState>>,
 ) {
     for (interaction, _, mut bg_color) in &mut query {
-        match *interaction {
-            Interaction::None => {
-                *bg_color = COLOR_UI_BG.into();
-                next_state.set(GlobalState::TrackSelectionIdle);
-            }
-            _ => {}
+        if *interaction == Interaction::None {
+            *bg_color = COLOR_UI_BG.into();
+            next_state.set(GlobalState::TrackSelectionIdle);
         }
     }
     for (interaction, track, mut bg_color) in &mut query {

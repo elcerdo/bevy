@@ -27,7 +27,7 @@ fn depopulate_screen(mut commands: Commands, query: Query<Entity, With<GameDoneS
 }
 
 fn populate_screen(mut commands: Commands) {
-    commands.spawn((GameDoneScreenMarker, Camera2d::default()));
+    commands.spawn((GameDoneScreenMarker, Camera2d));
     commands
         .spawn((
             GameDoneScreenMarker,

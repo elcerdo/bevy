@@ -138,8 +138,8 @@ impl BoatData {
         }
     }
     fn reset(&mut self) {
-        self.position_previous = self.position_initial.clone();
-        self.position_current = self.position_initial.clone();
+        self.position_previous = self.position_initial;
+        self.position_current = self.position_initial;
         self.angle_current = self.angle_initial;
         self.current_stat = LapStat::from(Duration::MAX);
         self.lap_count = 0;
@@ -328,7 +328,7 @@ fn update_vehicle_boards(
         let lap_duration = best_stat.top_finish - best_stat.top_start;
         sorted_lap_duration_boats.push((lap_duration, boat));
     }
-    sorted_lap_duration_boats.sort_by_key(|(duration, _)| duration.clone());
+    sorted_lap_duration_boats.sort_by_key(|(duration, _)| *duration);
 
     // update racing line cursors
     if !sorted_lap_duration_boats.is_empty() {
@@ -463,11 +463,12 @@ fn resolve_checkpoints(
         ));
 
         for kk in 1..track.checkpoint_count {
-            let foo = boat.current_stat.checkpoint_to_tops.get(&kk);
-            let aa: String = match foo {
-                Some(duration) => {
-                    let duration = (*duration - boat.current_stat.top_start).as_secs_f32();
-                    format!("{:>6.3}", duration)
+            let maybe_checkpoint_top = boat.current_stat.checkpoint_to_tops.get(&kk);
+            let aa: String = match maybe_checkpoint_top {
+                Some(checkpoint_top) => {
+                    let lap_duration =
+                        (*checkpoint_top - boat.current_stat.top_start).as_secs_f32();
+                    format!("{:>6.3}", lap_duration)
                 }
                 None => "     _".into(),
             };
@@ -475,10 +476,11 @@ fn resolve_checkpoints(
                 Some(stat) => {
                     let stat_top = stat.checkpoint_to_tops.get(&kk).unwrap();
                     let stat_duration = (*stat_top - stat.top_start).as_secs_f32();
-                    match foo {
-                        Some(duration) => {
-                            let duration = (*duration - boat.current_stat.top_start).as_secs_f32();
-                            format!("{:>+5.3}", duration - stat_duration)
+                    match maybe_checkpoint_top {
+                        Some(checkpoint_top) => {
+                            let lap_duration =
+                                (*checkpoint_top - boat.current_stat.top_start).as_secs_f32();
+                            format!("{:>+5.3}", lap_duration - stat_duration)
                         }
                         None => {
                             format!("{:>6.3}", stat_duration)
@@ -491,10 +493,11 @@ fn resolve_checkpoints(
                 Some(stat) => {
                     let stat_top = stat.checkpoint_to_tops.get(&kk).unwrap();
                     let stat_duration = (*stat_top - stat.top_start).as_secs_f32();
-                    match foo {
-                        Some(duration) => {
-                            let duration = (*duration - boat.current_stat.top_start).as_secs_f32();
-                            format!("{:>+5.3}", duration - stat_duration)
+                    match maybe_checkpoint_top {
+                        Some(checkpoint_top) => {
+                            let lap_duration =
+                                (*checkpoint_top - boat.current_stat.top_start).as_secs_f32();
+                            format!("{:>+5.3}", lap_duration - stat_duration)
                         }
                         None => {
                             format!("{:>6.3}", stat_duration)
