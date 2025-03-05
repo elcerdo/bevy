@@ -13,7 +13,7 @@ pub enum GlobalState {
     InitStarted,
     InitDone,
     TrackSelectionIdle,
-    TrackSelectionHoovered(TrackNickname),
+    TrackSelectionHoovered,
     TrackSelected(TrackNickname),
     InGame,
     GameDone,
@@ -24,16 +24,15 @@ pub struct GlobalStatePlugin;
 impl Plugin for GlobalStatePlugin {
     fn build(&self, app: &mut App) {
         app.init_state::<GlobalState>();
-        app.add_systems(OnEnter(GlobalState::InitDone), dump_init_done);
+        app.add_systems(OnEnter(GlobalState::InitDone), || {
+            info!("!!!! InitDone !!!!");
+        });
         app.add_systems(OnEnter(GlobalState::TrackSelectionIdle), || {
             info!("!!!! TrackSelectionIdle !!!!");
         });
-        app.add_systems(
-            OnEnter(GlobalState::TrackSelectionHoovered(TrackNickname::Advanced)),
-            || {
-                info!("!!!! TrackSelectionHoovered(Advanced) !!!!");
-            },
-        );
+        app.add_systems(OnEnter(GlobalState::TrackSelectionHoovered), || {
+            info!("!!!! TrackSelectionHoovered !!!!");
+        });
         app.add_systems(
             OnEnter(GlobalState::TrackSelected(TrackNickname::Advanced)),
             || {
@@ -50,8 +49,4 @@ impl Plugin for GlobalStatePlugin {
     fn finish(&self, app: &mut App) {
         app.insert_state(GlobalState::InitDone);
     }
-}
-
-fn dump_init_done() {
-    info!("!!!! init_done !!!!");
 }

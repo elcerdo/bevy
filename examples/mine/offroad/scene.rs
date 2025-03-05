@@ -1,3 +1,4 @@
+/*
 use crate::global_state::GlobalState;
 
 use bevy::prelude::{Assets, Commands, Entity, Query, Res, ResMut};
@@ -464,3 +465,5 @@ fn make_cube_mesh() -> bevy::render::mesh::Mesh {
         20,21,23 , 21,22,23, // forward (-z)
     ]))
 }
+
+*/
