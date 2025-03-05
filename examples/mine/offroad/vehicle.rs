@@ -47,8 +47,8 @@ impl bevy::prelude::Plugin for VehiclePlugin {
                     reset_vehicle_positions,
                     update_vehicle_physics,
                     resolve_checkpoints,
-                    update_vehicle_rankings,
-                    exit_to_track_selection_menu,
+                    update_vehicle_boards,
+                    exit_game,
                 )
                     .chain()
                     .run_if(in_state(state)),
@@ -284,10 +284,7 @@ fn populate_vehicles(
     ));
 }
 
-fn exit_to_track_selection_menu(
-    mut next_state: ResMut<NextState<GlobalState>>,
-    keyboard: Res<ButtonInput<KeyCode>>,
-) {
+fn exit_game(mut next_state: ResMut<NextState<GlobalState>>, keyboard: Res<ButtonInput<KeyCode>>) {
     if keyboard.just_pressed(KeyCode::Escape) {
         next_state.set(GlobalState::GameDone);
     }
@@ -301,16 +298,21 @@ fn reset_vehicle_positions(mut boats: Query<&mut BoatData>, keyboard: Res<Button
     }
 }
 
-fn update_vehicle_rankings(// mut materials: ResMut<Assets<racing_line_material::RacingLineMaterial>>,
-    // material_handles: Query<&MeshMaterial3d<racing_line_material::RacingLineMaterial>>,
-    // boats: Query<&BoatData>,
-    // first_place_labels: Query<&mut Text, With<FirstPlaceMarker>>,
-    // tracks: Res<Assets<Track>>,
+fn update_vehicle_boards(
+    mut materials: ResMut<Assets<racing_line_material::RacingLineMaterial>>,
+    material_handles: Query<&MeshMaterial3d<racing_line_material::RacingLineMaterial>>,
+    boats: Query<&BoatData>,
+    first_place_labels: Query<&mut Text, With<FirstPlaceMarker>>,
+    tracks: Res<Assets<Track>>,
+    state: Res<State<GlobalState>>,
 ) {
-    /*
-    let Some(track) = tracks.get(&TRACK_HANDLES[2]) else {
-        return;
-    };
+    let track = match state.get() {
+        GlobalState::InGame(TrackNickname::Beginner) => tracks.get(&TRACK_HANDLES[0]),
+        GlobalState::InGame(TrackNickname::Vertical) => tracks.get(&TRACK_HANDLES[1]),
+        GlobalState::InGame(TrackNickname::Advanced) => tracks.get(&TRACK_HANDLES[2]),
+        _ => unreachable!(),
+    }
+    .unwrap();
 
     assert!(track.is_looping);
 
@@ -357,18 +359,22 @@ fn update_vehicle_rankings(// mut materials: ResMut<Assets<racing_line_material:
     for mut first_place_label in first_place_labels {
         *first_place_label = label.clone().into();
     }
-    */
 }
 
-fn resolve_checkpoints(// mut boats: Query<&mut BoatData>,
-    // status_labels: Query<&mut Text, With<StatusMarker>>,
-    // tracks: Res<Assets<Track>>,
-    // time: Res<Time>,
+fn resolve_checkpoints(
+    mut boats: Query<&mut BoatData>,
+    status_labels: Query<&mut Text, With<StatusMarker>>,
+    tracks: Res<Assets<Track>>,
+    state: Res<State<GlobalState>>,
+    time: Res<Time>,
 ) {
-    /*
-    let Some(track) = tracks.get(&TRACK_HANDLES[2]) else {
-        return;
-    };
+    let track = match state.get() {
+        GlobalState::InGame(TrackNickname::Beginner) => tracks.get(&TRACK_HANDLES[0]),
+        GlobalState::InGame(TrackNickname::Vertical) => tracks.get(&TRACK_HANDLES[1]),
+        GlobalState::InGame(TrackNickname::Advanced) => tracks.get(&TRACK_HANDLES[2]),
+        _ => unreachable!(),
+    }
+    .unwrap();
 
     assert!(track.is_looping);
     assert!(!track.track_kdtree.is_empty());
@@ -507,7 +513,6 @@ fn resolve_checkpoints(// mut boats: Query<&mut BoatData>,
 
         *status_label = ss.join("\n").into();
     }
-    */
 }
 
 struct BoatPhysics {
