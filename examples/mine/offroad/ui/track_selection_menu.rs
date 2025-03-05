@@ -15,18 +15,16 @@ impl Plugin for TrackSelectionMenuPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(OnEnter(GlobalState::TrackSelectionInit), populate_scene);
 
-        for state in [
-            GlobalState::TrackSelectionHoovered(TrackNickname::Beginner),
-            GlobalState::TrackSelectionHoovered(TrackNickname::Vertical),
-            GlobalState::TrackSelectionHoovered(TrackNickname::Advanced),
+        for track_nickname in [
+            TrackNickname::Beginner,
+            TrackNickname::Vertical,
+            TrackNickname::Advanced,
         ] {
+            let state = GlobalState::TrackSelectionHoovered(track_nickname);
+            let state_ = GlobalState::TrackSelected(track_nickname);
             app.add_systems(OnEnter(state), update_selected_model);
+            app.add_systems(OnEnter(state_), depopulate_all);
         }
-
-        app.add_systems(
-            OnEnter(GlobalState::TrackSelected(TrackNickname::Advanced)),
-            depopulate_all,
-        );
 
         app.add_systems(Update, animate_selected_model);
         app.add_systems(Update, update_menu);
@@ -38,7 +36,7 @@ struct TrackSelectionModelMarker;
 
 fn update_selected_model(
     mut commands: Commands,
-    entities: Query<Entity, With<TrackSelectionModelMarker>>,
+    entities: Query<(Entity, &Transform), With<TrackSelectionModelMarker>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut racing_line_materials: ResMut<Assets<racing_line_material::RacingLineMaterial>>,
     mut standard_materials: ResMut<Assets<StandardMaterial>>,
@@ -52,7 +50,9 @@ fn update_selected_model(
     use bevy::image::ImageSamplerDescriptor;
     use racing_line_material::AnimatedRacingLineMarker;
 
-    for entity in entities {
+    let mut rotation = Quat::IDENTITY;
+    for (entity, transform) in entities {
+        rotation = transform.rotation;
         commands.entity(entity).despawn();
     }
 
@@ -75,7 +75,7 @@ fn update_selected_model(
     // materials
     let make_tileable = |settings: &mut ImageLoaderSettings| -> () {
         *settings = ImageLoaderSettings {
-            is_srgb: false,
+            // is_srgb: false,
             sampler: ImageSampler::Descriptor(ImageSamplerDescriptor {
                 address_mode_u: ImageAddressMode::Repeat,
                 address_mode_v: ImageAddressMode::Repeat,
@@ -111,13 +111,14 @@ fn update_selected_model(
         Mesh3d(mesh.clone()),
         MeshMaterial3d(checkerboard_material),
         AnimatedRacingLineMarker,
+        Transform::from_rotation(rotation),
     ));
     commands.spawn((
         TrackSelectionModelMarker,
         Mesh3d(mesh),
         MeshMaterial3d(racing_line_material),
         AnimatedRacingLineMarker,
-        Transform::from_translation(track.initial_up * 1e-3),
+        Transform::from_rotation(rotation) * Transform::from_translation(track.initial_up * 1e-3),
     ));
 }
 
@@ -126,7 +127,7 @@ fn animate_selected_model(
     time: Res<Time>,
 ) {
     for mut transform in query {
-        transform.rotation *= Quat::from_axis_angle(Vec3::Y, 0.5 * PI * time.delta_secs());
+        transform.rotation *= Quat::from_axis_angle(Vec3::Y, 0.1 * PI * time.delta_secs());
     }
 }
 
@@ -152,7 +153,7 @@ fn populate_scene(mut commands: Commands, mut next_state: ResMut<NextState<Globa
     commands.spawn((
         TrackSelectionSceneMarker,
         Camera3d::default(),
-        Transform::from_xyz(-10.0, 10.0, 15.0).looking_at(Vec3::ZERO, Vec3::Y),
+        Transform::from_xyz(-20.0, 20.0, 30.0).looking_at(Vec3::ZERO, Vec3::Y),
     ));
 
     // ui buttons
