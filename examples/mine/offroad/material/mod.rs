@@ -1,6 +1,6 @@
+pub mod parallax_material;
 pub mod racing_line_material;
 pub mod wavy_material;
-pub mod parallax_material;
 
 use bevy::prelude::*;
 
