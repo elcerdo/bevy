@@ -56,10 +56,6 @@ impl Plugin for SimuPlugin {
         app.add_plugins(ExtractResourcePlugin::<SimuImages>::default());
 
         let render_app = app.sub_app_mut(RenderApp);
-        render_app.add_systems(
-            Render,
-            prepare_bind_group.in_set(RenderSet::PrepareBindGroups),
-        );
 
         let mut render_graph = render_app.world_mut().resource_mut::<RenderGraph>();
         render_graph.add_node(SimuLabel, SimuNode::default());
@@ -68,7 +64,11 @@ impl Plugin for SimuPlugin {
         // for track_nickname in TRACK_NICKNAMES {
         // app.add_systems(OnEnter(GlobalState::InGame(*track_nickname)), populate_simu);
         // }
-        app.add_systems(Startup, prepare_simu);
+        render_app.add_systems(
+            Render,
+            prepare_bind_group.in_set(RenderSet::PrepareBindGroups),
+        );
+        app.add_systems(Startup, populate_simu);
     }
     fn finish(&self, app: &mut App) {
         info!("** simu_finish **");
@@ -282,13 +282,13 @@ impl Node for SimuNode {
     }
 }
 
-fn prepare_simu(
+fn populate_simu(
     mut commands: Commands,
     mut images: ResMut<Assets<Image>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    info!("** prepare_simu **");
+    info!("** populate_simu **");
 
     let mut image = Image::new_fill(
         Extent3d {

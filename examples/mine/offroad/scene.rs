@@ -1,33 +1,90 @@
-/*
-use crate::global_state::GlobalState;
+use crate::global_state::{GlobalState, TRACK_NICKNAMES};
+use crate::material::parallax_material;
 
-use bevy::prelude::{Assets, Commands, Entity, Query, Res, ResMut};
-
-use bevy::color::palettes::basic::SILVER;
+use bevy::prelude::{Assets, Commands, Component, Entity, Query, Res, ResMut, With};
 
 //////////////////////////////////////////////////////////////////////
 
-pub struct ScenePlugin;
+pub struct BackgroundPlugin;
 
-impl bevy::prelude::Plugin for ScenePlugin {
+impl bevy::prelude::Plugin for BackgroundPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         use bevy::prelude::*;
-        app.add_systems(OnEnter(GlobalState::InGame), populate_camera_and_lights);
-        app.add_systems(OnExit(GlobalState::InGame), depopulate_camera_and_lights);
-        app.add_systems(Startup, populate_background);
-        app.add_systems(Update, move_camera.run_if(in_state(GlobalState::InGame)));
+
+        for track_nickname in TRACK_NICKNAMES {
+            let state = GlobalState::InGame(*track_nickname);
+            app.add_systems(OnEnter(state), populate_background);
+            app.add_systems(OnExit(state), depopulate_background);
+        }
     }
 }
 
 //////////////////////////////////////////////////////////////////////
 
-/// The camera, used to move camera on click.
-#[derive(bevy::prelude::Component)]
-struct CameraController;
+#[derive(Component)]
+struct BackgroundMarker;
 
-use bevy::prelude::Projection;
-use bevy::prelude::Transform;
-use bevy::prelude::{Quat, Vec3};
+fn depopulate_background(mut commands: Commands, query: Query<Entity, With<BackgroundMarker>>) {
+    for entity in query {
+        commands.entity(entity).despawn();
+    }
+}
+
+fn populate_background(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<bevy::render::mesh::Mesh>>,
+    mut images: ResMut<Assets<bevy::image::Image>>,
+    mut materials: ResMut<Assets<bevy::pbr::StandardMaterial>>,
+    asset_server: Res<bevy::asset::AssetServer>,
+) {
+    use bevy::prelude::*;
+
+    info!("** populate_background **");
+
+    // tower
+    let debug_material = materials.add(StandardMaterial {
+        base_color_texture: Some(images.add(make_uv_debug_texture())),
+        ..default()
+    });
+    commands.spawn((
+        BackgroundMarker,
+        Mesh3d(meshes.add(Cuboid::new(1.0, 5.0, 1.0))),
+        MeshMaterial3d(debug_material),
+        Transform::from_xyz(5.0, 3.0, 5.0),
+    ));
+
+    // cube
+    commands.spawn((
+        BackgroundMarker,
+        Mesh3d(meshes.add(make_cube_mesh())),
+        MeshMaterial3d(materials.add(StandardMaterial {
+            base_color_texture: Some(asset_server.load("textures/array_texture.png")),
+            ..default()
+        })),
+        Transform::from_xyz(8.0, 3.0, 5.0),
+    ));
+
+    // parallal
+    let parallal_material = materials.add(parallax_material::make(asset_server, 2.0));
+    commands.spawn((
+        BackgroundMarker,
+        Mesh3d(
+            meshes.add(
+                Mesh::from(Cuboid::default())
+                    .with_generated_tangents()
+                    .unwrap(),
+            ),
+        ),
+        MeshMaterial3d(parallal_material),
+        Transform::from_xyz(3.0, 2.0, 18.0).with_scale(Vec3::ONE * 4.0),
+    ));
+}
+
+//////////////////////////////////////////////////////////////////////
+
+/*
+
+use bevy::prelude::*;
 
 const CAMERA_ROTATION: Quat = Quat::from_xyzw(-0.24781081, -0.2946635, -0.07941471, 0.91948706);
 const CAMERA_DATA: &[(Transform, f32)] = &[
@@ -51,13 +108,8 @@ const CAMERA_DATA: &[(Transform, f32)] = &[
     ),
 ];
 
-use bevy::prelude::ButtonInput;
-use bevy::prelude::Local;
-use bevy::prelude::MouseButton;
-use bevy::prelude::{Single, With};
-
 fn move_camera(
-    mut camera_projection: Single<(&mut Transform, &mut Projection), With<CameraController>>,
+    mut camera_projection: Single<(&mut Transform, &mut Projection)>,
     mut current_view: Local<usize>,
     button: Res<ButtonInput<MouseButton>>,
 ) {
@@ -94,176 +146,9 @@ fn move_camera(
     });
 }
 
+*/
+
 //////////////////////////////////////////////////////////////////////
-
-fn populate_background(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<bevy::render::mesh::Mesh>>,
-    mut images: ResMut<Assets<bevy::image::Image>>,
-    mut materials: ResMut<Assets<bevy::pbr::StandardMaterial>>,
-    asset_server: Res<bevy::asset::AssetServer>,
-) {
-    use bevy::prelude::*;
-
-    info!("** populate_background **");
-
-    // tower
-    let debug_material = materials.add(StandardMaterial {
-        base_color_texture: Some(images.add(make_uv_debug_texture())),
-        ..default()
-    });
-    commands.spawn((
-        Mesh3d(meshes.add(Cuboid::new(1.0, 5.0, 1.0))),
-        MeshMaterial3d(debug_material),
-        Transform::from_xyz(5.0, 3.0, 5.0),
-    ));
-
-    // cube
-    commands.spawn((
-        Mesh3d(meshes.add(make_cube_mesh())),
-        MeshMaterial3d(materials.add(StandardMaterial {
-            base_color_texture: Some(asset_server.load("textures/array_texture.png")),
-            ..default()
-        })),
-        Transform::from_xyz(8.0, 3.0, 5.0),
-    ));
-
-    // parallal
-    let parallal_material = materials.add(make_parallax_material(asset_server, 2.0));
-    commands.spawn((
-        Mesh3d(
-            meshes.add(
-                Mesh::from(Cuboid::default())
-                    .with_generated_tangents()
-                    .unwrap(),
-            ),
-        ),
-        MeshMaterial3d(parallal_material),
-        Transform::from_xyz(3.0, 2.0, 18.0).with_scale(Vec3::ONE * 4.0),
-    ));
-}
-
-use bevy::prelude::Component;
-
-#[derive(Component)]
-struct SceneCameraAndLightsMarker;
-
-fn depopulate_camera_and_lights(
-    mut commands: Commands,
-    query: Query<Entity, With<SceneCameraAndLightsMarker>>,
-) {
-    for entity in query {
-        commands.entity(entity).despawn();
-    }
-}
-
-fn populate_camera_and_lights(mut commands: Commands) {
-    use bevy::prelude::*;
-    use bevy::render::camera::ScalingMode;
-
-    info!("** populate_camera_and_lights **");
-
-    // lights
-    commands.spawn((
-        SceneCameraAndLightsMarker,
-        PointLight {
-            shadows_enabled: true,
-            intensity: 5.0e6,
-            range: 100.0,
-            shadow_depth_bias: 0.2,
-            ..default()
-        },
-        Transform::from_xyz(-4.0, 16.0, 8.0),
-    ));
-    commands.spawn((
-        SceneCameraAndLightsMarker,
-        DirectionalLight {
-            color: Color::WHITE,
-            shadows_enabled: true,
-            illuminance: light_consts::lux::OVERCAST_DAY,
-            ..default()
-        },
-        Transform::from_translation(Vec3::Y).looking_at(Vec3::ZERO, Vec3::Y),
-    ));
-
-    // camera
-    commands.spawn((
-        SceneCameraAndLightsMarker,
-        Camera3d::default(),
-        Projection::from(OrthographicProjection {
-            // 20 world units per pixel of window height.
-            scaling_mode: ScalingMode::FixedVertical {
-                viewport_height: CAMERA_DATA[0].1,
-            },
-            ..OrthographicProjection::default_3d()
-        }),
-        CAMERA_DATA[0].0,
-        CameraController,
-    ));
-}
-
-fn make_parallax_material(
-    asset_server: Res<bevy::asset::AssetServer>,
-    scale: f32,
-) -> bevy::pbr::StandardMaterial {
-    use bevy::image::ImageAddressMode;
-    use bevy::image::ImageLoaderSettings;
-    use bevy::image::ImageSampler;
-    use bevy::image::ImageSamplerDescriptor;
-    use bevy::math::Affine2;
-    use bevy::math::Vec2;
-    use bevy::pbr::UvChannel;
-    bevy::pbr::StandardMaterial {
-        perceptual_roughness: 0.2,
-        base_color_channel: UvChannel::Uv1,
-        base_color_texture: Some(asset_server.load_with_settings(
-            "textures/parallax_example/cube_color.png",
-            |settings: &mut ImageLoaderSettings| {
-                *settings = ImageLoaderSettings {
-                    sampler: ImageSampler::Descriptor(ImageSamplerDescriptor {
-                        address_mode_u: ImageAddressMode::Repeat,
-                        address_mode_v: ImageAddressMode::Repeat,
-                        ..ImageSamplerDescriptor::default()
-                    }),
-                    ..ImageLoaderSettings::default()
-                }
-            },
-        )),
-        normal_map_channel: UvChannel::Uv1,
-        normal_map_texture: Some(asset_server.load_with_settings(
-            "textures/parallax_example/cube_normal.png",
-            // The normal map texture is in linear color space. Lighting won't look correct
-            // if `is_srgb` is `true`, which is the default.
-            |settings: &mut ImageLoaderSettings| {
-                *settings = ImageLoaderSettings {
-                    is_srgb: false,
-                    sampler: ImageSampler::Descriptor(ImageSamplerDescriptor {
-                        address_mode_u: ImageAddressMode::Repeat,
-                        address_mode_v: ImageAddressMode::Repeat,
-                        ..ImageSamplerDescriptor::default()
-                    }),
-                    ..ImageLoaderSettings::default()
-                }
-            },
-        )),
-        depth_map: Some(asset_server.load_with_settings(
-            "textures/parallax_example/cube_depth.png",
-            |settings: &mut ImageLoaderSettings| {
-                *settings = ImageLoaderSettings {
-                    sampler: ImageSampler::Descriptor(ImageSamplerDescriptor {
-                        address_mode_u: ImageAddressMode::Repeat,
-                        address_mode_v: ImageAddressMode::Repeat,
-                        ..ImageSamplerDescriptor::default()
-                    }),
-                    ..ImageLoaderSettings::default()
-                }
-            },
-        )),
-        parallax_depth_scale: 0.1,
-        uv_transform: Affine2::from_scale(Vec2::ONE * scale),
-        ..bevy::pbr::StandardMaterial::default()
-    }
-}
 
 /// Creates a colorful test pattern
 fn make_uv_debug_texture() -> bevy::image::Image {
@@ -451,5 +336,3 @@ fn make_cube_mesh() -> bevy::render::mesh::Mesh {
         20,21,23 , 21,22,23, // forward (-z)
     ]))
 }
-
-*/
