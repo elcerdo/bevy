@@ -81,7 +81,7 @@ fn populate_camera_and_lights(mut commands: Commands) {
             illuminance: light_consts::lux::OVERCAST_DAY,
             ..default()
         },
-        Transform::from_translation(Vec3::Y).looking_at(vec3(-1.0, 0.0, -1.0), Vec3::Y),
+        Transform::from_translation(Vec3::Y).looking_at(Vec3::ZERO, Vec3::Y),
     ));
 
     // camera

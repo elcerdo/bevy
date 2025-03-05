@@ -50,7 +50,7 @@ fn populate_background(
         BackgroundMarker,
         Mesh3d(meshes.add(Cuboid::new(1.0, 5.0, 1.0))),
         MeshMaterial3d(debug_material),
-        Transform::from_xyz(5.0, 3.0, 5.0),
+        Transform::from_xyz(0.0, 2.5, 0.0),
     ));
 
     // cube
