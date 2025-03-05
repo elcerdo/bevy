@@ -7,6 +7,12 @@ pub enum TrackNickname {
     Advanced,
 }
 
+pub const TRACK_NICKNAMES: &[TrackNickname] = &[
+    TrackNickname::Beginner,
+    TrackNickname::Vertical,
+    TrackNickname::Advanced,
+];
+
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Default, States)]
 pub enum GlobalState {
     #[default]

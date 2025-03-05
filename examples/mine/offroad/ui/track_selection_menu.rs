@@ -1,4 +1,4 @@
-use crate::global_state::{GlobalState, TrackNickname};
+use crate::global_state::{GlobalState, TrackNickname, TRACK_NICKNAMES};
 use crate::material::racing_line_material;
 use crate::track::{Track, TRACK_HANDLES};
 use crate::ui::consts::*;
@@ -15,13 +15,9 @@ impl Plugin for TrackSelectionMenuPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(OnEnter(GlobalState::TrackSelectionInit), populate_scene);
 
-        for track_nickname in [
-            TrackNickname::Beginner,
-            TrackNickname::Vertical,
-            TrackNickname::Advanced,
-        ] {
-            let state = GlobalState::TrackSelectionHoovered(track_nickname);
-            let state_ = GlobalState::TrackSelected(track_nickname);
+        for track_nickname in TRACK_NICKNAMES {
+            let state = GlobalState::TrackSelectionHoovered(*track_nickname);
+            let state_ = GlobalState::TrackSelected(*track_nickname);
             app.add_systems(OnEnter(state), update_selected_model);
             app.add_systems(OnEnter(state_), depopulate_all);
         }

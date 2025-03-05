@@ -1,18 +1,16 @@
-use crate::global_state::{GlobalState, TrackNickname};
+use crate::global_state::{GlobalState, TrackNickname, TRACK_NICKNAMES};
 use crate::material::racing_line_material;
 use crate::material::wavy_material;
 
 use bevy::asset::{AssetServer, Assets};
 use bevy::color::Srgba;
-use bevy::math::Vec2;
 use bevy::pbr::StandardMaterial;
 use bevy::render::mesh::Mesh;
 
 use bevy::prelude::info;
-use bevy::prelude::NextState;
-use bevy::prelude::{Commands, Res, ResMut, Transform};
+use bevy::prelude::{Commands, Res, ResMut};
 use bevy::prelude::{Component, Entity, Query, With};
-use bevy::prelude::{Mesh3d, MeshMaterial3d};
+use bevy::prelude::{NextState, State};
 
 use std::f32::consts::PI;
 
@@ -24,7 +22,7 @@ pub use piece::Segment;
 pub use piece::Track;
 
 const TRACK_GROUND_COLOR: Srgba = bevy::color::palettes::basic::SILVER;
-const EPSILON: f32 = 5e-2;
+const TRACK_EPSILON: f32 = 5e-2;
 
 //////////////////////////////////////////////////////////////////////
 
@@ -35,29 +33,18 @@ impl bevy::prelude::Plugin for TrackPlugin {
         use bevy::prelude::*;
         app.init_asset::<Track>();
         app.add_systems(PreStartup, data::prepare_tracks);
-        app.add_systems(
-            OnEnter(GlobalState::TrackSelected(TrackNickname::Advanced)),
-            (
-                populate_advanced_track_and_checkpoints,
-                populate_advanced_overlay,
-                start_game,
-            )
-                .chain(),
-        );
+
+        for track_nickname in TRACK_NICKNAMES {
+            let state = GlobalState::TrackSelected(*track_nickname);
+            app.add_systems(OnEnter(state), populate_track);
+        }
+
         app.add_systems(OnEnter(GlobalState::InGame), populate_camera_and_lights);
         app.add_systems(OnExit(GlobalState::InGame), depopulate_all);
     }
 }
 
 //////////////////////////////////////////////////////////////////////
-
-// const TRACK_BEGINNER_TRANSFORM: Transform = Transform::from_xyz(22.0, 0.0, -14.0);
-// const TRACK_VERTICAL_TRANSFORM_AA: Transform = Transform::from_xyz(-1.0, 0.0, -8.0);
-// const TRACK_VERTICAL_TRANSFORM_BB: Transform = Transform {
-//     translation: Vec3::new(12.0, 0.0, 9.0),
-//     rotation: Quat::from_xyzw(-0.70710677, -0.0, -0.0, 0.70710677),
-//     scale: Vec3::ONE,
-// };
 
 #[derive(Component)]
 struct GameSceneMarker;
@@ -111,78 +98,105 @@ fn populate_camera_and_lights(mut commands: Commands) {
     ));
 }
 
-fn populate_advanced_track_and_checkpoints(
+fn populate_track(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut standard_materials: ResMut<Assets<StandardMaterial>>,
+    mut racing_line_materials: ResMut<Assets<racing_line_material::RacingLineMaterial>>,
     tracks: Res<Assets<Track>>,
     asset_server: Res<AssetServer>,
+    state: Res<State<GlobalState>>,
+    mut next_state: ResMut<NextState<GlobalState>>,
 ) {
-    use bevy::color::Color;
-    use bevy::prelude::*;
+    use racing_line_material::AnimatedRacingLineMarker;
     use wavy_material::AnimatedWavyMarker;
 
-    info!("** populate_advanced_track_and_checkpoints **");
+    use bevy::color::Color;
+    use bevy::prelude::*;
 
-    let track = tracks.get(&data::TRACK_ADVANCED_HANDLE).unwrap();
+    info!("** populate_track **");
+
+    let (track_length, track_up, maybe_lateral_range, track_mesh, checkpoint_mesh) =
+        match state.get() {
+            GlobalState::TrackSelected(TrackNickname::Beginner) => {
+                let track = tracks.get(&TRACK_HANDLES[0]).unwrap();
+                (
+                    track.total_length,
+                    track.initial_up,
+                    None,
+                    meshes.add(track.track.clone()),
+                    meshes.add(track.checkpoint.clone()),
+                )
+            }
+            GlobalState::TrackSelected(TrackNickname::Vertical) => {
+                let track = tracks.get(&TRACK_HANDLES[1]).unwrap();
+                (
+                    track.total_length,
+                    track.initial_up,
+                    None,
+                    meshes.add(track.track.clone()),
+                    meshes.add(track.checkpoint.clone()),
+                )
+            }
+            GlobalState::TrackSelected(TrackNickname::Advanced) => {
+                let track = tracks.get(&TRACK_HANDLES[2]).unwrap();
+                (
+                    track.total_length,
+                    track.initial_up,
+                    Some(Vec2::new(-1.5, 1.5)),
+                    meshes.add(track.track.clone()),
+                    meshes.add(track.checkpoint.clone()),
+                )
+            }
+            _ => unreachable!(),
+        };
 
     // materials
-    let checkpoint_material = materials.add(StandardMaterial {
+    let checkpoint_material = standard_materials.add(StandardMaterial {
         base_color: Color::hsva(0.0, 0.8, 1.0, 0.8),
         ..StandardMaterial::default()
     });
-    let wavy_material = materials.add(wavy_material::make(&asset_server, 0.6, PI / 3.0));
-
-    // ground plane
-    commands.spawn((
-        GameSceneMarker,
-        Mesh3d(meshes.add(Plane3d::default().mesh().size(50.0, 50.0).subdivisions(20))),
-        MeshMaterial3d(materials.add(Color::from(TRACK_GROUND_COLOR))),
-        Transform::from_xyz(0.0, -EPSILON, 0.0),
-    ));
+    let wavy_material = standard_materials.add(wavy_material::make(&asset_server, 0.6, PI / 3.0));
+    let mut overlay_material = racing_line_material::make(&asset_server, track_length);
+    overlay_material.middle_line_width = -1.0; // no middle line
+    if let Some(lateral_range) = maybe_lateral_range {
+        overlay_material.lateral_range = lateral_range;
+    }
+    let overlay_material = racing_line_materials.add(overlay_material);
 
     // checkpoints
     commands.spawn((
         GameSceneMarker,
-        Mesh3d(meshes.add(track.checkpoint.clone())),
-        MeshMaterial3d(checkpoint_material.clone()),
-        Transform::from_translation(2.0 * EPSILON * track.initial_up),
+        Mesh3d(checkpoint_mesh),
+        MeshMaterial3d(checkpoint_material),
+        Transform::from_translation(2.0 * TRACK_EPSILON * track_up),
+    ));
+
+    // racing lines
+    commands.spawn((
+        GameSceneMarker,
+        Mesh3d(track_mesh.clone()),
+        AnimatedRacingLineMarker,
+        MeshMaterial3d(overlay_material),
+        Transform::from_translation(1.0 * TRACK_EPSILON * track_up),
     ));
 
     // track
     commands.spawn((
         GameSceneMarker,
-        Mesh3d(meshes.add(track.track.clone())),
+        Mesh3d(track_mesh),
         AnimatedWavyMarker,
         MeshMaterial3d(wavy_material.clone()),
+        Transform::from_translation(0.0 * TRACK_EPSILON * track_up),
     ));
-}
 
-fn populate_advanced_overlay(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<racing_line_material::RacingLineMaterial>>,
-    tracks: Res<Assets<Track>>,
-    asset_server: Res<AssetServer>,
-) {
-    use racing_line_material::AnimatedRacingLineMarker;
-
-    info!("** populate_advanced_overlay **");
-
-    let track = tracks.get(&data::TRACK_ADVANCED_HANDLE).unwrap();
-
-    let mut overlay_material = racing_line_material::make(&asset_server, track.total_length);
-    overlay_material.middle_line_width = -1.0; // no middle line
-    overlay_material.lateral_range = Vec2::new(-1.5, 1.5);
+    // ground plane
     commands.spawn((
         GameSceneMarker,
-        AnimatedRacingLineMarker,
-        Mesh3d(meshes.add(track.track.clone())),
-        MeshMaterial3d(materials.add(overlay_material)),
-        Transform::from_translation(2.0 * EPSILON * track.initial_up),
+        Mesh3d(meshes.add(Plane3d::default().mesh().size(50.0, 50.0).subdivisions(20))),
+        MeshMaterial3d(standard_materials.add(Color::from(TRACK_GROUND_COLOR))),
+        Transform::from_translation(-1.0 * TRACK_EPSILON * track_up),
     ));
-}
 
-fn start_game(mut next_state: ResMut<NextState<GlobalState>>) {
     next_state.set(GlobalState::InGame);
 }
