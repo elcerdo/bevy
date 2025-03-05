@@ -46,7 +46,7 @@ static TRACK_ADVANCED_PIECES: &[TrackPiece] = &[
 
 static TRACK_ADVANCED_DATA: TrackData = TrackData {
     pieces: &TRACK_ADVANCED_PIECES,
-    initial_position: Vec3::new(-16.0, 0.0, 0.0),
+    initial_position: Vec3::new(-8.0, 0.0, 0.0),
     initial_forward: Vec3::Z,
     initial_up: Vec3::Y,
     initial_left: -TRACK_ADVANCED_WW,

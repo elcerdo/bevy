@@ -34,9 +34,11 @@ pub struct VehiclePlugin;
 impl bevy::prelude::Plugin for VehiclePlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         use bevy::prelude::*;
-        app.add_systems(Startup, populate_vehicles);
-        app.add_systems(OnEnter(GlobalState::InGame), populate_boards);
-        app.add_systems(OnExit(GlobalState::InGame), depopulate_boards);
+        app.add_systems(
+            OnEnter(GlobalState::InGame),
+            (populate_boards, populate_vehicles),
+        );
+        app.add_systems(OnExit(GlobalState::InGame), depopulate_all);
         app.add_systems(
             Update,
             (
@@ -144,13 +146,14 @@ struct StatusMarker;
 struct FirstPlaceMarker;
 
 #[derive(Component)]
-struct VehiculeBoardMarker;
+struct VehiculeSceneMarker;
 
 fn populate_boards(mut commands: Commands) {
     use bevy::prelude::*;
 
     info!("** populate_boards **");
 
+    // ui
     commands.spawn((
         Text::new("$$best_lap_leaderboard$$"),
         Node {
@@ -166,12 +169,12 @@ fn populate_boards(mut commands: Commands) {
         TextLayout::new_with_justify(JustifyText::Right),
         TextColor(GOLD.into()),
         FirstPlaceMarker,
-        VehiculeBoardMarker,
+        VehiculeSceneMarker,
     ));
 
     commands
         .spawn((
-            VehiculeBoardMarker,
+            VehiculeSceneMarker,
             Node {
                 position_type: PositionType::Absolute,
                 top: Val::Px(5.0),
@@ -219,7 +222,7 @@ fn populate_boards(mut commands: Commands) {
         });
 }
 
-fn depopulate_boards(mut commands: Commands, query: Query<Entity, With<VehiculeBoardMarker>>) {
+fn depopulate_all(mut commands: Commands, query: Query<Entity, With<VehiculeSceneMarker>>) {
     for entity in query {
         commands.entity(entity).despawn();
     }
@@ -249,16 +252,19 @@ fn populate_vehicles(mut commands: Commands, server: Res<AssetServer>, tracks: R
         SceneRoot(model_p1),
         Transform::from_scale(Vec3::ONE * 0.15),
         BoatData::from_player_and_position(Player::One, pos_p1),
+        VehiculeSceneMarker,
     ));
     commands.spawn((
         SceneRoot(model_p2),
         Transform::from_scale(Vec3::ONE * 0.15),
         BoatData::from_player_and_position(Player::Two, pos_p2),
+        VehiculeSceneMarker,
     ));
     commands.spawn((
         SceneRoot(model_p3),
         Transform::from_scale(Vec3::ONE * 0.15),
         BoatData::from_player_and_position(Player::Three, pos_p3),
+        VehiculeSceneMarker,
     ));
 }
 

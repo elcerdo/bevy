@@ -1,6 +1,7 @@
 use crate::global_state::{GlobalState, TrackNickname};
 use crate::ui::consts::*;
 
+use bevy::color::palettes::css::GRAY;
 use bevy::prelude::*;
 
 pub struct TrackSelectionMenuPlugin;
@@ -33,10 +34,36 @@ fn depopulate_track_selection_menu(
 
 fn populate_track_selection_menu(
     mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
     mut next_state: ResMut<NextState<GlobalState>>,
 ) {
-    commands.spawn((TrackSelectionMenuMarker, Camera2d::default()));
+    use bevy::prelude::*;
+    use bevy::render::camera::ScalingMode;
 
+    // camera
+    commands.spawn((
+        TrackSelectionMenuMarker,
+        Camera3d::default(),
+        Projection::from(OrthographicProjection {
+            scaling_mode: ScalingMode::FixedVertical {
+                viewport_height: 14.0,
+            },
+            ..OrthographicProjection::default_3d()
+        }),
+        Transform::from_xyz(-10.0, 10.0, 15.0).looking_at(Vec3::ZERO, Vec3::Y),
+    ));
+
+    commands.spawn((
+        TrackSelectionMenuMarker,
+        Mesh3d(meshes.add(Cuboid::from_length(2.0))),
+        MeshMaterial3d(materials.add(StandardMaterial {
+            base_color: Color::from(GRAY),
+            ..StandardMaterial::default()
+        })),
+    ));
+
+    // ui buttons
     commands
         .spawn((
             TrackSelectionMenuMarker,
