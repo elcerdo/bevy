@@ -34,7 +34,7 @@ impl Plugin for TrackSelectionMenuPlugin {
 
 fn quit_with_escape(mut writer: EventWriter<AppExit>, keyboard: Res<ButtonInput<KeyCode>>) {
     if keyboard.just_pressed(KeyCode::Escape) {
-        writer.send(AppExit::Success);
+        writer.write(AppExit::Success);
     }
 }
 
