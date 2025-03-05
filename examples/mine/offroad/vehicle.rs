@@ -153,7 +153,7 @@ struct StatusMarker;
 struct FirstPlaceMarker;
 
 #[derive(Component)]
-struct VehiculeSceneMarker;
+struct VehicleSceneMarker;
 
 fn populate_boards(mut commands: Commands) {
     use bevy::prelude::*;
@@ -176,7 +176,7 @@ fn populate_boards(mut commands: Commands) {
         TextLayout::new_with_justify(JustifyText::Right),
         TextColor(GOLD.into()),
         FirstPlaceMarker,
-        VehiculeSceneMarker,
+        VehicleSceneMarker,
     ));
 
     // ui player status
@@ -197,7 +197,7 @@ fn populate_boards(mut commands: Commands) {
         },
         TextColor(COLOR_P1.into()),
         StatusMarker,
-        VehiculeSceneMarker,
+        VehicleSceneMarker,
     ));
     commands.spawn((
         Text::new("$$status_p2$$"),
@@ -211,7 +211,7 @@ fn populate_boards(mut commands: Commands) {
         },
         TextColor(COLOR_P2.into()),
         StatusMarker,
-        VehiculeSceneMarker,
+        VehicleSceneMarker,
     ));
     commands.spawn((
         Text::new("$$status_p3$"),
@@ -225,12 +225,12 @@ fn populate_boards(mut commands: Commands) {
         },
         TextColor(COLOR_P3.into()),
         StatusMarker,
-        VehiculeSceneMarker,
+        VehicleSceneMarker,
     ));
     // });
 }
 
-fn depopulate_all(mut commands: Commands, query: Query<Entity, With<VehiculeSceneMarker>>) {
+fn depopulate_all(mut commands: Commands, query: Query<Entity, With<VehicleSceneMarker>>) {
     for entity in query {
         commands.entity(entity).despawn();
     }
@@ -269,19 +269,19 @@ fn populate_vehicles(
         SceneRoot(model_p1),
         Transform::from_scale(Vec3::ONE * 0.15),
         BoatData::from_player_position_and_forward(Player::One, pos_p1, track.initial_forward),
-        VehiculeSceneMarker,
+        VehicleSceneMarker,
     ));
     commands.spawn((
         SceneRoot(model_p2),
         Transform::from_scale(Vec3::ONE * 0.15),
         BoatData::from_player_position_and_forward(Player::Two, pos_p2, track.initial_forward),
-        VehiculeSceneMarker,
+        VehicleSceneMarker,
     ));
     commands.spawn((
         SceneRoot(model_p3),
         Transform::from_scale(Vec3::ONE * 0.15),
         BoatData::from_player_position_and_forward(Player::Three, pos_p3, track.initial_forward),
-        VehiculeSceneMarker,
+        VehicleSceneMarker,
     ));
 }
 
