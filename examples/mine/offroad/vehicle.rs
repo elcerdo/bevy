@@ -19,8 +19,8 @@ use std::collections::HashMap;
 use std::fmt;
 use std::time::Duration;
 
-const COLOR_P1: Srgba = bevy::color::palettes::css::LIGHT_GRAY;
-const COLOR_P2: Srgba = bevy::color::palettes::css::LIGHT_PINK;
+const COLOR_P1: Srgba = bevy::color::palettes::css::LIGHT_GREY;
+const COLOR_P2: Srgba = bevy::color::palettes::css::HOT_PINK;
 const COLOR_P3: Srgba = bevy::color::palettes::css::LIME;
 
 const MODEL_P1: &str = "models/offroad/boat_p1.glb";
