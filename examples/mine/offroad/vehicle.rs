@@ -1,32 +1,59 @@
-use crate::track;
+use crate::global_state::{GlobalState, TrackNickname, TRACK_NICKNAMES};
+use crate::material::racing_line_material;
+use crate::track::{Segment, Track, TRACK_HANDLES};
+
+use bevy::asset::{AssetServer, Assets};
+use bevy::color::Srgba;
+use bevy::math::ops;
+use bevy::math::{Mat2, Quat, Vec2, Vec3, Vec3Swizzles};
+
+use bevy::prelude::MeshMaterial3d;
+use bevy::prelude::State;
+use bevy::prelude::Text;
+use bevy::prelude::{info, warn};
+use bevy::prelude::{ButtonInput, KeyCode};
+use bevy::prelude::{Commands, Component, NextState, Query, Res, ResMut, Time, Transform, With};
+use bevy::prelude::{Entity, Gamepad, GamepadAxis, GamepadButton};
 
 use std::collections::HashMap;
 use std::fmt;
 use std::time::Duration;
 
-use bevy::prelude::*;
+const COLOR_P1: Srgba = bevy::color::palettes::css::LIGHT_GREY;
+const COLOR_P2: Srgba = bevy::color::palettes::css::HOT_PINK;
+const COLOR_P3: Srgba = bevy::color::palettes::css::LIME;
 
-// const PINK: Color = Color::hsv(270.0, 0.27, 0.87);
+const MODEL_P1: &str = "models/offroad/boat_p1.glb";
+const MODEL_P2: &str = "models/offroad/boat_p2.glb";
+const MODEL_P3: &str = "models/offroad/boat_p3.glb";
 
-use bevy::color::palettes::basic::LIME;
 use bevy::color::palettes::css::GOLD;
-use bevy::color::palettes::css::GRAY;
-use bevy::color::palettes::css::LIGHT_PINK;
-
 use std::f32::consts::PI;
 
 //////////////////////////////////////////////////////////////////////
 
 pub struct VehiclePlugin;
 
-impl Plugin for VehiclePlugin {
-    fn build(&self, app: &mut App) {
-        info!("** build_vehicle **");
-
-        app.add_systems(Startup, setup_vehicles);
-        app.add_systems(Update, update_vehicle_physics);
-        app.add_systems(Update, resolve_checkpoints);
-        app.add_systems(Update, update_first_place);
+impl bevy::prelude::Plugin for VehiclePlugin {
+    fn build(&self, app: &mut bevy::prelude::App) {
+        use bevy::prelude::*;
+        for track_nickname in TRACK_NICKNAMES {
+            let state = GlobalState::InGame(*track_nickname);
+            app.add_systems(OnEnter(state), (populate_boards, populate_vehicles));
+            app.add_systems(OnExit(state), depopulate_all);
+            app.add_systems(
+                Update,
+                (
+                    reset_vehicle_positions,
+                    update_vehicle_physics,
+                    resolve_checkpoints,
+                    update_vehicle_boards,
+                    exit_game,
+                )
+                    .chain()
+                    .run_if(in_state(state)),
+            );
+        }
     }
 }
 
@@ -49,7 +76,7 @@ impl fmt::Display for Player {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 struct LapStat {
     top_start: Duration,
     checkpoint_to_tops: HashMap<u8, Duration>,
@@ -82,48 +109,40 @@ impl LapStat {
 #[derive(Component, Clone)]
 struct BoatData {
     player: Player,
+    position_initial: Vec2,
     position_previous: Vec2,
     position_current: Vec2,
+    angle_initial: f32,
     angle_current: f32,
     current_stat: LapStat,
+    maybe_last_stat: Option<LapStat>,
     maybe_best_stat: Option<LapStat>,
     lap_count: u32,
 }
 
 impl BoatData {
-    fn from_player(player: Player) -> Self {
-        const POS_P1: Vec3 = Vec3::new(-11.5, 0.0, 0.0);
-        const POS_P2: Vec3 = Vec3::new(-12.5, 0.0, 0.0);
-        const POS_P3: Vec3 = Vec3::new(-12.0, 0.0, 0.0);
-        match player {
-            Player::One => BoatData {
-                player: Player::One,
-                position_previous: POS_P1.xz(),
-                position_current: POS_P1.xz(),
-                angle_current: PI,
-                current_stat: LapStat::from(Duration::MAX),
-                maybe_best_stat: None,
-                lap_count: 0,
-            },
-            Player::Two => BoatData {
-                player: Player::Two,
-                position_previous: POS_P2.xz(),
-                position_current: POS_P2.xz(),
-                angle_current: PI,
-                current_stat: LapStat::from(Duration::MAX),
-                maybe_best_stat: None,
-                lap_count: 0,
-            },
-            Player::Three => BoatData {
-                player: Player::Three,
-                position_previous: POS_P3.xz(),
-                position_current: POS_P3.xz(),
-                angle_current: PI,
-                current_stat: LapStat::from(Duration::MAX),
-                maybe_best_stat: None,
-                lap_count: 0,
-            },
+    fn from_player_position_and_forward(player: Player, pos: Vec3, fwd: Vec3) -> Self {
+        let angle = ops::atan2(fwd.x, fwd.z);
+        let pos = pos.xz();
+        Self {
+            player,
+            position_initial: pos,
+            position_previous: pos,
+            position_current: pos,
+            angle_initial: angle,
+            angle_current: angle,
+            current_stat: LapStat::from(Duration::MAX),
+            maybe_last_stat: None,
+            maybe_best_stat: None,
+            lap_count: 0,
         }
+    }
+    fn reset(&mut self) {
+        self.position_previous = self.position_initial;
+        self.position_current = self.position_initial;
+        self.angle_current = self.angle_initial;
+        self.current_stat = LapStat::from(Duration::MAX);
+        self.lap_count = 0;
     }
 }
 
@@ -133,181 +152,242 @@ struct StatusMarker;
 #[derive(Component)]
 struct FirstPlaceMarker;
 
-fn setup_vehicles(
-    mut commands: Commands,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    server: Res<AssetServer>,
-) {
-    info!("** setup_vehicles **");
+#[derive(Component)]
+struct VehicleSceneMarker;
 
-    let my_mesh: Handle<Mesh> = server.load("models/offroad/boat.glb#Mesh0/Primitive0");
+fn populate_boards(mut commands: Commands) {
+    use bevy::prelude::*;
 
+    info!("** populate_boards **");
+
+    // ui learderboard
     commands.spawn((
-        Mesh3d(my_mesh.clone()),
-        MeshMaterial3d(materials.add(StandardMaterial {
-            base_color: Color::from(GRAY),
-            ..StandardMaterial::default()
-        })),
-        Transform::from_scale(Vec3::ONE * 0.15),
-        BoatData::from_player(Player::One),
-    ));
-    commands.spawn((
-        Mesh3d(my_mesh.clone()),
-        MeshMaterial3d(materials.add(StandardMaterial {
-            base_color: Color::from(LIGHT_PINK),
-            ..StandardMaterial::default()
-        })),
-        Transform::from_scale(Vec3::ONE * 0.15),
-        BoatData::from_player(Player::Two),
-    ));
-    commands.spawn((
-        Mesh3d(my_mesh),
-        MeshMaterial3d(materials.add(StandardMaterial {
-            base_color: Color::from(LIME),
-            ..StandardMaterial::default()
-        })),
-        Transform::from_scale(Vec3::ONE * 0.15),
-        BoatData::from_player(Player::Three),
+        Text::new("$$best_lap_leaderboard$$"),
+        Node {
+            position_type: PositionType::Absolute,
+            bottom: Val::Px(5.0),
+            right: Val::Px(5.0),
+            ..Node::default()
+        },
+        TextFont {
+            font_size: 25.0,
+            ..TextFont::default()
+        },
+        TextLayout::new_with_justify(JustifyText::Right),
+        TextColor(GOLD.into()),
+        FirstPlaceMarker,
+        VehicleSceneMarker,
     ));
 
+    // ui player status
+    let layout = TextLayout::new_with_justify(JustifyText::Right);
+    let font = TextFont {
+        font_size: 16.0,
+        ..TextFont::default()
+    };
     commands.spawn((
-        Text::new("best"),
+        Text::new("$$status_p1$$"),
+        font.clone(),
+        layout,
+        Node {
+            position_type: PositionType::Absolute,
+            top: Val::Px(5.0),
+            left: Val::Px(5.0),
+            ..Node::default()
+        },
+        TextColor(COLOR_P1.into()),
+        StatusMarker,
+        VehicleSceneMarker,
+    ));
+    commands.spawn((
+        Text::new("$$status_p2$$"),
+        font.clone(),
+        layout,
         Node {
             position_type: PositionType::Absolute,
             top: Val::Px(5.0),
             right: Val::Px(5.0),
-            ..default()
+            ..Node::default()
         },
-        TextFont {
-            font_size: 25.0,
-            ..default()
-        },
-        TextLayout::new_with_justify(JustifyText::Center),
-        TextColor(GOLD.into()),
-        FirstPlaceMarker,
+        TextColor(COLOR_P2.into()),
+        StatusMarker,
+        VehicleSceneMarker,
     ));
-
-    commands
-        .spawn(Node {
+    commands.spawn((
+        Text::new("$$status_p3$"),
+        font,
+        layout,
+        Node {
             position_type: PositionType::Absolute,
-            top: Val::Px(5.0),
-            right: Val::Px(75.0),
-            ..default()
-        })
-        .with_children(|parent| {
-            let node = Node {
-                margin: UiRect {
-                    left: Val::Px(15.0),
-                    ..default()
-                },
-                ..default()
-            };
-            let font = TextFont {
-                font_size: 16.0,
-                ..default()
-            };
-            let layout = TextLayout::new_with_justify(JustifyText::Right);
-            parent.spawn((
-                Text::new("status p1"),
-                font.clone(),
-                layout,
-                node.clone(),
-                StatusMarker,
-            ));
-            parent.spawn((
-                Text::new("status p2"),
-                font.clone(),
-                layout,
-                node.clone(),
-                StatusMarker,
-            ));
-            parent.spawn((
-                Text::new("status p3"),
-                font.clone(),
-                layout,
-                node.clone(),
-                StatusMarker,
-            ));
-        });
+            bottom: Val::Px(5.0),
+            left: Val::Px(5.0),
+            ..Node::default()
+        },
+        TextColor(COLOR_P3.into()),
+        StatusMarker,
+        VehicleSceneMarker,
+    ));
 }
 
-fn update_first_place(
-    mut materials: ResMut<Assets<track::RacingLineMaterial>>,
-    material_handles: Query<&MeshMaterial3d<track::RacingLineMaterial>>,
+fn depopulate_all(mut commands: Commands, query: Query<Entity, With<VehicleSceneMarker>>) {
+    for entity in query {
+        commands.entity(entity).despawn();
+    }
+}
+
+fn populate_vehicles(
+    mut commands: Commands,
+    server: Res<AssetServer>,
+    tracks: Res<Assets<Track>>,
+    state: Res<State<GlobalState>>,
+) {
+    use bevy::prelude::*;
+
+    info!("** populate_vehicles **");
+
+    let track = match state.get() {
+        GlobalState::InGame(TrackNickname::Beginner) => tracks.get(&TRACK_HANDLES[0]),
+        GlobalState::InGame(TrackNickname::Vertical) => tracks.get(&TRACK_HANDLES[1]),
+        GlobalState::InGame(TrackNickname::Advanced) => tracks.get(&TRACK_HANDLES[2]),
+        _ => unreachable!(),
+    }
+    .unwrap();
+
+    assert!(track.is_looping);
+
+    let model_p1: Handle<Scene> = server.load(GltfAssetLabel::Scene(0).from_asset(MODEL_P1));
+    let model_p2: Handle<Scene> = server.load(GltfAssetLabel::Scene(0).from_asset(MODEL_P2));
+    let model_p3: Handle<Scene> = server.load(GltfAssetLabel::Scene(0).from_asset(MODEL_P3));
+
+    let initial_righthand = track.initial_forward.cross(track.initial_up);
+    let pos_p1 = track.initial_position;
+    let pos_p2 = track.initial_position + initial_righthand * track.initial_left / 2.0;
+    let pos_p3 = track.initial_position + initial_righthand * track.initial_right / 2.0;
+
+    commands.spawn((
+        SceneRoot(model_p1),
+        Transform::from_scale(Vec3::ONE * 0.15),
+        BoatData::from_player_position_and_forward(Player::One, pos_p1, track.initial_forward),
+        VehicleSceneMarker,
+    ));
+    commands.spawn((
+        SceneRoot(model_p2),
+        Transform::from_scale(Vec3::ONE * 0.15),
+        BoatData::from_player_position_and_forward(Player::Two, pos_p2, track.initial_forward),
+        VehicleSceneMarker,
+    ));
+    commands.spawn((
+        SceneRoot(model_p3),
+        Transform::from_scale(Vec3::ONE * 0.15),
+        BoatData::from_player_position_and_forward(Player::Three, pos_p3, track.initial_forward),
+        VehicleSceneMarker,
+    ));
+}
+
+fn exit_game(mut next_state: ResMut<NextState<GlobalState>>, keyboard: Res<ButtonInput<KeyCode>>) {
+    if keyboard.just_pressed(KeyCode::Escape) {
+        next_state.set(GlobalState::GameDone);
+    }
+}
+
+fn reset_vehicle_positions(mut boats: Query<&mut BoatData>, keyboard: Res<ButtonInput<KeyCode>>) {
+    if keyboard.just_pressed(KeyCode::KeyR) {
+        for mut boat in &mut boats {
+            boat.reset();
+        }
+    }
+}
+
+fn update_vehicle_boards(
+    mut materials: ResMut<Assets<racing_line_material::RacingLineMaterial>>,
+    material_handles: Query<&MeshMaterial3d<racing_line_material::RacingLineMaterial>>,
     boats: Query<&BoatData>,
     first_place_labels: Query<&mut Text, With<FirstPlaceMarker>>,
+    tracks: Res<Assets<Track>>,
+    state: Res<State<GlobalState>>,
 ) {
-    let mut maybe_current_best: Option<(Duration, Player)> = None;
-    for boat in &boats {
+    let track = match state.get() {
+        GlobalState::InGame(TrackNickname::Beginner) => tracks.get(&TRACK_HANDLES[0]),
+        GlobalState::InGame(TrackNickname::Vertical) => tracks.get(&TRACK_HANDLES[1]),
+        GlobalState::InGame(TrackNickname::Advanced) => tracks.get(&TRACK_HANDLES[2]),
+        _ => unreachable!(),
+    }
+    .unwrap();
+
+    assert!(track.is_looping);
+
+    // sort by best lap
+    let mut sorted_lap_duration_boats: Vec<(Duration, &BoatData)> = vec![];
+    for boat in boats {
         let Some(best_stat) = &boat.maybe_best_stat else {
             continue;
         };
+        assert!(best_stat.top_start != Duration::MAX);
+        assert!(best_stat.top_finish != Duration::MAX);
+        assert!(best_stat.top_start < best_stat.top_finish);
         let lap_duration = best_stat.top_finish - best_stat.top_start;
-        maybe_current_best = match maybe_current_best {
-            None => Some((lap_duration, boat.player.clone())),
-            Some(current_best) => {
-                if lap_duration < current_best.0 {
-                    Some((lap_duration, boat.player.clone()))
-                } else {
-                    Some(current_best)
-                }
-            }
-        };
+        sorted_lap_duration_boats.push((lap_duration, boat));
     }
+    sorted_lap_duration_boats.sort_by_key(|(duration, _)| *duration);
 
-    if let Some((_, player)) = &maybe_current_best {
+    // update racing line cursors
+    if !sorted_lap_duration_boats.is_empty() {
+        let best_boat_position = sorted_lap_duration_boats[0].1.position_current;
         for material_handle in material_handles.iter() {
             if let Some(material) = materials.get_mut(material_handle) {
-                for boat in boats {
-                    if boat.player != *player {
-                        continue;
-                    }
-                    let mut pos = boat.position_current;
-                    pos -= vec2(-12.0, 0.0);
-                    pos.x = -pos.x;
-                    material.cursor_position = pos;
-                }
+                let mut position = best_boat_position;
+                position -= track.initial_position.xz();
+                position.x = -position.x;
+                material.cursor_position = position;
             }
         }
     }
 
-    let name = match &maybe_current_best {
-        Some((_, player)) => format!("{}", player.clone()),
-        None => "??".into(),
-    };
-
+    // update labels
+    const RANK_NAMES: [&str; 3] = ["1st", "2nd", "3rd"];
+    assert!(sorted_lap_duration_boats.len() < RANK_NAMES.len());
+    let mut rr = vec![];
+    for ((duration, boat), rank_name) in sorted_lap_duration_boats.iter().zip(RANK_NAMES) {
+        rr.push(format!(
+            "{} {:>6.3} {}",
+            boat.player,
+            duration.as_secs_f32(),
+            rank_name
+        ));
+    }
+    let label = format!("{}\nBEST LAP", rr.join("\n"));
     for mut first_place_label in first_place_labels {
-        *first_place_label = format!("BEST\n{}", name).into();
+        *first_place_label = label.clone().into();
     }
 }
 
 fn resolve_checkpoints(
     mut boats: Query<&mut BoatData>,
     status_labels: Query<&mut Text, With<StatusMarker>>,
-    tracks: Res<Assets<track::Track>>,
+    tracks: Res<Assets<Track>>,
+    state: Res<State<GlobalState>>,
     time: Res<Time>,
 ) {
-    use crate::track_data;
-    let Some(track) = tracks.get(&track_data::TRACK_BEGINNER_HANDLE) else {
-        return;
-    };
-
-    if boats.is_empty() {
-        return;
+    let track = match state.get() {
+        GlobalState::InGame(TrackNickname::Beginner) => tracks.get(&TRACK_HANDLES[0]),
+        GlobalState::InGame(TrackNickname::Vertical) => tracks.get(&TRACK_HANDLES[1]),
+        GlobalState::InGame(TrackNickname::Advanced) => tracks.get(&TRACK_HANDLES[2]),
+        _ => unreachable!(),
     }
+    .unwrap();
 
     assert!(track.is_looping);
     assert!(!track.track_kdtree.is_empty());
     assert!(!track.checkpoint_kdtree.is_empty());
+    assert!(boats.iter().len() == status_labels.iter().len());
 
     // bounce track boundary
     for mut boat in &mut boats {
-        let query_segment =
-            track::Segment::from_endpoints(boat.position_current, boat.position_previous);
+        let query_segment = Segment::from_endpoints(boat.position_current, boat.position_previous);
         let closest_segment = track.track_kdtree.nearest(&query_segment).unwrap();
         assert!(query_segment.ii == 255);
         assert!(closest_segment.item.ii == 0 || closest_segment.item.ii == 1);
-        if track::Segment::clips(closest_segment.item, &query_segment) {
+        if Segment::clips(closest_segment.item, &query_segment) {
             boat.position_previous = closest_segment.item.mirror(boat.position_previous);
             boat.position_current = closest_segment.item.mirror(boat.position_current);
         }
@@ -317,8 +397,7 @@ fn resolve_checkpoints(
     let top_now = time.elapsed();
     for mut boat in &mut boats {
         boat.current_stat.top_finish = top_now;
-        let query_segment =
-            track::Segment::from_endpoints(boat.position_current, boat.position_previous);
+        let query_segment = Segment::from_endpoints(boat.position_current, boat.position_previous);
         let closest_segment = track.checkpoint_kdtree.nearest(&query_segment).unwrap();
         assert!(query_segment.ii == 255);
         assert!(closest_segment.item.ii != 255);
@@ -333,11 +412,7 @@ fn resolve_checkpoints(
                             boat.current_stat.checkpoint_to_tops.contains_key(&kk);
                     }
                     if crossed_all_checkpoints {
-                        warn!(
-                            "player {} completed a lap in {:>6.3}",
-                            boat.player,
-                            boat.current_stat.elapsed_secs(),
-                        );
+                        boat.maybe_last_stat = Some(boat.current_stat.clone());
                         boat.maybe_best_stat = Some(match &boat.maybe_best_stat {
                             None => boat.current_stat.clone(),
                             Some(best_stat) => {
@@ -349,6 +424,15 @@ fn resolve_checkpoints(
                             }
                         });
                         boat.lap_count += 1;
+                        let is_new_best: bool =
+                            boat.maybe_best_stat.clone() == boat.maybe_last_stat.clone();
+                        warn!(
+                            "player {} completed lap {} in {:>6.3}{}",
+                            boat.player,
+                            boat.lap_count,
+                            boat.current_stat.elapsed_secs(),
+                            if is_new_best { " NEW BEST LAP !!!" } else { "" },
+                        );
                         boat.current_stat = LapStat::from(top_now);
                     }
                 }
@@ -361,53 +445,106 @@ fn resolve_checkpoints(
     }
 
     // prepare ui status label
-    assert!(boats.iter().len() == status_labels.iter().len());
     for (boat, mut status_label) in boats.iter().zip(status_labels) {
         let mut ss: Vec<String> = vec![];
         ss.push(format!(
-            "{} lap{} {:>6.3} {:>6.3}",
+            "{} lap{}\ncurrent   last   best\n{:>6.3} {:>6.3} {:>6.3}",
             boat.player,
             boat.lap_count,
             boat.current_stat.elapsed_secs(),
+            match &boat.maybe_last_stat {
+                None => 0.0,
+                Some(stat) => stat.elapsed_secs(),
+            },
             match &boat.maybe_best_stat {
                 None => 0.0,
                 Some(best_stat) => best_stat.elapsed_secs(),
             },
         ));
-        match &boat.maybe_best_stat {
-            None => {
-                for kk in 1..track.checkpoint_count {
-                    ss.push(match boat.current_stat.checkpoint_to_tops.get(&kk) {
-                        Some(duration) => format!(
-                            "#{} {:>6.3}       ",
-                            kk,
-                            (*duration - boat.current_stat.top_start).as_secs_f32()
-                        ),
-                        None => "_       ".into(),
-                    });
+
+        for kk in 1..track.checkpoint_count {
+            let maybe_checkpoint_top = boat.current_stat.checkpoint_to_tops.get(&kk);
+            let aa: String = match maybe_checkpoint_top {
+                Some(checkpoint_top) => {
+                    let lap_duration =
+                        (*checkpoint_top - boat.current_stat.top_start).as_secs_f32();
+                    format!("{:>6.3}", lap_duration)
                 }
-            }
-            Some(best_stat) => {
-                for kk in 1..track.checkpoint_count {
-                    let best_duration = best_stat.checkpoint_to_tops.get(&kk).unwrap();
-                    let best_delta = (*best_duration - best_stat.top_start).as_secs_f32();
-                    ss.push(match boat.current_stat.checkpoint_to_tops.get(&kk) {
-                        Some(current_duration) => {
-                            let current_delta =
-                                (*current_duration - boat.current_stat.top_start).as_secs_f32();
-                            format!(
-                                "#{} {:>6.3} {:>+5.3}",
-                                kk,
-                                current_delta,
-                                current_delta - best_delta,
-                            )
+                None => "     _".into(),
+            };
+            let bb: String = match &boat.maybe_last_stat {
+                Some(stat) => {
+                    let stat_top = stat.checkpoint_to_tops.get(&kk).unwrap();
+                    let stat_duration = (*stat_top - stat.top_start).as_secs_f32();
+                    match maybe_checkpoint_top {
+                        Some(checkpoint_top) => {
+                            let lap_duration =
+                                (*checkpoint_top - boat.current_stat.top_start).as_secs_f32();
+                            format!("{:>+5.3}", lap_duration - stat_duration)
                         }
-                        None => format!("_ {:>6.3}", best_delta),
-                    });
+                        None => {
+                            format!("{:>6.3}", stat_duration)
+                        }
+                    }
                 }
-            }
+                None => "     _".into(),
+            };
+            let cc: String = match &boat.maybe_best_stat {
+                Some(stat) => {
+                    let stat_top = stat.checkpoint_to_tops.get(&kk).unwrap();
+                    let stat_duration = (*stat_top - stat.top_start).as_secs_f32();
+                    match maybe_checkpoint_top {
+                        Some(checkpoint_top) => {
+                            let lap_duration =
+                                (*checkpoint_top - boat.current_stat.top_start).as_secs_f32();
+                            format!("{:>+5.3}", lap_duration - stat_duration)
+                        }
+                        None => {
+                            format!("{:>6.3}", stat_duration)
+                        }
+                    }
+                }
+                None => "     _".into(),
+            };
+            ss.push(format!("#{} {} {} {}", kk, aa, bb, cc));
         }
+
         *status_label = ss.join("\n").into();
+    }
+}
+
+struct BoatPhysics {
+    mass: f32,
+    friction: Vec2,
+    thrust: f32,
+    brake: f32,
+    turning_speed: f32,
+    force: Vec2,
+    dt: f32,
+}
+
+impl BoatPhysics {
+    fn from_dt(dt: f32) -> Self {
+        Self {
+            mass: 100.0,                     // kg
+            friction: Vec2::new(5e-2, 1e-2), // 0 <= f < 1
+            thrust: 1500.0,                  // m / s^2 / kg ~ N
+            brake: 800.0,                    // m / s^2 / kg ~ N
+            turning_speed: 5.0 * PI / 4.0,   // rad / s
+            force: Vec2::ZERO,               // m / s^2 /kg ~ N
+            dt,                              // s
+        }
+    }
+}
+
+impl BoatPhysics {
+    fn compute_next_pos(&self, pos_prev: Vec2, pos_current: Vec2, angle_current: f32) -> Vec2 {
+        let accel = self.force / self.mass / 2.0;
+        let pp = Mat2::from_angle(angle_current);
+        let friction = pp.transpose() * Mat2::from_diagonal(self.friction) * pp;
+        (2.0 * Mat2::IDENTITY - friction) * pos_current
+            - (1.0 * Mat2::IDENTITY - friction) * pos_prev
+            + accel * self.dt * self.dt
     }
 }
 
@@ -417,49 +554,8 @@ fn update_vehicle_physics(
     keyboard: Res<ButtonInput<KeyCode>>,
     gamepads: Query<(Entity, &Gamepad)>,
 ) {
-    struct BoatPhysics {
-        mass: f32,
-        friction: Vec2,
-        thrust: f32,
-        brake: f32,
-        turning_speed: f32,
-        force: Vec2,
-        dt: f32,
-    }
-
-    impl BoatPhysics {
-        fn from_dt(dt: f32) -> Self {
-            Self {
-                mass: 100.0,                     // kg
-                friction: Vec2::new(5e-2, 1e-2), // 0 <= f < 1
-                thrust: 1500.0,                  // m / s^2 / kg ~ N
-                brake: 800.0,                    // m / s^2 / kg ~ N
-                turning_speed: 5.0 * PI / 4.0,   // rad / s
-                force: Vec2::ZERO,               // m / s^2 /kg ~ N
-                dt,                              // s
-            }
-        }
-    }
-
-    impl BoatPhysics {
-        fn compute_next_pos(&self, pos_prev: Vec2, pos_current: Vec2, angle_current: f32) -> Vec2 {
-            let accel = self.force / self.mass / 2.0;
-            let pp = Mat2::from_angle(angle_current);
-            let friction = pp.transpose() * Mat2::from_diagonal(self.friction) * pp;
-            (2.0 * Mat2::IDENTITY - friction) * pos_current
-                - (1.0 * Mat2::IDENTITY - friction) * pos_prev
-                + accel * self.dt * self.dt
-        }
-    }
-
     let dt = time.delta_secs();
     for (mut boat, mut transform) in &mut boats {
-        if keyboard.just_pressed(KeyCode::KeyR) {
-            let player = boat.player.clone();
-            let maybe_best_stat = boat.maybe_best_stat.clone();
-            *boat = BoatData::from_player(player);
-            boat.maybe_best_stat = maybe_best_stat;
-        }
         let pos_prev = boat.position_previous;
         let pos_current = boat.position_current;
         let mut physics = BoatPhysics::from_dt(dt);
@@ -471,7 +567,7 @@ fn update_vehicle_physics(
                 if keyboard.pressed(KeyCode::ArrowRight) {
                     boat.angle_current -= physics.turning_speed * dt;
                 }
-                let dir_current = Vec2::from_angle(3.0 * PI / 2.0 - boat.angle_current);
+                let dir_current = Vec2::from_angle(PI / 2.0 - boat.angle_current);
                 if keyboard.pressed(KeyCode::ArrowUp) {
                     physics.force += physics.thrust * dir_current;
                 }
@@ -487,7 +583,7 @@ fn update_vehicle_physics(
                 if keyboard.pressed(KeyCode::KeyD) {
                     boat.angle_current -= physics.turning_speed * dt;
                 }
-                let dir_current = Vec2::from_angle(3.0 * PI / 2.0 - boat.angle_current);
+                let dir_current = Vec2::from_angle(PI / 2.0 - boat.angle_current);
                 if keyboard.pressed(KeyCode::KeyW) {
                     physics.force += physics.thrust * dir_current;
                 }
@@ -502,7 +598,7 @@ fn update_vehicle_physics(
                     if left_stick_x.abs() > 0.01 {
                         boat.angle_current -= physics.turning_speed * left_stick_x * dt;
                     }
-                    let dir_current = Vec2::from_angle(3.0 * PI / 2.0 - boat.angle_current);
+                    let dir_current = Vec2::from_angle(PI / 2.0 - boat.angle_current);
                     if gamepad.pressed(GamepadButton::East) {
                         physics.force += physics.thrust * dir_current;
                     }

@@ -1,351 +1,12 @@
 use kd_tree::{KdPoint, KdTree};
 
-use bevy::asset::{Asset, AssetApp, AssetServer, Assets};
-use bevy::math::{ops, FloatPow};
-use bevy::math::{Mat2, Mat3, NormedVectorSpace, Quat, Vec2, Vec3};
-use bevy::pbr::StandardMaterial;
+use bevy::asset::Asset;
+use bevy::math::{ops, FloatPow, NormedVectorSpace};
+use bevy::math::{Mat2, Vec2, Vec3};
 use bevy::reflect::TypePath;
 use bevy::render::mesh::Mesh;
-use bevy::render::render_resource::{AsBindGroup, ShaderRef};
-
-use bevy::prelude::Vec3Swizzles;
-use bevy::prelude::{debug, info, warn};
-use bevy::prelude::{Commands, Component, Handle, Query, Res, ResMut, Time, With};
-use bevy::prelude::{Mesh3d, MeshMaterial3d};
-
-use bevy::color::palettes::basic::BLUE;
-use bevy::color::palettes::basic::WHITE;
 
 use std::f32::consts::PI;
-
-//////////////////////////////////////////////////////////////////////
-
-pub struct TrackPlugin;
-
-impl bevy::prelude::Plugin for TrackPlugin {
-    fn build(&self, app: &mut bevy::prelude::App) {
-        use crate::track_data;
-        use bevy::prelude::{MaterialPlugin, PreStartup, Startup, Update};
-        app.init_asset::<Track>();
-        app.add_plugins(MaterialPlugin::<RacingLineMaterial>::default());
-        app.add_systems(PreStartup, track_data::prepare_tracks);
-        app.add_systems(Startup, populate_tracks);
-        app.add_systems(Startup, populate_racing_lines);
-        app.add_systems(Update, animate_wavy_materials);
-        app.add_systems(Update, animate_racing_line_materials);
-    }
-}
-
-//////////////////////////////////////////////////////////////////////
-
-fn populate_tracks(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    tracks: Res<Assets<Track>>,
-    asset_server: Res<AssetServer>,
-) {
-    use crate::track_data;
-    use bevy::color::Color;
-    use bevy::image::ImageAddressMode;
-    use bevy::image::ImageLoaderSettings;
-    use bevy::image::ImageSampler;
-    use bevy::image::ImageSamplerDescriptor;
-    use bevy::math::Affine2;
-    use bevy::pbr::UvChannel;
-    use bevy::prelude::Transform;
-
-    info!("** populate_tracks **");
-
-    let track0 = tracks.get(&track_data::TRACK_BEGINNER_HANDLE).unwrap();
-    let track1 = tracks.get(&track_data::TRACK_VERTICAL_HANDLE).unwrap();
-
-    // track 0 showcases flow parametrization
-    let checkpoint0_material = materials.add(StandardMaterial {
-        base_color: Color::hsva(0.0, 0.8, 1.0, 0.8),
-        // alpha_mode: AlphaMode::Blend, FIXME buggy
-        ..StandardMaterial::default()
-    });
-    commands.spawn((
-        Mesh3d(meshes.add(track0.checkpoint.clone())),
-        MeshMaterial3d(checkpoint0_material),
-    ));
-    let track0_material = materials.add(make_wavy_material(&asset_server, 0.6, PI / 3.0));
-    commands.spawn((
-        WavyMarker,
-        Mesh3d(meshes.add(track0.track.clone())),
-        MeshMaterial3d(track0_material),
-    ));
-
-    // track 1 showcases projected parametrization
-    let track1_material = materials.add(StandardMaterial {
-        base_color_channel: UvChannel::Uv1,
-        base_color_texture: Some(asset_server.load_with_settings(
-            // "textures/parallax_example/cube_color.png",
-            // "textures/slice_square.png",
-            // "textures/fantasy_ui_borders/panel-border-015.png",
-            "textures/uv_checker_bw.png",
-            |s: &mut _| {
-                *s = ImageLoaderSettings {
-                    sampler: ImageSampler::Descriptor(ImageSamplerDescriptor {
-                        address_mode_u: ImageAddressMode::Repeat,
-                        address_mode_v: ImageAddressMode::Repeat,
-                        ..ImageSamplerDescriptor::default()
-                    }),
-                    ..ImageLoaderSettings::default()
-                }
-            },
-        )),
-        uv_transform: Affine2::from_scale(Vec2::new(1.0 / 8.0, 1.0 / 8.0)),
-        ..StandardMaterial::default()
-    });
-    commands.spawn((
-        Mesh3d(meshes.add(track1.track.clone())),
-        MeshMaterial3d(track1_material),
-        Transform::from_xyz(-1.0, 0.0, -2.0),
-    ));
-
-    // track 2 showcases water effect
-    let track2_material = materials.add(StandardMaterial {
-        base_color_channel: UvChannel::Uv0,
-        base_color_texture: Some(asset_server.load_with_settings(
-            "textures/fantasy_ui_borders/panel-border-010.png",
-            |s: &mut _| {
-                *s = ImageLoaderSettings {
-                    sampler: ImageSampler::Descriptor(ImageSamplerDescriptor {
-                        // rewriting mode to repeat image,
-                        address_mode_u: ImageAddressMode::Repeat,
-                        address_mode_v: ImageAddressMode::Repeat,
-                        ..ImageSamplerDescriptor::default()
-                    }),
-                    ..ImageLoaderSettings::default()
-                }
-            },
-        )),
-        ..StandardMaterial::default()
-    });
-    commands.spawn((
-        Mesh3d(meshes.add(track1.track.clone())),
-        MeshMaterial3d(track2_material),
-        Transform::from_xyz(12.0, 0.0, 9.0)
-            .with_rotation(Quat::from_axis_angle(Vec3::X, -PI / 2.0)),
-    ));
-}
-
-fn populate_racing_lines(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<RacingLineMaterial>>,
-    tracks: Res<Assets<Track>>,
-    asset_server: Res<AssetServer>,
-) {
-    use crate::track_data;
-    use bevy::prelude::Transform;
-    info!("** populate_track_dots **");
-
-    let track0 = tracks.get(&track_data::TRACK_BEGINNER_HANDLE).unwrap();
-    let track1 = tracks.get(&track_data::TRACK_VERTICAL_HANDLE).unwrap();
-
-    // track 3 showcases racing lines on track 0 data
-    let track3_material = make_racing_line_material(&asset_server, track0.total_length);
-    commands.spawn((
-        Mesh3d(meshes.add(track0.track.clone())),
-        MeshMaterial3d(materials.add(track3_material)),
-        Transform::from_xyz(0.0, 1e-3, 0.0),
-    ));
-
-    // track 4 showcases racing lines on track 1 data
-    let track4_material = make_racing_line_material(&asset_server, track1.total_length);
-    commands.spawn((
-        Mesh3d(meshes.add(track1.track.clone())),
-        MeshMaterial3d(materials.add(track4_material)),
-        Transform::from_xyz(-1.0, 0.0, -2.0 + 1e-3),
-    ));
-
-    // track 5 showcases racing lines on track 1 data
-    let mut track5_material = make_racing_line_material(&asset_server, track1.total_length);
-    track5_material.middle_line_width = 0.5;
-    track5_material.lateral_range = Vec2::new(-1.8, 0.8);
-    commands.spawn((
-        Mesh3d(meshes.add(track1.track.clone())),
-        MeshMaterial3d(materials.add(track5_material)),
-        Transform::from_xyz(12.0, 1e-3, 9.0)
-            .with_rotation(Quat::from_axis_angle(Vec3::X, -PI / 2.0)),
-    ));
-}
-
-//////////////////////////////////////////////////////////////////////
-
-use bevy::prelude::AlphaMode;
-use bevy::prelude::LinearRgba;
-
-const SHADER_ASSET_PATH: &str = "shaders/offroad/racing_line_material.wgsl";
-
-// This struct defines the data that will be passed to your shader
-#[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
-pub struct RacingLineMaterial {
-    #[texture(0)]
-    #[sampler(1)]
-    color_texture: Option<Handle<bevy::image::Image>>,
-    #[uniform(2)]
-    color: LinearRgba,
-    #[uniform(3)]
-    track_length: f32,
-    #[uniform(4)]
-    middle_line_width: f32,
-    #[uniform(5)]
-    start_line_width: f32,
-    #[uniform(6)]
-    time: f32,
-    #[uniform(7)]
-    pub cursor_position: Vec2,
-    #[uniform(8)]
-    cursor_radius: f32,
-    #[uniform(9)]
-    lateral_range: Vec2,
-    alpha_mode: AlphaMode,
-}
-
-/// The Material trait is very configurable, but comes with sensible defaults for all methods.
-/// You only need to implement functions for features that need non-default behavior. See the Material api docs for details!
-impl bevy::prelude::Material for RacingLineMaterial {
-    fn fragment_shader() -> ShaderRef {
-        SHADER_ASSET_PATH.into()
-    }
-
-    fn alpha_mode(&self) -> AlphaMode {
-        self.alpha_mode
-    }
-}
-
-fn make_racing_line_material(
-    asset_server: &Res<AssetServer>,
-    track_length: f32,
-) -> RacingLineMaterial {
-    use bevy::image::ImageAddressMode;
-    use bevy::image::ImageLoaderSettings;
-    use bevy::image::ImageSampler;
-    use bevy::image::ImageSamplerDescriptor;
-    RacingLineMaterial {
-        track_length,
-        middle_line_width: 0.2,
-        start_line_width: 0.2,
-        lateral_range: Vec2::new(-0.8, 0.8),
-        time: 0.0,
-        cursor_position: Vec2::ZERO,
-        cursor_radius: 0.4,
-        color: LinearRgba::from(WHITE),
-        color_texture: Some(asset_server.load_with_settings(
-            "textures/slice_square.png",
-            |settings: &mut ImageLoaderSettings| {
-                *settings = ImageLoaderSettings {
-                    sampler: ImageSampler::Descriptor(ImageSamplerDescriptor {
-                        address_mode_u: ImageAddressMode::Repeat,
-                        address_mode_v: ImageAddressMode::Repeat,
-                        ..ImageSamplerDescriptor::default()
-                    }),
-                    ..ImageLoaderSettings::default()
-                }
-            },
-        )),
-        alpha_mode: AlphaMode::Blend,
-    }
-}
-
-fn animate_racing_line_materials(
-    mut materials: ResMut<Assets<RacingLineMaterial>>,
-    material_handles: Query<&MeshMaterial3d<RacingLineMaterial>>,
-    time: Res<Time>,
-) {
-    for material_handle in material_handles.iter() {
-        if let Some(material) = materials.get_mut(material_handle) {
-            material.time += time.delta_secs();
-        }
-    }
-}
-
-//////////////////////////////////////////////////////////////////////
-
-#[derive(Component)]
-struct WavyMarker;
-
-fn make_wavy_material(asset_server: &Res<AssetServer>, scale: f32, angle: f32) -> StandardMaterial {
-    use bevy::color::Color;
-    use bevy::image::ImageAddressMode;
-    use bevy::image::ImageLoaderSettings;
-    use bevy::image::ImageSampler;
-    use bevy::image::ImageSamplerDescriptor;
-    use bevy::math::Affine2;
-    use bevy::math::Vec2;
-    use bevy::pbr::UvChannel;
-    StandardMaterial {
-        perceptual_roughness: 0.2,
-        base_color: Color::from(BLUE),
-        // base_color_channel: UvChannel::Uv1,
-        // base_color_texture: Some(asset_server.load_with_settings(
-        //     "textures/parallax_example/cube_color.png",
-        //     |settings: &mut ImageLoaderSettings| {
-        //         *settings = ImageLoaderSettings {
-        //             sampler: ImageSampler::Descriptor(ImageSamplerDescriptor {
-        //                 address_mode_u: ImageAddressMode::Repeat,
-        //                 address_mode_v: ImageAddressMode::Repeat,
-        //                 ..ImageSamplerDescriptor::default()
-        //             }),
-        //             ..ImageLoaderSettings::default()
-        //         }
-        //     },
-        // )),
-        normal_map_channel: UvChannel::Uv1,
-        normal_map_texture: Some(asset_server.load_with_settings(
-            "textures/wavy_normal.png",
-            // The normal map texture is in linear color space. Lighting won't look correct
-            // if `is_srgb` is `true`, which is the default.
-            |settings: &mut ImageLoaderSettings| {
-                *settings = ImageLoaderSettings {
-                    is_srgb: false,
-                    sampler: ImageSampler::Descriptor(ImageSamplerDescriptor {
-                        address_mode_u: ImageAddressMode::Repeat,
-                        address_mode_v: ImageAddressMode::Repeat,
-                        ..ImageSamplerDescriptor::default()
-                    }),
-                    ..ImageLoaderSettings::default()
-                }
-            },
-        )),
-        depth_map: Some(asset_server.load_with_settings(
-            "textures/wavy_depth.png",
-            |settings: &mut ImageLoaderSettings| {
-                *settings = ImageLoaderSettings {
-                    sampler: ImageSampler::Descriptor(ImageSamplerDescriptor {
-                        address_mode_u: ImageAddressMode::Repeat,
-                        address_mode_v: ImageAddressMode::Repeat,
-                        ..ImageSamplerDescriptor::default()
-                    }),
-                    ..ImageLoaderSettings::default()
-                }
-            },
-        )),
-        parallax_depth_scale: 0.1,
-        uv_transform: Affine2::from_mat2(
-            Mat2::from_diagonal(Vec2::ONE * scale) * Mat2::from_angle(angle),
-        ),
-        ..StandardMaterial::default()
-    }
-}
-
-fn animate_wavy_materials(
-    material_handles: Query<&MeshMaterial3d<StandardMaterial>, With<WavyMarker>>,
-    time: Res<Time>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-) {
-    for material_handle in material_handles.iter() {
-        if let Some(material) = materials.get_mut(material_handle) {
-            material.uv_transform.translation.y += -0.8 * time.delta_secs();
-        }
-    }
-}
-
-//////////////////////////////////////////////////////////////////////
 
 pub enum TrackPiece {
     Start,
@@ -520,9 +181,16 @@ pub struct Track {
     pub track_kdtree: KdTree<Segment>,
     pub checkpoint_kdtree: KdTree<Segment>,
     pub checkpoint_count: u8,
+    pub initial_up: Vec3,
+    pub initial_position: Vec3,
+    pub initial_forward: Vec3,
+    pub initial_left: f32,
+    pub initial_right: f32,
 }
 
 pub fn prepare_track(track_data: &TrackData) -> Track {
+    use bevy::prelude::*;
+
     assert!(ops::abs(track_data.initial_forward.norm() - 1.0) < 1e-5);
     assert!(ops::abs(track_data.initial_up.norm() - 1.0) < 1e-5);
     assert!(track_data.initial_left < track_data.initial_right);
@@ -814,5 +482,10 @@ pub fn prepare_track(track_data: &TrackData) -> Track {
         checkpoint_count: checkpoint_segments.len() as u8,
         track_kdtree: KdTree::build_by_ordered_float(track_segments),
         checkpoint_kdtree: KdTree::build_by_ordered_float(checkpoint_segments),
+        initial_up: track_data.initial_up,
+        initial_position: track_data.initial_position,
+        initial_forward: track_data.initial_forward,
+        initial_left: track_data.initial_left,
+        initial_right: track_data.initial_right,
     }
 }
