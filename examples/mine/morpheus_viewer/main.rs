@@ -42,9 +42,6 @@ fn main() {
     }
 
     app.add_plugins(morpheus::MorpheusPlugin);
-    // app.add_plugins(track::TrackPlugin);
-    // app.add_plugins(simu::SimuPlugin);
-    // app.add_plugins(vehicle::VehiclePlugin);
 
     app.run();
 }
