@@ -63,14 +63,14 @@ struct SnippetHandles {
 
 fn make_shader_from_snippet(
     server_asset: &Res<AssetServer>,
-    ray_snippet: &String,
+    ray_snippet: &str,
     shape: &str,
 ) -> Shader {
     let sdf_path = format!("shaders/morpheus/sdf/{shape}.wgsl");
     let sdf_handle: Handle<Shader> = server_asset.load::<Shader>(sdf_path.clone());
 
     let ray_path = format!("shaders/morpheus/raymarching/{shape}.wgsl");
-    let mut ray_source: String = ray_snippet.clone();
+    let mut ray_source: String = ray_snippet.to_owned();
     ray_source = ray_source.replace("SDF_PATH", &sdf_path);
     let mut ray_shader = Shader::from_wgsl(ray_source, ray_path);
     ray_shader.file_dependencies.push(sdf_handle);
@@ -79,19 +79,19 @@ fn make_shader_from_snippet(
 }
 
 fn update_internal_state(
-    mut foo: ResMut<SnippetHandles>,
+    mut handles: ResMut<SnippetHandles>,
     mut shaders: ResMut<Assets<Shader>>,
     snippets: Res<Assets<Snippet>>,
     server_asset: Res<AssetServer>,
 ) {
-    foo.state = match foo.state {
+    handles.state = match handles.state {
         State::Init => {
-            foo.raymarching_snippet =
+            handles.raymarching_snippet =
                 server_asset.load::<Snippet>("shaders/morpheus/snippet/raymarching.snippet");
             State::LoadingSnippets
         }
         State::LoadingSnippets => {
-            let has_snippet = !snippets.get(foo.raymarching_snippet.id()).is_none();
+            let has_snippet = snippets.get(handles.raymarching_snippet.id()).is_some();
             match has_snippet {
                 true => State::PreparingShaders,
                 false => State::LoadingSnippets,
@@ -99,23 +99,23 @@ fn update_internal_state(
         }
         State::PreparingShaders => {
             info!("** prepare_shaders **");
-            let snippet = snippets.get(foo.raymarching_snippet.id()).unwrap();
+            let snippet = snippets.get(handles.raymarching_snippet.id()).unwrap();
             let snippet = &snippet.content;
             shaders.insert(
                 Slot0::RAY_HANDLE.id(),
-                make_shader_from_snippet(&server_asset, &snippet, "sphere"),
+                make_shader_from_snippet(&server_asset, snippet, "sphere"),
             );
             shaders.insert(
                 Slot1::RAY_HANDLE.id(),
-                make_shader_from_snippet(&server_asset, &snippet, "union"),
+                make_shader_from_snippet(&server_asset, snippet, "union"),
             );
             shaders.insert(
                 Slot2::RAY_HANDLE.id(),
-                make_shader_from_snippet(&server_asset, &snippet, "alien"),
+                make_shader_from_snippet(&server_asset, snippet, "alien"),
             );
             shaders.insert(
                 Slot3::RAY_HANDLE.id(),
-                make_shader_from_snippet(&server_asset, &snippet, "can"),
+                make_shader_from_snippet(&server_asset, snippet, "can"),
             );
             State::Done
         }
