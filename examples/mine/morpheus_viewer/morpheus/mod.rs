@@ -1,10 +1,10 @@
 mod camera;
 mod raymarching_material;
-mod sdf;
+mod slot;
 mod snippet;
 
 use raymarching_material::MorpheusRaymarchingMaterial;
-use sdf::{Sdf, Slot0, Slot1, Slot2, Slot3};
+use slot::{Slot, Slot0, Slot1, Slot2, Slot3};
 use snippet::{Snippet, SnippetAssetLoader};
 
 use bevy::prelude::*;

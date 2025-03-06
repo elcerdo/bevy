@@ -1,4 +1,4 @@
-use crate::morpheus::sdf::Sdf;
+use crate::morpheus::slot::Slot;
 
 use bevy::prelude::*;
 use bevy::render::render_resource::{AsBindGroup, ShaderRef};
@@ -6,7 +6,7 @@ use bevy::render::render_resource::{AsBindGroup, ShaderRef};
 use std::marker::PhantomData;
 
 #[derive(Asset, TypePath, AsBindGroup, Clone)]
-pub struct MorpheusRaymarchingMaterial<T: Sdf> {
+pub struct MorpheusRaymarchingMaterial<T: Slot> {
     #[texture(0)]
     #[sampler(1)]
     pub matcap_texture: Option<Handle<Image>>,
@@ -15,7 +15,7 @@ pub struct MorpheusRaymarchingMaterial<T: Sdf> {
     phantom: PhantomData<T>,
 }
 
-impl<T: Sdf> Material for MorpheusRaymarchingMaterial<T> {
+impl<T: Slot> Material for MorpheusRaymarchingMaterial<T> {
     fn vertex_shader() -> ShaderRef {
         T::raymarching_shader()
     }
@@ -29,7 +29,7 @@ impl<T: Sdf> Material for MorpheusRaymarchingMaterial<T> {
     }
 }
 
-impl<T: Sdf> MorpheusRaymarchingMaterial<T> {
+impl<T: Slot> MorpheusRaymarchingMaterial<T> {
     pub fn new(matcap_texture: Handle<Image>) -> Self {
         Self {
             bbox_center: Vec3::ZERO,

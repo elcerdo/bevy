@@ -3,7 +3,7 @@ use bevy::render::render_resource::ShaderRef;
 
 use bevy::prelude::*;
 
-pub trait Sdf: TypePath + Clone + Sync + Send {
+pub trait Slot: TypePath + Clone + Sync + Send {
     const RAY_HANDLE: Handle<Shader>;
     fn raymarching_shader() -> ShaderRef {
         Self::RAY_HANDLE.into()
@@ -30,27 +30,27 @@ pub trait Sdf: TypePath + Clone + Sync + Send {
 #[derive(Clone, TypePath)]
 pub struct Slot0;
 
-impl Sdf for Slot0 {
+impl Slot for Slot0 {
     const RAY_HANDLE: Handle<Shader> = weak_handle!("7987c9b7-c46a-0000-1111-023a354b7cac");
 }
 
 #[derive(Clone, TypePath)]
 pub struct Slot1;
 
-impl Sdf for Slot1 {
+impl Slot for Slot1 {
     const RAY_HANDLE: Handle<Shader> = weak_handle!("7987c9b7-c46a-1111-1111-023a354b7cac");
 }
 
 #[derive(Clone, TypePath)]
 pub struct Slot2;
 
-impl Sdf for Slot2 {
+impl Slot for Slot2 {
     const RAY_HANDLE: Handle<Shader> = weak_handle!("7987c9b7-c46a-2222-1111-023a354b7cac");
 }
 
 #[derive(Clone, TypePath)]
 pub struct Slot3;
 
-impl Sdf for Slot3 {
+impl Slot for Slot3 {
     const RAY_HANDLE: Handle<Shader> = weak_handle!("7987c9b7-c46a-3333-1111-023a354b7cac");
 }
