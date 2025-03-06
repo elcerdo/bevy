@@ -1,3 +1,5 @@
+// use crate::global_state::{GlobalState, TrackNickname, TRACK_NICKNAMES};
+
 use bevy::render::extract_component::{
     ComponentUniforms, ExtractComponent, ExtractComponentPlugin, UniformComponentPlugin,
 };
@@ -16,7 +18,7 @@ use bevy::prelude::*;
 
 const SHADER_ASSET_PATH: &str = "shaders/offroad/simu_compute.wgsl";
 const TEXTURE_FORMAT: TextureFormat = TextureFormat::Rgba32Float;
-const SIMU_SIZE: (u32, u32) = (64, 64);
+const SIMU_SIZE: (u32, u32) = (1024, 1024);
 const WORKGROUP_SIZE: u32 = 8;
 
 //////////////////////////////////////////////////////////////////////
@@ -54,16 +56,19 @@ impl Plugin for SimuPlugin {
         app.add_plugins(ExtractResourcePlugin::<SimuImages>::default());
 
         let render_app = app.sub_app_mut(RenderApp);
-        render_app.add_systems(
-            Render,
-            prepare_bind_group.in_set(RenderSet::PrepareBindGroups),
-        );
 
         let mut render_graph = render_app.world_mut().resource_mut::<RenderGraph>();
         render_graph.add_node(SimuLabel, SimuNode::default());
         render_graph.add_node_edge(SimuLabel, bevy::render::graph::CameraDriverLabel);
 
-        app.add_systems(Startup, setup_simu);
+        // for track_nickname in TRACK_NICKNAMES {
+        // app.add_systems(OnEnter(GlobalState::InGame(*track_nickname)), populate_simu);
+        // }
+        render_app.add_systems(
+            Render,
+            prepare_bind_group.in_set(RenderSet::PrepareBindGroups),
+        );
+        app.add_systems(Startup, populate_simu);
     }
     fn finish(&self, app: &mut App) {
         info!("** simu_finish **");
@@ -277,13 +282,13 @@ impl Node for SimuNode {
     }
 }
 
-fn setup_simu(
+fn populate_simu(
     mut commands: Commands,
     mut images: ResMut<Assets<Image>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    info!("** setup_simu **");
+    info!("** populate_simu **");
 
     let mut image = Image::new_fill(
         Extent3d {
@@ -303,14 +308,21 @@ fn setup_simu(
     let image_a = images.add(image.clone());
     let image_b = images.add(image);
 
-    // cube
+    // magic plane
     commands.spawn((
-        Mesh3d(meshes.add(Mesh::from(Cuboid::default()))),
+        Mesh3d(
+            meshes.add(
+                Plane3d::default()
+                    .mesh()
+                    .size(400.0, 400.0)
+                    .subdivisions(20),
+            ),
+        ),
         MeshMaterial3d(materials.add(StandardMaterial {
             base_color_texture: Some(image_a.clone()),
             ..StandardMaterial::default()
         })),
-        Transform::from_xyz(-7.0, 3.0, -11.0).with_scale(Vec3::ONE * 6.0),
+        Transform::from_xyz(100.0, -0.25, -100.0),
         SimuSettings { rng_seed: 42 },
     ));
 

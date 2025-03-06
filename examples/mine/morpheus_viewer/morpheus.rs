@@ -278,7 +278,7 @@ fn animate_camera(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mouse_motion: Res<AccumulatedMouseMotion>,
 ) {
-    let Ok((mut transform, pivot)) = query.get_single_mut() else {
+    let Ok((mut transform, pivot)) = query.single_mut() else {
         return;
     };
     if mouse_input.pressed(MouseButton::Left) {
