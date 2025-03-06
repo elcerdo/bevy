@@ -128,6 +128,10 @@ fn prepare_shader(
 }
 
 fn prepare_shaders(mut shaders: ResMut<Assets<Shader>>, server_asset: Res<AssetServer>) {
+    // let path = path.replace(std::path::MAIN_SEPARATOR, "/");
+    // let mut bytes = Vec::new();
+    // reader.read_to_end(&mut bytes).await?;
+
     prepare_shader(&mut shaders, &server_asset, "sphere", Slot0::RAY_HANDLE);
     prepare_shader(&mut shaders, &server_asset, "union", Slot1::RAY_HANDLE);
     prepare_shader(&mut shaders, &server_asset, "alien", Slot2::RAY_HANDLE);
@@ -183,7 +187,7 @@ fn populate_models(
     let slot2_center = Vec3::new(0.0, 2.0, 0.0);
     let slot3_center = Vec3::new(0.0, 0.0, 2.0);
 
-    // models
+    // materials
     let slot0_material = morpheus_slot0_materials.add(MorpheusRaymarchingMaterial::<Slot0>::new(
         slot0_center,
         matcap_texture.clone(),
@@ -200,7 +204,8 @@ fn populate_models(
         slot3_center,
         matcap_texture.clone(),
     ));
-    
+
+    // models
     commands.spawn((
         Mesh3d(cube_mesh.clone()),
         MeshMaterial3d(slot0_material),
