@@ -4,15 +4,14 @@ use crate::material::wavy_material;
 
 use bevy::asset::{AssetServer, Assets};
 use bevy::color::Srgba;
-use bevy::pbr::StandardMaterial;
+use bevy::core_pipeline::fxaa::Fxaa;
+use bevy::pbr::{ScreenSpaceReflections, StandardMaterial};
 use bevy::render::mesh::Mesh;
 
 use bevy::prelude::info;
 use bevy::prelude::{Commands, Res, ResMut};
 use bevy::prelude::{Component, Entity, Query, With};
 use bevy::prelude::{NextState, State};
-
-use std::f32::consts::PI;
 
 mod data;
 mod piece;
@@ -21,7 +20,7 @@ pub use data::TRACK_HANDLES;
 pub use piece::Segment;
 pub use piece::Track;
 
-const TRACK_GROUND_COLOR: Srgba = bevy::color::palettes::basic::SILVER;
+const TRACK_GROUND_COLOR: Srgba = bevy::color::palettes::basic::WHITE;
 const TRACK_EPSILON: f32 = 5e-2;
 
 //////////////////////////////////////////////////////////////////////
@@ -55,7 +54,7 @@ fn depopulate_all(mut commands: Commands, query: Query<Entity, With<GameSceneMar
     }
 }
 
-fn populate_camera_and_lights(mut commands: Commands) {
+fn populate_camera_and_lights(mut commands: Commands, asset_server: Res<AssetServer>) {
     use bevy::prelude::*;
     use bevy::render::camera::ScalingMode;
 
@@ -71,18 +70,28 @@ fn populate_camera_and_lights(mut commands: Commands) {
             shadow_depth_bias: 0.2,
             ..default()
         },
-        Transform::from_xyz(-4.0, 16.0, 8.0),
+        Transform::from_xyz(-16.0, 16.0, 8.0),
     ));
-    commands.spawn((
-        GameSceneMarker,
-        DirectionalLight {
-            color: Color::WHITE,
-            shadows_enabled: true,
-            illuminance: light_consts::lux::OVERCAST_DAY,
-            ..default()
-        },
-        Transform::from_translation(Vec3::Y).looking_at(Vec3::ZERO, Vec3::Y),
-    ));
+    // commands.spawn((
+    //     GameSceneMarker,
+    //     DirectionalLight {
+    //         color: Color::WHITE,
+    //         shadows_enabled: true,
+    //         illuminance: light_consts::lux::OVERCAST_DAY,
+    //         ..default()
+    //     },
+    //     Transform::from_translation(Vec3::Y).looking_at(Vec3::new(-1.0, 0.0, -1.0), Vec3::Y),
+    // ));
+    // commands.spawn((
+    //     GameSceneMarker,
+    //     DirectionalLight {
+    //         color: Color::WHITE,
+    //         shadows_enabled: true,
+    //         illuminance: light_consts::lux::OVERCAST_DAY,
+    //         ..default()
+    //     },
+    //     Transform::from_translation(Vec3::Y).looking_at(Vec3::new(0.0, 0.0, 1.0), Vec3::Y),
+    // ));
 
     // camera
     commands.spawn((
@@ -94,6 +103,15 @@ fn populate_camera_and_lights(mut commands: Commands) {
             },
             ..OrthographicProjection::default_3d()
         }),
+        Msaa::Off,
+        Fxaa::default(),
+        ScreenSpaceReflections::default(),
+        EnvironmentMapLight {
+            diffuse_map: asset_server.load("environment_maps/pisa_diffuse_rgb9e5_zstd.ktx2"),
+            specular_map: asset_server.load("environment_maps/pisa_specular_rgb9e5_zstd.ktx2"),
+            intensity: 500.0,
+            ..default()
+        },
         Transform::from_xyz(-10.0, 10.0, 15.0).looking_at(Vec3::ZERO, Vec3::Y),
     ));
 }
@@ -155,7 +173,7 @@ fn populate_track(
         base_color: Color::hsva(0.0, 0.8, 1.0, 0.8),
         ..StandardMaterial::default()
     });
-    let wavy_material = standard_materials.add(wavy_material::make(&asset_server, 0.6, PI / 3.0));
+    let wavy_material = standard_materials.add(wavy_material::make(&asset_server));
     let mut overlay_material = racing_line_material::make(&asset_server, track_length);
     overlay_material.middle_line_width = -1.0; // no middle line
     if let Some(lateral_range) = maybe_lateral_range {

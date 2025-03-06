@@ -118,7 +118,7 @@ static TRACK_VERTICAL_PIECES: &[TrackPiece] = &[
 
 static TRACK_VERTICAL_DATA: TrackData = TrackData {
     pieces: TRACK_VERTICAL_PIECES,
-    initial_position: Vec3::ZERO,
+    initial_position: Vec3::new(0.0, 0.0, -6.0),
     initial_forward: Vec3::X,
     initial_up: Vec3::Y,
     initial_left: -2.0,

@@ -2,7 +2,7 @@
 
 mod global_state;
 mod material;
-mod scene;
+mod background;
 mod simu;
 mod track;
 mod ui;
@@ -34,7 +34,7 @@ fn main() {
     app.add_plugins(global_state::GlobalStatePlugin);
     app.add_plugins(ui::TrackSelectionMenuPlugin);
     app.add_plugins(ui::GameDoneScreenPlugin);
-    app.add_plugins(scene::BackgroundPlugin);
+    app.add_plugins(background::BackgroundPlugin);
     app.add_plugins(simu::SimuPlugin);
     app.add_plugins(track::TrackPlugin);
     app.add_plugins(vehicle::VehiclePlugin);
