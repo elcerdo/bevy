@@ -31,13 +31,16 @@ impl Plugin for MorpheusPlugin {
         app.add_plugins(MaterialPlugin::<MorpheusRaymarchingMaterial<Slot1>>::default());
         app.add_plugins(MaterialPlugin::<MorpheusRaymarchingMaterial<Slot2>>::default());
         app.add_plugins(MaterialPlugin::<MorpheusRaymarchingMaterial<Slot3>>::default());
-        // app.add_systems(Startup, populate_snippets);
-        app.add_systems(Update, patate);
 
         app.add_systems(Startup, camera::populate_camera_and_lights);
-        app.add_systems(Update, camera::animate_camera);
-
         app.add_systems(Startup, populate_models);
+
+        app.add_systems(Update, update_internal_state);
+        app.add_systems(Update, update_slot0_bbox_centers);
+        app.add_systems(Update, update_slot1_bbox_centers);
+        app.add_systems(Update, update_slot2_bbox_centers);
+        app.add_systems(Update, update_slot3_bbox_centers);
+        app.add_systems(Update, camera::animate_camera);
     }
 }
 
@@ -75,7 +78,7 @@ fn make_shader_from_snippet(
     ray_shader
 }
 
-fn patate(
+fn update_internal_state(
     mut foo: ResMut<SnippetHandles>,
     mut shaders: ResMut<Assets<Shader>>,
     snippets: Res<Assets<Snippet>>,
@@ -164,26 +167,17 @@ fn populate_models(
         asset_server.load("textures/matcap/583629_2E1810_765648_3C1C14-512px.png");
     let cube_mesh: Handle<Mesh> = meshes.add(Mesh::from(Cuboid::new(2.0, 2.0, 2.0)));
 
-    let slot0_center = Vec3::ZERO;
-    let slot1_center = Vec3::new(2.0, 0.0, 0.0);
-    let slot2_center = Vec3::new(0.0, 2.0, 0.0);
-    let slot3_center = Vec3::new(0.0, 0.0, 2.0);
-
     // materials
     let slot0_material = morpheus_slot0_materials.add(MorpheusRaymarchingMaterial::<Slot0>::new(
-        slot0_center,
         matcap_texture.clone(),
     ));
     let slot1_material = morpheus_slot1_materials.add(MorpheusRaymarchingMaterial::<Slot1>::new(
-        slot1_center,
         matcap_texture.clone(),
     ));
     let slot2_material = morpheus_slot2_materials.add(MorpheusRaymarchingMaterial::<Slot2>::new(
-        slot2_center,
         matcap_texture.clone(),
     ));
     let slot3_material = morpheus_slot3_materials.add(MorpheusRaymarchingMaterial::<Slot3>::new(
-        slot3_center,
         matcap_texture.clone(),
     ));
 
@@ -191,21 +185,93 @@ fn populate_models(
     commands.spawn((
         Mesh3d(cube_mesh.clone()),
         MeshMaterial3d(slot0_material),
-        Transform::from_translation(slot0_center),
+        Transform::default(),
     ));
     commands.spawn((
         Mesh3d(cube_mesh.clone()),
         MeshMaterial3d(slot1_material),
-        Transform::from_translation(slot1_center),
+        Transform::from_xyz(2.0, 0.0, 0.0),
+    ));
+
+    commands.spawn((
+        Mesh3d(cube_mesh.clone()),
+        MeshMaterial3d(slot2_material.clone()),
+        Transform::from_xyz(0.0, 2.0, 0.0),
+    ));
+    commands.spawn((
+        Mesh3d(cube_mesh.clone()),
+        MeshMaterial3d(slot2_material.clone()),
+        Transform::from_xyz(2.0, 2.0, 0.0),
     ));
     commands.spawn((
         Mesh3d(cube_mesh.clone()),
         MeshMaterial3d(slot2_material),
-        Transform::from_translation(slot2_center),
+        Transform::from_xyz(0.0, 2.0, 2.0),
     ));
+
     commands.spawn((
         Mesh3d(cube_mesh.clone()),
         MeshMaterial3d(slot3_material),
-        Transform::from_translation(slot3_center),
+        Transform::from_xyz(0.0, 0.0, 2.0),
     ));
+}
+
+fn update_slot0_bbox_centers(
+    query: Query<(
+        &Transform,
+        &mut MeshMaterial3d<MorpheusRaymarchingMaterial<Slot0>>,
+    )>,
+    mut materials: ResMut<Assets<MorpheusRaymarchingMaterial<Slot0>>>,
+) {
+    for (transform, material_handle) in query.iter() {
+        if let Some(material) = materials.get_mut(material_handle) {
+            // let foo = transform.translation;
+            material.bbox_center = transform.translation;
+        }
+    }
+}
+
+fn update_slot1_bbox_centers(
+    query: Query<(
+        &Transform,
+        &mut MeshMaterial3d<MorpheusRaymarchingMaterial<Slot1>>,
+    )>,
+    mut materials: ResMut<Assets<MorpheusRaymarchingMaterial<Slot1>>>,
+) {
+    for (transform, material_handle) in query.iter() {
+        if let Some(material) = materials.get_mut(material_handle) {
+            // let foo = transform.translation;
+            material.bbox_center = transform.translation;
+        }
+    }
+}
+
+fn update_slot2_bbox_centers(
+    query: Query<(
+        &Transform,
+        &mut MeshMaterial3d<MorpheusRaymarchingMaterial<Slot2>>,
+    )>,
+    mut materials: ResMut<Assets<MorpheusRaymarchingMaterial<Slot2>>>,
+) {
+    for (transform, material_handle) in query.iter() {
+        if let Some(material) = materials.get_mut(material_handle) {
+            // let foo = transform.translation;
+            material.bbox_center = transform.translation;
+        }
+    }
+}
+
+fn update_slot3_bbox_centers(
+    query: Query<(
+        &Transform,
+        &mut MeshMaterial3d<MorpheusRaymarchingMaterial<Slot3>>,
+    )>,
+    mut materials: ResMut<Assets<MorpheusRaymarchingMaterial<Slot3>>>,
+) {
+    for (transform, material_handle) in query.iter() {
+        if let Some(material) = materials.get_mut(material_handle) {
+            // let foo = transform.translation;
+            material.bbox_center = transform.translation;
+        }
+    }
 }

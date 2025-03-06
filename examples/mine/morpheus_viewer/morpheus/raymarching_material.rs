@@ -9,9 +9,9 @@ use std::marker::PhantomData;
 pub struct MorpheusRaymarchingMaterial<T: Sdf> {
     #[texture(0)]
     #[sampler(1)]
-    matcap_texture: Option<Handle<Image>>,
+    pub matcap_texture: Option<Handle<Image>>,
     #[uniform(2)]
-    bbox_center: Vec3,
+    pub bbox_center: Vec3,
     phantom: PhantomData<T>,
 }
 
@@ -30,9 +30,9 @@ impl<T: Sdf> Material for MorpheusRaymarchingMaterial<T> {
 }
 
 impl<T: Sdf> MorpheusRaymarchingMaterial<T> {
-    pub fn new(center: Vec3, matcap_texture: Handle<Image>) -> Self {
+    pub fn new(matcap_texture: Handle<Image>) -> Self {
         Self {
-            bbox_center: center,
+            bbox_center: Vec3::ZERO,
             matcap_texture: Some(matcap_texture),
             phantom: PhantomData,
         }
