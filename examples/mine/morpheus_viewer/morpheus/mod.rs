@@ -174,9 +174,6 @@ fn populate_models(
     let slot1_material = morpheus_slot1_materials.add(MorpheusRaymarchingMaterial::<Slot1>::new(
         matcap_texture.clone(),
     ));
-    let slot2_material = morpheus_slot2_materials.add(MorpheusRaymarchingMaterial::<Slot2>::new(
-        matcap_texture.clone(),
-    ));
     let slot3_material = morpheus_slot3_materials.add(MorpheusRaymarchingMaterial::<Slot3>::new(
         matcap_texture.clone(),
     ));
@@ -192,23 +189,24 @@ fn populate_models(
         MeshMaterial3d(slot1_material),
         Transform::from_xyz(2.0, 0.0, 0.0),
     ));
-
     commands.spawn((
         Mesh3d(cube_mesh.clone()),
-        MeshMaterial3d(slot2_material.clone()),
+        MeshMaterial3d(
+            morpheus_slot2_materials.add(MorpheusRaymarchingMaterial::<Slot2>::new(
+                matcap_texture.clone(),
+            )),
+        ),
         Transform::from_xyz(0.0, 2.0, 0.0),
     ));
     commands.spawn((
         Mesh3d(cube_mesh.clone()),
-        MeshMaterial3d(slot2_material.clone()),
+        MeshMaterial3d(
+            morpheus_slot2_materials.add(MorpheusRaymarchingMaterial::<Slot2>::new(
+                matcap_texture.clone(),
+            )),
+        ),
         Transform::from_xyz(2.0, 2.0, 0.0),
     ));
-    commands.spawn((
-        Mesh3d(cube_mesh.clone()),
-        MeshMaterial3d(slot2_material),
-        Transform::from_xyz(0.0, 2.0, 2.0),
-    ));
-
     commands.spawn((
         Mesh3d(cube_mesh.clone()),
         MeshMaterial3d(slot3_material),
@@ -225,7 +223,6 @@ fn update_slot0_bbox_centers(
 ) {
     for (transform, material_handle) in query.iter() {
         if let Some(material) = materials.get_mut(material_handle) {
-            // let foo = transform.translation;
             material.bbox_center = transform.translation;
         }
     }
@@ -240,7 +237,6 @@ fn update_slot1_bbox_centers(
 ) {
     for (transform, material_handle) in query.iter() {
         if let Some(material) = materials.get_mut(material_handle) {
-            // let foo = transform.translation;
             material.bbox_center = transform.translation;
         }
     }
@@ -255,7 +251,6 @@ fn update_slot2_bbox_centers(
 ) {
     for (transform, material_handle) in query.iter() {
         if let Some(material) = materials.get_mut(material_handle) {
-            // let foo = transform.translation;
             material.bbox_center = transform.translation;
         }
     }
@@ -270,7 +265,6 @@ fn update_slot3_bbox_centers(
 ) {
     for (transform, material_handle) in query.iter() {
         if let Some(material) = materials.get_mut(material_handle) {
-            // let foo = transform.translation;
             material.bbox_center = transform.translation;
         }
     }
