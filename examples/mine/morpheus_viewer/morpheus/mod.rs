@@ -58,23 +58,21 @@ struct SnippetHandles {
     state: State,
 }
 
-fn prepare_shader(
-    shaders: &mut ResMut<Assets<Shader>>,
+fn make_shader_from_snippet(
     server_asset: &Res<AssetServer>,
-    snippet: &String,
+    ray_snippet: &String,
     shape: &str,
-    ray_handle: Handle<Shader>,
-) {
+) -> Shader {
     let sdf_path = format!("shaders/morpheus/sdf/{shape}.wgsl");
     let sdf_handle: Handle<Shader> = server_asset.load::<Shader>(sdf_path.clone());
 
     let ray_path = format!("shaders/morpheus/raymarching/{shape}.wgsl");
-    let mut ray_source: String = snippet.clone();
+    let mut ray_source: String = ray_snippet.clone();
     ray_source = ray_source.replace("SDF_PATH", &sdf_path);
     let mut ray_shader = Shader::from_wgsl(ray_source, ray_path);
     ray_shader.file_dependencies.push(sdf_handle);
 
-    shaders.insert(ray_handle.id(), ray_shader);
+    ray_shader
 }
 
 fn patate(
@@ -100,36 +98,22 @@ fn patate(
             info!("** prepare_shaders **");
             let snippet = snippets.get(foo.raymarching_snippet.id()).unwrap();
             let snippet = &snippet.content;
-
-            prepare_shader(
-                &mut shaders,
-                &server_asset,
-                &snippet,
-                "sphere",
-                Slot0::RAY_HANDLE,
+            shaders.insert(
+                Slot0::RAY_HANDLE.id(),
+                make_shader_from_snippet(&server_asset, &snippet, "sphere"),
             );
-            prepare_shader(
-                &mut shaders,
-                &server_asset,
-                &snippet,
-                "union",
-                Slot1::RAY_HANDLE,
+            shaders.insert(
+                Slot1::RAY_HANDLE.id(),
+                make_shader_from_snippet(&server_asset, &snippet, "union"),
             );
-            prepare_shader(
-                &mut shaders,
-                &server_asset,
-                &snippet,
-                "alien",
-                Slot2::RAY_HANDLE,
+            shaders.insert(
+                Slot2::RAY_HANDLE.id(),
+                make_shader_from_snippet(&server_asset, &snippet, "alien"),
             );
-            prepare_shader(
-                &mut shaders,
-                &server_asset,
-                &snippet,
-                "can",
-                Slot3::RAY_HANDLE,
+            shaders.insert(
+                Slot3::RAY_HANDLE.id(),
+                make_shader_from_snippet(&server_asset, &snippet, "can"),
             );
-
             State::Done
         }
         State::Done => State::Done,
