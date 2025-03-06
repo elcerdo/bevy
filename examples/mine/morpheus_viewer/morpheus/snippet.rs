@@ -35,15 +35,9 @@ impl AssetLoader for SnippetAssetLoader {
         _settings: &(),
         _load_context: &mut LoadContext<'_>,
     ) -> Result<Self::Asset, Self::Error> {
-        // let path = load_context.asset_path().to_string();
-        // // On windows, the path will inconsistently use \ or /.
-        // // TODO: remove this once AssetPath forces cross-platform "slash" consistency. See #10511
-        // let path = path.replace(std::path::MAIN_SEPARATOR, "/");
-        // warn!("Loading Snippet...");
         let mut bytes = Vec::new();
         reader.read_to_end(&mut bytes).await?;
         let content = String::from_utf8(bytes)?;
-        // warn!("Loaded Snippet {}...", content.len());
         Ok(Snippet { content })
     }
 }
