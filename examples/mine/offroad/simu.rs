@@ -1,5 +1,3 @@
-// use crate::global_state::{GlobalState, TrackNickname, TRACK_NICKNAMES};
-
 use bevy::render::extract_component::{
     ComponentUniforms, ExtractComponent, ExtractComponentPlugin, UniformComponentPlugin,
 };
@@ -15,9 +13,9 @@ use bevy::render::renderer::RenderDevice;
 use bevy::render::texture::GpuImage;
 use bevy::render::{Render, RenderApp, RenderSet};
 
-use std::borrow::Cow;
-
 use bevy::prelude::*;
+
+use std::borrow::Cow;
 
 const SHADER_ASSET_PATH: &str = "shaders/offroad/simu_compute.wgsl";
 const TEXTURE_FORMAT: TextureFormat = TextureFormat::Rgba32Float;
@@ -55,9 +53,6 @@ impl Plugin for SimuPlugin {
         // for operation on by the compute shader and display on the sprite.
         app.add_plugins(ExtractResourcePlugin::<SimuImages>::default());
 
-        // for track_nickname in TRACK_NICKNAMES {
-        // app.add_systems(OnEnter(GlobalState::InGame(*track_nickname)), populate_simu);
-        // }
         app.add_systems(Startup, populate_simu_plane_and_images);
 
         let render_app = app.sub_app_mut(RenderApp);
