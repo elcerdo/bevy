@@ -31,16 +31,16 @@ impl Plugin for MorpheusPlugin {
         app.add_plugins(MaterialPlugin::<MorpheusRaymarchingMaterial<Slot1>>::default());
         app.add_plugins(MaterialPlugin::<MorpheusRaymarchingMaterial<Slot2>>::default());
         app.add_plugins(MaterialPlugin::<MorpheusRaymarchingMaterial<Slot3>>::default());
+        app.add_systems(Update, update_bbox_centers_slot::<Slot0>);
+        app.add_systems(Update, update_bbox_centers_slot::<Slot1>);
+        app.add_systems(Update, update_bbox_centers_slot::<Slot2>);
+        app.add_systems(Update, update_bbox_centers_slot::<Slot3>);
+        app.add_systems(Update, update_internal_state);
 
         app.add_systems(Startup, camera::populate_camera_and_lights);
-        app.add_systems(Startup, populate_models);
-
-        app.add_systems(Update, update_internal_state);
-        app.add_systems(Update, update_slot0_bbox_centers);
-        app.add_systems(Update, update_slot1_bbox_centers);
-        app.add_systems(Update, update_slot2_bbox_centers);
-        app.add_systems(Update, update_slot3_bbox_centers);
         app.add_systems(Update, camera::animate_camera);
+
+        app.add_systems(Startup, populate_models);
     }
 }
 
@@ -214,54 +214,12 @@ fn populate_models(
     ));
 }
 
-fn update_slot0_bbox_centers(
+fn update_bbox_centers_slot<S: Slot>(
     query: Query<(
         &Transform,
-        &mut MeshMaterial3d<MorpheusRaymarchingMaterial<Slot0>>,
+        &mut MeshMaterial3d<MorpheusRaymarchingMaterial<S>>,
     )>,
-    mut materials: ResMut<Assets<MorpheusRaymarchingMaterial<Slot0>>>,
-) {
-    for (transform, material_handle) in query.iter() {
-        if let Some(material) = materials.get_mut(material_handle) {
-            material.bbox_center = transform.translation;
-        }
-    }
-}
-
-fn update_slot1_bbox_centers(
-    query: Query<(
-        &Transform,
-        &mut MeshMaterial3d<MorpheusRaymarchingMaterial<Slot1>>,
-    )>,
-    mut materials: ResMut<Assets<MorpheusRaymarchingMaterial<Slot1>>>,
-) {
-    for (transform, material_handle) in query.iter() {
-        if let Some(material) = materials.get_mut(material_handle) {
-            material.bbox_center = transform.translation;
-        }
-    }
-}
-
-fn update_slot2_bbox_centers(
-    query: Query<(
-        &Transform,
-        &mut MeshMaterial3d<MorpheusRaymarchingMaterial<Slot2>>,
-    )>,
-    mut materials: ResMut<Assets<MorpheusRaymarchingMaterial<Slot2>>>,
-) {
-    for (transform, material_handle) in query.iter() {
-        if let Some(material) = materials.get_mut(material_handle) {
-            material.bbox_center = transform.translation;
-        }
-    }
-}
-
-fn update_slot3_bbox_centers(
-    query: Query<(
-        &Transform,
-        &mut MeshMaterial3d<MorpheusRaymarchingMaterial<Slot3>>,
-    )>,
-    mut materials: ResMut<Assets<MorpheusRaymarchingMaterial<Slot3>>>,
+    mut materials: ResMut<Assets<MorpheusRaymarchingMaterial<S>>>,
 ) {
     for (transform, material_handle) in query.iter() {
         if let Some(material) = materials.get_mut(material_handle) {
