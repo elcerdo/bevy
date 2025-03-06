@@ -269,16 +269,14 @@ impl Node for SimuNode {
         // if the corresponding pipeline has loaded, transition to the next stage
         match self.state {
             SimuState::Loading => {
-                let init_ok =
-                    match pipeline_cache.get_compute_pipeline_state(pipeline.init_pipeline) {
-                        CachedPipelineState::Ok(_) => true,
-                        _ => false,
-                    };
-                let update_ok =
-                    match pipeline_cache.get_compute_pipeline_state(pipeline.init_pipeline) {
-                        CachedPipelineState::Ok(_) => true,
-                        _ => false,
-                    };
+                let init_ok = matches!(
+                    pipeline_cache.get_compute_pipeline_state(pipeline.init_pipeline),
+                    CachedPipelineState::Ok(_)
+                );
+                let update_ok = matches!(
+                    pipeline_cache.get_compute_pipeline_state(pipeline.init_pipeline),
+                    CachedPipelineState::Ok(_)
+                );
                 if init_ok && update_ok {
                     self.state = SimuState::Init;
                 }
