@@ -1,23 +1,27 @@
-use bevy::asset::{AssetApp, AssetServer, Assets};
-use bevy::math::{Affine2, Quat, Vec2, Vec3};
-use bevy::pbr::StandardMaterial;
+use crate::global_state::{GlobalState, TrackNickname, TRACK_NICKNAMES};
+use crate::material::racing_line_material;
+use crate::material::wavy_material;
+
+use bevy::asset::{AssetServer, Assets};
+use bevy::color::Srgba;
+use bevy::core_pipeline::fxaa::Fxaa;
+use bevy::pbr::{ScreenSpaceReflections, StandardMaterial};
 use bevy::render::mesh::Mesh;
 
 use bevy::prelude::info;
-use bevy::prelude::{Commands, Handle, Res, ResMut, Transform};
-use bevy::prelude::{Mesh3d, MeshMaterial3d};
-
-use std::f32::consts::PI;
+use bevy::prelude::{Commands, Res, ResMut};
+use bevy::prelude::{Component, Entity, Query, With};
+use bevy::prelude::{NextState, State};
 
 mod data;
 mod piece;
-mod racing_line_material;
-mod wavy_material;
 
+pub use data::TRACK_HANDLES;
 pub use piece::Segment;
 pub use piece::Track;
-pub use racing_line_material::RacingLineMaterial;
-pub const TRACK_CURRENT_HANDLE: Handle<Track> = data::TRACK_ADVANCED_HANDLE;
+
+const TRACK_GROUND_COLOR: Srgba = bevy::color::palettes::basic::WHITE;
+const TRACK_EPSILON: f32 = 5e-2;
 
 //////////////////////////////////////////////////////////////////////
 
@@ -25,195 +29,198 @@ pub struct TrackPlugin;
 
 impl bevy::prelude::Plugin for TrackPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
-        use bevy::prelude::MaterialPlugin;
-        use bevy::prelude::{PreStartup, Startup, Update};
+        use bevy::prelude::*;
         app.init_asset::<Track>();
-        app.add_plugins(MaterialPlugin::<RacingLineMaterial>::default());
         app.add_systems(PreStartup, data::prepare_tracks);
-        app.add_systems(Startup, populate_tracks_and_checkpoints);
-        app.add_systems(Startup, populate_overlays);
-        app.add_systems(Update, wavy_material::animate);
-        app.add_systems(Update, racing_line_material::animate);
+
+        for track_nickname in TRACK_NICKNAMES {
+            let state = GlobalState::TrackSelected(*track_nickname);
+            let state_ = GlobalState::InGame(*track_nickname);
+            app.add_systems(OnEnter(state), (populate_track, to_game).chain());
+            app.add_systems(OnEnter(state_), populate_camera_and_lights);
+            app.add_systems(OnExit(state_), depopulate_all);
+        }
     }
 }
 
 //////////////////////////////////////////////////////////////////////
 
-const TRACK_BEGINNER_TRANSFORM: Transform = Transform::from_xyz(22.0, 0.0, -14.0);
-const TRACK_VERTICAL_TRANSFORM_AA: Transform = Transform::from_xyz(-1.0, 0.0, -8.0);
-const TRACK_VERTICAL_TRANSFORM_BB: Transform = Transform {
-    translation: Vec3::new(12.0, 0.0, 9.0),
-    rotation: Quat::from_xyzw(-0.70710677, -0.0, -0.0, 0.70710677),
-    scale: Vec3::ONE,
-};
-const TRACK_ADVANCED_TRANSFORM: Transform = Transform::from_xyz(0.0, 0.0, 0.0);
+#[derive(Component)]
+struct GameSceneMarker;
 
-fn populate_tracks_and_checkpoints(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    tracks: Res<Assets<Track>>,
-    asset_server: Res<AssetServer>,
-) {
-    use bevy::color::Color;
-    use bevy::image::ImageAddressMode;
-    use bevy::image::ImageLoaderSettings;
-    use bevy::image::ImageSampler;
-    use bevy::image::ImageSamplerDescriptor;
-    use bevy::pbr::UvChannel;
-    use wavy_material::AnimatedWavyMarker;
+fn depopulate_all(mut commands: Commands, query: Query<Entity, With<GameSceneMarker>>) {
+    for entity in query {
+        commands.entity(entity).despawn();
+    }
+}
 
-    info!("** populate_tracks_and_checkpoints **");
+fn populate_camera_and_lights(mut commands: Commands, asset_server: Res<AssetServer>) {
+    use bevy::prelude::*;
+    use bevy::render::camera::ScalingMode;
 
-    // tracks
-    let track0 = tracks.get(&data::TRACK_BEGINNER_HANDLE).unwrap();
-    let track1 = tracks.get(&data::TRACK_VERTICAL_HANDLE).unwrap();
-    let track2 = tracks.get(&data::TRACK_ADVANCED_HANDLE).unwrap();
+    info!("** populate_camera_and_lights **");
 
-    // materials
-    let wavy_material = materials.add(wavy_material::make(&asset_server, 0.6, PI / 3.0));
-    let checkerboard_material = materials.add(StandardMaterial {
-        base_color_channel: UvChannel::Uv1,
-        base_color_texture: Some(asset_server.load_with_settings(
-            "textures/uv_checker_bw.png",
-            |s: &mut _| {
-                *s = ImageLoaderSettings {
-                    sampler: ImageSampler::Descriptor(ImageSamplerDescriptor {
-                        address_mode_u: ImageAddressMode::Repeat,
-                        address_mode_v: ImageAddressMode::Repeat,
-                        ..ImageSamplerDescriptor::default()
-                    }),
-                    ..ImageLoaderSettings::default()
-                }
+    // lights
+    commands.spawn((
+        GameSceneMarker,
+        PointLight {
+            shadows_enabled: true,
+            intensity: 5.0e6,
+            range: 100.0,
+            shadow_depth_bias: 0.2,
+            ..default()
+        },
+        Transform::from_xyz(-16.0, 16.0, 8.0),
+    ));
+    // commands.spawn((
+    //     GameSceneMarker,
+    //     DirectionalLight {
+    //         color: Color::WHITE,
+    //         shadows_enabled: true,
+    //         illuminance: light_consts::lux::OVERCAST_DAY,
+    //         ..default()
+    //     },
+    //     Transform::from_translation(Vec3::Y).looking_at(Vec3::new(-1.0, 0.0, -1.0), Vec3::Y),
+    // ));
+    // commands.spawn((
+    //     GameSceneMarker,
+    //     DirectionalLight {
+    //         color: Color::WHITE,
+    //         shadows_enabled: true,
+    //         illuminance: light_consts::lux::OVERCAST_DAY,
+    //         ..default()
+    //     },
+    //     Transform::from_translation(Vec3::Y).looking_at(Vec3::new(0.0, 0.0, 1.0), Vec3::Y),
+    // ));
+
+    // camera
+    commands.spawn((
+        GameSceneMarker,
+        Camera3d::default(),
+        Projection::from(OrthographicProjection {
+            scaling_mode: ScalingMode::FixedVertical {
+                viewport_height: 14.0,
             },
-        )),
-        uv_transform: Affine2::from_scale(Vec2::new(1.0 / 8.0, 1.0 / 8.0)),
-        ..StandardMaterial::default()
-    });
-    let tiledflow_material = materials.add(StandardMaterial {
-        base_color_channel: UvChannel::Uv0,
-        base_color_texture: Some(asset_server.load_with_settings(
-            "textures/fantasy_ui_borders/panel-border-010.png",
-            |s: &mut _| {
-                *s = ImageLoaderSettings {
-                    sampler: ImageSampler::Descriptor(ImageSamplerDescriptor {
-                        // rewriting mode to repeat image,
-                        address_mode_u: ImageAddressMode::Repeat,
-                        address_mode_v: ImageAddressMode::Repeat,
-                        ..ImageSamplerDescriptor::default()
-                    }),
-                    ..ImageLoaderSettings::default()
-                }
-            },
-        )),
-        ..StandardMaterial::default()
-    });
-    let checkpoint_material = materials.add(StandardMaterial {
-        base_color: Color::hsva(0.0, 0.8, 1.0, 0.8),
-        ..StandardMaterial::default()
-    });
-
-    // beginner track showcases water effect
-    commands.spawn((
-        Mesh3d(meshes.add(track0.checkpoint.clone())),
-        MeshMaterial3d(checkpoint_material.clone()),
-        TRACK_BEGINNER_TRANSFORM,
-    ));
-    commands.spawn((
-        AnimatedWavyMarker,
-        Mesh3d(meshes.add(track0.track.clone())),
-        MeshMaterial3d(wavy_material.clone()),
-        TRACK_BEGINNER_TRANSFORM,
-    ));
-
-    // vertical track showcases projected parametrization wo checkpoints
-    commands.spawn((
-        Mesh3d(meshes.add(track1.track.clone())),
-        MeshMaterial3d(checkerboard_material.clone()),
-        TRACK_VERTICAL_TRANSFORM_AA,
-    ));
-
-    // transformed vertical track showcases flow parametrization wo checkpoints
-    commands.spawn((
-        Mesh3d(meshes.add(track1.track.clone())),
-        MeshMaterial3d(tiledflow_material.clone()),
-        TRACK_VERTICAL_TRANSFORM_BB,
-    ));
-
-    // advanced showcases water effect
-    commands.spawn((
-        Mesh3d(meshes.add(track2.checkpoint.clone())),
-        MeshMaterial3d(checkpoint_material.clone()),
-        TRACK_ADVANCED_TRANSFORM,
-    ));
-    commands.spawn((
-        AnimatedWavyMarker,
-        Mesh3d(meshes.add(track2.track.clone())),
-        MeshMaterial3d(wavy_material.clone()),
-        TRACK_ADVANCED_TRANSFORM,
+            ..OrthographicProjection::default_3d()
+        }),
+        Msaa::Off,
+        Fxaa::default(),
+        ScreenSpaceReflections::default(),
+        EnvironmentMapLight {
+            diffuse_map: asset_server.load("environment_maps/pisa_diffuse_rgb9e5_zstd.ktx2"),
+            specular_map: asset_server.load("environment_maps/pisa_specular_rgb9e5_zstd.ktx2"),
+            intensity: 500.0,
+            ..default()
+        },
+        Transform::from_xyz(-10.0, 10.0, 15.0).looking_at(Vec3::ZERO, Vec3::Y),
     ));
 }
 
-fn populate_overlays(
+fn populate_track(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<RacingLineMaterial>>,
+    mut standard_materials: ResMut<Assets<StandardMaterial>>,
+    mut racing_line_materials: ResMut<Assets<racing_line_material::RacingLineMaterial>>,
     tracks: Res<Assets<Track>>,
     asset_server: Res<AssetServer>,
+    state: Res<State<GlobalState>>,
 ) {
     use racing_line_material::AnimatedRacingLineMarker;
+    use wavy_material::AnimatedWavyMarker;
 
-    info!("** populate_overlays **");
+    use bevy::color::Color;
+    use bevy::prelude::*;
 
-    // tracks
-    let track0 = tracks.get(&data::TRACK_BEGINNER_HANDLE).unwrap();
-    let track1 = tracks.get(&data::TRACK_VERTICAL_HANDLE).unwrap();
-    let track2 = tracks.get(&data::TRACK_ADVANCED_HANDLE).unwrap();
+    info!("** populate_track **");
 
-    // showcases racing lines on beginner track
-    let track3_material = racing_line_material::make(&asset_server, track0.total_length);
-    let track3_transform =
-        TRACK_BEGINNER_TRANSFORM * Transform::from_translation(1e-3 * track0.initial_up);
+    let (track_length, track_up, maybe_lateral_range, track_mesh, checkpoint_mesh) =
+        match state.get() {
+            GlobalState::TrackSelected(TrackNickname::Beginner) => {
+                let track = tracks.get(&TRACK_HANDLES[0]).unwrap();
+                (
+                    track.total_length,
+                    track.initial_up,
+                    None,
+                    meshes.add(track.track.clone()),
+                    meshes.add(track.checkpoint.clone()),
+                )
+            }
+            GlobalState::TrackSelected(TrackNickname::Vertical) => {
+                let track = tracks.get(&TRACK_HANDLES[1]).unwrap();
+                (
+                    track.total_length,
+                    track.initial_up,
+                    None,
+                    meshes.add(track.track.clone()),
+                    meshes.add(track.checkpoint.clone()),
+                )
+            }
+            GlobalState::TrackSelected(TrackNickname::Advanced) => {
+                let track = tracks.get(&TRACK_HANDLES[2]).unwrap();
+                (
+                    track.total_length,
+                    track.initial_up,
+                    Some(Vec2::new(-1.5, 1.5)),
+                    meshes.add(track.track.clone()),
+                    meshes.add(track.checkpoint.clone()),
+                )
+            }
+            _ => unreachable!(),
+        };
+
+    // materials
+    let checkpoint_material = standard_materials.add(StandardMaterial {
+        base_color: Color::hsva(0.0, 0.8, 1.0, 0.8),
+        ..StandardMaterial::default()
+    });
+    let wavy_material = standard_materials.add(wavy_material::make(&asset_server));
+    let mut overlay_material = racing_line_material::make(&asset_server, track_length);
+    overlay_material.middle_line_width = -1.0; // no middle line
+    if let Some(lateral_range) = maybe_lateral_range {
+        overlay_material.lateral_range = lateral_range;
+    }
+    let overlay_material = racing_line_materials.add(overlay_material);
+
+    // checkpoints
     commands.spawn((
+        GameSceneMarker,
+        Mesh3d(checkpoint_mesh),
+        MeshMaterial3d(checkpoint_material),
+        Transform::from_translation(2.0 * TRACK_EPSILON * track_up),
+    ));
+
+    // racing lines
+    commands.spawn((
+        GameSceneMarker,
+        Mesh3d(track_mesh.clone()),
         AnimatedRacingLineMarker,
-        Mesh3d(meshes.add(track0.track.clone())),
-        MeshMaterial3d(materials.add(track3_material)),
-        track3_transform,
+        MeshMaterial3d(overlay_material),
+        Transform::from_translation(1.0 * TRACK_EPSILON * track_up),
     ));
 
-    // showcases racing lines on vertical track
-    let track4_material = racing_line_material::make(&asset_server, track1.total_length);
-    let track4_transform =
-        TRACK_VERTICAL_TRANSFORM_AA * Transform::from_translation(1e-3 * track1.initial_up);
+    // track
     commands.spawn((
-        AnimatedRacingLineMarker,
-        Mesh3d(meshes.add(track1.track.clone())),
-        MeshMaterial3d(materials.add(track4_material)),
-        track4_transform,
+        GameSceneMarker,
+        Mesh3d(track_mesh),
+        AnimatedWavyMarker,
+        MeshMaterial3d(wavy_material.clone()),
+        Transform::from_translation(0.0 * TRACK_EPSILON * track_up),
     ));
 
-    // showcases racing lines on transformed vertical track
-    let mut track5_material = racing_line_material::make(&asset_server, track1.total_length);
-    track5_material.middle_line_width = 0.5;
-    track5_material.lateral_range = Vec2::new(-1.8, 0.8);
-    let track5_transform =
-        TRACK_VERTICAL_TRANSFORM_BB * Transform::from_translation(1e-3 * track1.initial_up);
+    // ground plane
     commands.spawn((
-        AnimatedRacingLineMarker,
-        Mesh3d(meshes.add(track1.track.clone())),
-        MeshMaterial3d(materials.add(track5_material)),
-        track5_transform,
+        GameSceneMarker,
+        Mesh3d(meshes.add(Plane3d::default().mesh().size(30.0, 40.0).subdivisions(20))),
+        MeshMaterial3d(standard_materials.add(Color::from(TRACK_GROUND_COLOR))),
+        Transform::from_translation(-1.0 * TRACK_EPSILON * track_up),
     ));
+}
 
-    // showcases non animated racing lines on advanced track
-    let mut track6_material = racing_line_material::make(&asset_server, track2.total_length);
-    // track5_material.middle_line_width = -1.0; // no middle line
-    track6_material.lateral_range = Vec2::new(-1.5, 1.5);
-    let track6_transform =
-        TRACK_ADVANCED_TRANSFORM * Transform::from_translation(1e-3 * track2.initial_up);
-    commands.spawn((
-        Mesh3d(meshes.add(track2.track.clone())),
-        MeshMaterial3d(materials.add(track6_material)),
-        track6_transform,
-    ));
+fn to_game(state: Res<State<GlobalState>>, mut next_state: ResMut<NextState<GlobalState>>) {
+    match state.get() {
+        GlobalState::TrackSelected(track_nickname) => {
+            next_state.set(GlobalState::InGame(*track_nickname));
+        }
+        _ => unreachable!(),
+    };
 }
