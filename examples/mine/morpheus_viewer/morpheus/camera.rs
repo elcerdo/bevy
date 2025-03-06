@@ -15,8 +15,6 @@ impl CameraPivot {
 }
 
 pub fn populate_camera_and_lights(mut commands: Commands) {
-    // use bevy::render::camera::ScalingMode;
-
     info!("** populate_camera_and_lights **");
 
     // lights

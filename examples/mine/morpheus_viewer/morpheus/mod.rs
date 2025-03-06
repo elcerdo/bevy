@@ -1,9 +1,11 @@
 mod camera;
 mod raymarching_material;
 mod sdf;
+mod snippet;
 
-use crate::morpheus::raymarching_material::MorpheusRaymarchingMaterial;
-use crate::morpheus::sdf::{Sdf, Slot0, Slot1, Slot2, Slot3};
+use raymarching_material::MorpheusRaymarchingMaterial;
+use sdf::{Sdf, Slot0, Slot1, Slot2, Slot3};
+use snippet::{Snippet, SnippetAssetLoader};
 
 use bevy::prelude::*;
 
@@ -15,90 +17,22 @@ use std::f32::consts::PI;
 
 //////////////////////////////////////////////////////////////////////
 
-const RAYMARCHING_SOURCE: &str = r#"
-#import "SDF_PATH"::signed_distance_function
-
-#import bevy_pbr::{
-    mesh_functions,
-    view_transformations,
-}
-
-@group(2) @binding(0) var matcap_texture: texture_2d<f32>;
-@group(2) @binding(1) var matcap_sampler: sampler;
-@group(2) @binding(2) var<uniform> bbox_center: vec3<f32>;
-
-struct Vertex {
-    @builtin(instance_index) instance_index: u32,
-    @location(0) position: vec3<f32>,
-    @location(1) normal: vec3<f32>,
-    @location(2) uv: vec2<f32>,
-}
-
-struct VertexOutput {
-    @builtin(position) clip_position: vec4<f32>,
-    @location(0) world_position: vec3<f32>,
-    @location(1) world_normal: vec3<f32>,
-    @location(2) uv: vec2<f32>,
-}
-
-@vertex
-fn vertex(vertex: Vertex) -> VertexOutput {
-    var out: VertexOutput;
-    var world_from_local = mesh_functions::get_world_from_local(vertex.instance_index);
-    out.world_position = mesh_functions::mesh_position_local_to_world(world_from_local, vec4(vertex.position, 1.0)).xyz;
-    out.world_normal = mesh_functions::mesh_normal_local_to_world(vertex.normal, vertex.instance_index);
-    out.clip_position = view_transformations::position_world_to_clip(out.world_position);
-    out.uv = vertex.uv;
-    return out;
-}
-
-@fragment
-fn fragment(
-    out: VertexOutput,
-) -> @location(0) vec4<f32> {
-    let eye_position = view_transformations::position_ndc_to_world(vec3(0.0, 0.0, -1.0));
-    let world_direction = normalize(out.world_position - eye_position);
-
-    var pos = out.world_position - bbox_center;
-    var dist = signed_distance_function(pos);
-    for (var kk=0; kk<64; kk++) {
-        if (dist <= 0.0) { break; }
-        if (length(pos) > sqrt(3.0)) { break; }
-        pos += world_direction * dist;
-        dist = signed_distance_function(pos);
-    }
-
-    if dist > 1e-3 {
-        return vec4(0.0);
-    }
-
-    let hh = 1e-3;
-    let world_grad = normalize(vec3(
-        signed_distance_function(pos + vec3(hh, 0.0, 0.0)) - signed_distance_function(pos - vec3(hh, 0.0, 0.0)), 
-        signed_distance_function(pos + vec3(0.0, hh, 0.0)) - signed_distance_function(pos - vec3(0.0, hh, 0.0)), 
-        signed_distance_function(pos + vec3(0.0, 0.0, hh)) - signed_distance_function(pos - vec3(0.0, 0.0, hh)), 
-    ));
-    let view_grad = normalize(view_transformations::direction_world_to_view(world_grad));
-    var color = textureSample(matcap_texture, matcap_sampler, (view_grad.xy + 1.0) / 2.0);
-    
-    return color;
-}
-
-"#;
-
-//////////////////////////////////////////////////////////////////////
-
 pub struct MorpheusPlugin;
 
 impl Plugin for MorpheusPlugin {
     fn build(&self, app: &mut App) {
         info!("** build_morpheus_plugin **");
 
+        app.init_resource::<SnippetHandles>();
+        app.init_asset::<Snippet>();
+        app.init_asset_loader::<SnippetAssetLoader>();
+
         app.add_plugins(MaterialPlugin::<MorpheusRaymarchingMaterial<Slot0>>::default());
         app.add_plugins(MaterialPlugin::<MorpheusRaymarchingMaterial<Slot1>>::default());
         app.add_plugins(MaterialPlugin::<MorpheusRaymarchingMaterial<Slot2>>::default());
         app.add_plugins(MaterialPlugin::<MorpheusRaymarchingMaterial<Slot3>>::default());
-        app.add_systems(PreStartup, prepare_shaders);
+        // app.add_systems(Startup, populate_snippets);
+        app.add_systems(Update, patate);
 
         app.add_systems(Startup, camera::populate_camera_and_lights);
         app.add_systems(Update, camera::animate_camera);
@@ -109,9 +43,25 @@ impl Plugin for MorpheusPlugin {
 
 //////////////////////////////////////////////////////////////////////
 
+#[derive(Default, PartialEq)]
+enum State {
+    #[default]
+    Init,
+    LoadingSnippets,
+    PreparingShaders,
+    Done,
+}
+
+#[derive(Resource, Default)]
+struct SnippetHandles {
+    raymarching_snippet: Handle<Snippet>,
+    state: State,
+}
+
 fn prepare_shader(
     shaders: &mut ResMut<Assets<Shader>>,
     server_asset: &Res<AssetServer>,
+    snippet: &String,
     shape: &str,
     ray_handle: Handle<Shader>,
 ) {
@@ -119,7 +69,7 @@ fn prepare_shader(
     let sdf_handle: Handle<Shader> = server_asset.load::<Shader>(sdf_path.clone());
 
     let ray_path = format!("shaders/morpheus/raymarching/{shape}.wgsl");
-    let mut ray_source: String = RAYMARCHING_SOURCE.into();
+    let mut ray_source: String = snippet.clone();
     ray_source = ray_source.replace("SDF_PATH", &sdf_path);
     let mut ray_shader = Shader::from_wgsl(ray_source, ray_path);
     ray_shader.file_dependencies.push(sdf_handle);
@@ -127,15 +77,63 @@ fn prepare_shader(
     shaders.insert(ray_handle.id(), ray_shader);
 }
 
-fn prepare_shaders(mut shaders: ResMut<Assets<Shader>>, server_asset: Res<AssetServer>) {
-    // let path = path.replace(std::path::MAIN_SEPARATOR, "/");
-    // let mut bytes = Vec::new();
-    // reader.read_to_end(&mut bytes).await?;
+fn patate(
+    mut foo: ResMut<SnippetHandles>,
+    mut shaders: ResMut<Assets<Shader>>,
+    snippets: Res<Assets<Snippet>>,
+    server_asset: Res<AssetServer>,
+) {
+    foo.state = match foo.state {
+        State::Init => {
+            foo.raymarching_snippet =
+                server_asset.load::<Snippet>("shaders/morpheus/snippet/raymarching.snippet");
+            State::LoadingSnippets
+        }
+        State::LoadingSnippets => {
+            let has_snippet = !snippets.get(foo.raymarching_snippet.id()).is_none();
+            match has_snippet {
+                true => State::PreparingShaders,
+                false => State::LoadingSnippets,
+            }
+        }
+        State::PreparingShaders => {
+            info!("** prepare_shaders **");
+            let snippet = snippets.get(foo.raymarching_snippet.id()).unwrap();
+            let snippet = &snippet.content;
 
-    prepare_shader(&mut shaders, &server_asset, "sphere", Slot0::RAY_HANDLE);
-    prepare_shader(&mut shaders, &server_asset, "union", Slot1::RAY_HANDLE);
-    prepare_shader(&mut shaders, &server_asset, "alien", Slot2::RAY_HANDLE);
-    prepare_shader(&mut shaders, &server_asset, "can", Slot3::RAY_HANDLE);
+            prepare_shader(
+                &mut shaders,
+                &server_asset,
+                &snippet,
+                "sphere",
+                Slot0::RAY_HANDLE,
+            );
+            prepare_shader(
+                &mut shaders,
+                &server_asset,
+                &snippet,
+                "union",
+                Slot1::RAY_HANDLE,
+            );
+            prepare_shader(
+                &mut shaders,
+                &server_asset,
+                &snippet,
+                "alien",
+                Slot2::RAY_HANDLE,
+            );
+            prepare_shader(
+                &mut shaders,
+                &server_asset,
+                &snippet,
+                "can",
+                Slot3::RAY_HANDLE,
+            );
+
+            State::Done
+        }
+        State::Done => State::Done,
+    };
 }
 
 fn populate_models(
