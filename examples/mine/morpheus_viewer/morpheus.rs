@@ -1,7 +1,6 @@
-use bevy_asset::weak_handle;
-use const_format::formatcp;
 use std::marker::PhantomData;
 
+use bevy::asset::weak_handle;
 use bevy::input::mouse::AccumulatedMouseMotion;
 use bevy::render::render_resource::{AsBindGroup, ShaderRef};
 
@@ -15,41 +14,43 @@ use std::f32::consts::PI;
 //////////////////////////////////////////////////////////////////////
 
 trait Sdf: TypePath + Clone + Sync + Send {
-    const NAME: &'static str;
     fn raymarching_shader() -> ShaderRef;
 }
 
 #[derive(Clone, TypePath)]
 struct SphereSdf;
 
+const SPHERE_RAY_HANDLE: Handle<Shader> = weak_handle!("1347c9b7-c46a-0000-abcd-023a354b7cac");
+
 impl Sdf for SphereSdf {
-    const NAME: &'static str = "sphere";
     fn raymarching_shader() -> ShaderRef {
-        SHADER_HANDLE.clone().into()
+        SPHERE_RAY_HANDLE.into()
     }
 }
 
 #[derive(Clone, TypePath)]
 struct UnionSdf;
 
+const UNION_RAY_HANDLE: Handle<Shader> = weak_handle!("1347c9b7-c46a-1111-abcd-023a354b7cac");
+
 impl Sdf for UnionSdf {
-    const NAME: &'static str = "union";
     fn raymarching_shader() -> ShaderRef {
-        formatcp!("shaders/morpheus/{}_raymarching.wgsl", UnionSdf::NAME).into()
+        UNION_RAY_HANDLE.into()
     }
 }
 
 #[derive(Clone, TypePath)]
 struct AlienSdf;
 
+const ALIEN_RAY_HANDLE: Handle<Shader> = weak_handle!("1347c9b7-c46a-2222-abcd-023a354b7cac");
+
 impl Sdf for AlienSdf {
-    const NAME: &'static str = "alien";
     fn raymarching_shader() -> ShaderRef {
-        formatcp!("shaders/morpheus/{}_raymarching.wgsl", AlienSdf::NAME).into()
+        ALIEN_RAY_HANDLE.into()
     }
 }
 
-const FOOBAR: &str = r#"
+const RAYMARCHING_SOURCE: &str = r#"
 #import "SDF_PATH"::signed_distance_function
 
 #import bevy_pbr::{
@@ -120,8 +121,6 @@ fn fragment(
 
 "#;
 
-static SHADER_HANDLE: Handle<Shader> = weak_handle!("1347c9b7-c46a-0000-abcd-023a354b7cac");
-
 //////////////////////////////////////////////////////////////////////
 
 pub struct MorpheusPlugin;
@@ -130,24 +129,34 @@ impl Plugin for MorpheusPlugin {
     fn build(&self, app: &mut App) {
         info!("** build_morpheus_plugin **");
 
-        let bar = app
-            .world_mut()
-            .load_asset::<Shader>("shaders/morpheus/sdf/sphere.wgsl");
-        let mut shaders = app.world_mut().resource_mut::<Assets<Shader>>();
-
-        let kikou = FOOBAR.replace("SDF_PATH", "shaders/morpheus/sdf/sphere.wgsl");
-        let mut foo = Shader::from_wgsl(kikou, "kikou.wgsl");
-        foo.file_dependencies.push(bar);
-        shaders.insert(&SHADER_HANDLE, foo);
-
         app.add_plugins(MaterialPlugin::<MorpheusRaymarchingMaterial<SphereSdf>>::default());
         app.add_plugins(MaterialPlugin::<MorpheusRaymarchingMaterial<UnionSdf>>::default());
         app.add_plugins(MaterialPlugin::<MorpheusRaymarchingMaterial<AlienSdf>>::default());
+        app.add_systems(PreStartup, prepare_shaders);
 
         app.add_systems(Startup, populate_camera_and_lights);
         app.add_systems(Startup, populate_models);
         app.add_systems(Update, animate_camera);
     }
+}
+
+fn prepare_shaders(mut shaders: ResMut<Assets<Shader>>, server_asset: Res<AssetServer>) {
+    let mut make_raymarching_shader_from_sdf = |shape: &str, ray_handle: Handle<Shader>| {
+        let sdf_path = format!("shaders/morpheus/sdf/{shape}.wgsl");
+        let sdf_handle: Handle<Shader> = server_asset.load::<Shader>(sdf_path.clone());
+
+        let ray_path = format!("shaders/morpheus/raymarching/{shape}.wgsl");
+        let mut ray_source: String = RAYMARCHING_SOURCE.into();
+        ray_source = ray_source.replace("SDF_PATH", &sdf_path);
+        let mut ray_shader = Shader::from_wgsl(ray_source, ray_path);
+        ray_shader.file_dependencies.push(sdf_handle);
+
+        shaders.insert(ray_handle.id(), ray_shader);
+    };
+
+    make_raymarching_shader_from_sdf("sphere", SPHERE_RAY_HANDLE);
+    make_raymarching_shader_from_sdf("union", UNION_RAY_HANDLE);
+    make_raymarching_shader_from_sdf("alien", ALIEN_RAY_HANDLE);
 }
 
 //////////////////////////////////////////////////////////////////////

@@ -497,7 +497,6 @@ tracing = { version = "0.1", default-features = false, optional = true }
 bevy_dylib = { path = "crates/bevy_dylib", version = "0.16.0-dev", default-features = false, optional = true }
 
 [dev-dependencies]
-const_format = "0.2.34"
 kd-tree = "0.6.0"
 typenum = "1.18.0"
 rand = "0.8.0"
