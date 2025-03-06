@@ -7,8 +7,11 @@ use bevy::render::extract_resource::{ExtractResource, ExtractResourcePlugin};
 use bevy::render::render_asset::{RenderAssetUsages, RenderAssets};
 use bevy::render::render_graph::{Node, RenderGraph, RenderLabel};
 use bevy::render::render_resource::{
-    binding_types::texture_storage_2d, binding_types::uniform_buffer, *,
+    binding_types::{texture_storage_2d, uniform_buffer},
+    BindGroup, BindGroupEntries, BindGroupLayout, CachedComputePipelineId, ShaderType,
+    TextureFormat,
 };
+use bevy::render::renderer::RenderDevice;
 use bevy::render::texture::GpuImage;
 use bevy::render::{Render, RenderApp, RenderSet};
 
@@ -27,9 +30,6 @@ const WORKGROUP_SIZE: u32 = 8;
 struct SimuSettings {
     rng_seed: u32,
 }
-
-#[derive(Hash, Clone, Eq, PartialEq, Debug, RenderLabel)]
-struct SimuLabel;
 
 pub struct SimuPlugin;
 
@@ -55,26 +55,85 @@ impl Plugin for SimuPlugin {
         // for operation on by the compute shader and display on the sprite.
         app.add_plugins(ExtractResourcePlugin::<SimuImages>::default());
 
-        let render_app = app.sub_app_mut(RenderApp);
-
-        let mut render_graph = render_app.world_mut().resource_mut::<RenderGraph>();
-        render_graph.add_node(SimuLabel, SimuNode::default());
-        render_graph.add_node_edge(SimuLabel, bevy::render::graph::CameraDriverLabel);
-
         // for track_nickname in TRACK_NICKNAMES {
         // app.add_systems(OnEnter(GlobalState::InGame(*track_nickname)), populate_simu);
         // }
+        app.add_systems(Startup, populate_simu_plane_and_images);
+
+        let render_app = app.sub_app_mut(RenderApp);
+
+        let mut render_graph = render_app.world_mut().resource_mut::<RenderGraph>();
+        render_graph.add_node(SimuNodeMarker, SimuNode::default());
+        render_graph.add_node_edge(SimuNodeMarker, bevy::render::graph::CameraDriverLabel);
+
         render_app.add_systems(
             Render,
-            prepare_bind_group.in_set(RenderSet::PrepareBindGroups),
+            update_bind_groups.in_set(RenderSet::PrepareBindGroups),
         );
-        app.add_systems(Startup, populate_simu);
     }
     fn finish(&self, app: &mut App) {
         info!("** simu_finish **");
         let render_app = app.sub_app_mut(RenderApp);
         render_app.init_resource::<SimuPipeline>();
     }
+}
+
+//////////////////////////////////////////////////////////////////////
+
+#[derive(Resource, Clone, ExtractResource)]
+struct SimuImages {
+    image_a: Handle<Image>,
+    image_b: Handle<Image>,
+}
+
+fn populate_simu_plane_and_images(
+    mut commands: Commands,
+    mut images: ResMut<Assets<Image>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
+    use bevy::render::render_resource::*;
+
+    info!("** populate_simu_plane_and_images **");
+
+    let mut image = Image::new_fill(
+        Extent3d {
+            width: SIMU_SIZE.0,
+            height: SIMU_SIZE.1,
+            depth_or_array_layers: 1,
+        },
+        TextureDimension::D2,
+        &[0, 0, 0, 255],
+        TEXTURE_FORMAT,
+        RenderAssetUsages::RENDER_WORLD,
+    );
+    image.texture_descriptor.usage =
+        TextureUsages::COPY_DST | TextureUsages::STORAGE_BINDING | TextureUsages::TEXTURE_BINDING;
+    image.sampler = bevy::image::ImageSampler::nearest();
+
+    let image_a = images.add(image.clone());
+    let image_b = images.add(image);
+
+    // magic plane
+    commands.spawn((
+        Mesh3d(
+            meshes.add(
+                Plane3d::default()
+                    .mesh()
+                    .size(400.0, 400.0)
+                    .subdivisions(20),
+            ),
+        ),
+        MeshMaterial3d(materials.add(StandardMaterial {
+            base_color_texture: Some(image_a.clone()),
+            ..StandardMaterial::default()
+        })),
+        Transform::from_xyz(100.0, -0.25, -100.0),
+        SimuSettings { rng_seed: 42 },
+    ));
+
+    // insert images
+    commands.insert_resource(SimuImages { image_a, image_b });
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -88,7 +147,9 @@ struct SimuPipeline {
 
 impl FromWorld for SimuPipeline {
     fn from_world(world: &mut World) -> Self {
-        let render_device = world.resource::<bevy::render::renderer::RenderDevice>();
+        use bevy::render::render_resource::*;
+
+        let render_device = world.resource::<RenderDevice>();
         let pipeline_cache = world.resource::<PipelineCache>();
 
         let group_layout = render_device.create_bind_group_layout(
@@ -133,96 +194,97 @@ impl FromWorld for SimuPipeline {
     }
 }
 
-#[derive(Resource, Clone, ExtractResource)]
-struct SimuImages {
-    image_a: Handle<Image>,
-    image_b: Handle<Image>,
-}
+//////////////////////////////////////////////////////////////////////
 
 #[derive(Resource)]
 struct SimuBindGroups {
-    group_a: BindGroup,
-    group_b: BindGroup,
+    group_ab: BindGroup,
+    group_ba: BindGroup,
 }
 
-fn prepare_bind_group(
+fn update_bind_groups(
     mut commands: Commands,
-    pipeline: Res<SimuPipeline>,
-    gpu_images: Res<RenderAssets<GpuImage>>,
-    simu_images: Res<SimuImages>,
-    render_device: Res<bevy::render::renderer::RenderDevice>,
     simu_settings: Res<ComponentUniforms<SimuSettings>>,
+    simu_pipeline: Res<SimuPipeline>,
+    simu_images: Res<SimuImages>,
+    gpu_images: Res<RenderAssets<GpuImage>>,
+    render_device: Res<RenderDevice>,
 ) {
     let simu_binding = simu_settings.uniforms().binding();
     assert!(simu_binding.is_some());
 
     let view_a = gpu_images.get(&simu_images.image_a).unwrap();
     let view_b = gpu_images.get(&simu_images.image_b).unwrap();
-    let group_a = render_device.create_bind_group(
-        Some("group_a"),
-        &pipeline.group_layout,
+    let group_ab = render_device.create_bind_group(
+        Some("group_ab"),
+        &simu_pipeline.group_layout,
         &BindGroupEntries::sequential((
             &view_a.texture_view,
             &view_b.texture_view,
             simu_binding.clone().unwrap(),
         )),
     );
-    let group_b = render_device.create_bind_group(
-        Some("group_b"),
-        &pipeline.group_layout,
+    let group_ba = render_device.create_bind_group(
+        Some("group_ba"),
+        &simu_pipeline.group_layout,
         &BindGroupEntries::sequential((
             &view_b.texture_view,
             &view_a.texture_view,
             simu_binding.unwrap(),
         )),
     );
-    let bind_groups = SimuBindGroups { group_a, group_b };
-    commands.insert_resource(bind_groups);
+
+    // insert bind groups
+    commands.insert_resource(SimuBindGroups { group_ab, group_ba });
 }
 
 //////////////////////////////////////////////////////////////////////
 
+#[derive(Default)]
 enum SimuState {
+    #[default]
     Loading,
     Init,
     Update(bool),
 }
 
+#[derive(Default)]
 struct SimuNode {
     state: SimuState,
 }
 
-impl Default for SimuNode {
-    fn default() -> Self {
-        Self {
-            state: SimuState::Loading,
-        }
-    }
-}
+#[derive(Hash, Clone, Eq, PartialEq, Debug, RenderLabel)]
+struct SimuNodeMarker;
 
 impl Node for SimuNode {
     fn update(&mut self, world: &mut World) {
+        use bevy::render::render_resource::*;
+
         let pipeline = world.resource::<SimuPipeline>();
         let pipeline_cache = world.resource::<PipelineCache>();
 
         // if the corresponding pipeline has loaded, transition to the next stage
         match self.state {
             SimuState::Loading => {
-                if let CachedPipelineState::Ok(_) =
-                    pipeline_cache.get_compute_pipeline_state(pipeline.init_pipeline)
-                {
+                let init_ok =
+                    match pipeline_cache.get_compute_pipeline_state(pipeline.init_pipeline) {
+                        CachedPipelineState::Ok(_) => true,
+                        _ => false,
+                    };
+                let update_ok =
+                    match pipeline_cache.get_compute_pipeline_state(pipeline.init_pipeline) {
+                        CachedPipelineState::Ok(_) => true,
+                        _ => false,
+                    };
+                if init_ok && update_ok {
                     self.state = SimuState::Init;
                 }
             }
             SimuState::Init => {
-                if let CachedPipelineState::Ok(_) =
-                    pipeline_cache.get_compute_pipeline_state(pipeline.update_pipeline)
-                {
-                    self.state = SimuState::Update(true);
-                }
+                self.state = SimuState::Update(false);
             }
-            SimuState::Update(aa) => {
-                self.state = SimuState::Update(!aa);
+            SimuState::Update(flipped) => {
+                self.state = SimuState::Update(!flipped);
             }
         }
     }
@@ -233,6 +295,8 @@ impl Node for SimuNode {
         render_context: &mut bevy::render::renderer::RenderContext,
         world: &World,
     ) -> Result<(), bevy::render::render_graph::NodeRunError> {
+        use bevy::render::render_resource::*;
+
         let bind_groups = world.resource::<SimuBindGroups>();
         let pipeline_cache = world.resource::<PipelineCache>();
         let pipeline_simu = world.resource::<SimuPipeline>();
@@ -242,89 +306,42 @@ impl Node for SimuNode {
             .begin_compute_pass(&ComputePassDescriptor::default());
 
         // select the pipeline based on the current state
-        match self.state {
-            SimuState::Loading => {}
+        let should_dispatch = match self.state {
+            SimuState::Loading => false,
             SimuState::Init => {
                 let init_pipeline = pipeline_cache
                     .get_compute_pipeline(pipeline_simu.init_pipeline)
                     .unwrap();
-                pass.set_bind_group(0, &bind_groups.group_a, &[0]);
+                pass.set_bind_group(0, &bind_groups.group_ab, &[0]);
                 pass.set_pipeline(init_pipeline);
-                pass.dispatch_workgroups(
-                    SIMU_SIZE.0 / WORKGROUP_SIZE,
-                    SIMU_SIZE.1 / WORKGROUP_SIZE,
-                    1,
-                );
+                true
             }
-            SimuState::Update(index) => {
+            SimuState::Update(flipped) => {
                 let update_pipeline = pipeline_cache
                     .get_compute_pipeline(pipeline_simu.update_pipeline)
                     .unwrap();
                 pass.set_bind_group(
                     0,
-                    if !index {
-                        &bind_groups.group_a
+                    if flipped {
+                        &bind_groups.group_ab
                     } else {
-                        &bind_groups.group_b
+                        &bind_groups.group_ba
                     },
                     &[0],
                 );
                 pass.set_pipeline(update_pipeline);
-                pass.dispatch_workgroups(
-                    SIMU_SIZE.0 / WORKGROUP_SIZE,
-                    SIMU_SIZE.1 / WORKGROUP_SIZE,
-                    1,
-                );
+                true
             }
+        };
+
+        if should_dispatch {
+            pass.dispatch_workgroups(
+                SIMU_SIZE.0 / WORKGROUP_SIZE,
+                SIMU_SIZE.1 / WORKGROUP_SIZE,
+                1,
+            );
         }
 
         Ok(())
     }
-}
-
-fn populate_simu(
-    mut commands: Commands,
-    mut images: ResMut<Assets<Image>>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-) {
-    info!("** populate_simu **");
-
-    let mut image = Image::new_fill(
-        Extent3d {
-            width: SIMU_SIZE.0,
-            height: SIMU_SIZE.1,
-            depth_or_array_layers: 1,
-        },
-        TextureDimension::D2,
-        &[0, 0, 0, 255],
-        TEXTURE_FORMAT,
-        RenderAssetUsages::RENDER_WORLD,
-    );
-    image.texture_descriptor.usage =
-        TextureUsages::COPY_DST | TextureUsages::STORAGE_BINDING | TextureUsages::TEXTURE_BINDING;
-    image.sampler = bevy::image::ImageSampler::nearest();
-
-    let image_a = images.add(image.clone());
-    let image_b = images.add(image);
-
-    // magic plane
-    commands.spawn((
-        Mesh3d(
-            meshes.add(
-                Plane3d::default()
-                    .mesh()
-                    .size(400.0, 400.0)
-                    .subdivisions(20),
-            ),
-        ),
-        MeshMaterial3d(materials.add(StandardMaterial {
-            base_color_texture: Some(image_a.clone()),
-            ..StandardMaterial::default()
-        })),
-        Transform::from_xyz(100.0, -0.25, -100.0),
-        SimuSettings { rng_seed: 42 },
-    ));
-
-    commands.insert_resource(SimuImages { image_a, image_b });
 }
