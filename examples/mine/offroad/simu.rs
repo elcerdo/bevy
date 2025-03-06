@@ -198,8 +198,8 @@ impl FromWorld for SimuPipeline {
 
 #[derive(Resource)]
 struct SimuBindGroups {
-    group_ab: BindGroup,
-    group_ba: BindGroup,
+    group_direct: BindGroup,
+    group_indirect: BindGroup,
 }
 
 fn update_bind_groups(
@@ -215,8 +215,8 @@ fn update_bind_groups(
 
     let view_a = gpu_images.get(&simu_images.image_a).unwrap();
     let view_b = gpu_images.get(&simu_images.image_b).unwrap();
-    let group_ab = render_device.create_bind_group(
-        Some("group_ab"),
+    let group_direct = render_device.create_bind_group(
+        Some("group_direct"),
         &simu_pipeline.group_layout,
         &BindGroupEntries::sequential((
             &view_a.texture_view,
@@ -224,8 +224,8 @@ fn update_bind_groups(
             simu_binding.clone().unwrap(),
         )),
     );
-    let group_ba = render_device.create_bind_group(
-        Some("group_ba"),
+    let group_indirect = render_device.create_bind_group(
+        Some("group_indirect"),
         &simu_pipeline.group_layout,
         &BindGroupEntries::sequential((
             &view_b.texture_view,
@@ -235,7 +235,10 @@ fn update_bind_groups(
     );
 
     // insert bind groups
-    commands.insert_resource(SimuBindGroups { group_ab, group_ba });
+    commands.insert_resource(SimuBindGroups {
+        group_direct,
+        group_indirect,
+    });
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -281,7 +284,7 @@ impl Node for SimuNode {
                 }
             }
             SimuState::Init => {
-                self.state = SimuState::Update(false);
+                self.state = SimuState::Update(true);
             }
             SimuState::Update(flipped) => {
                 self.state = SimuState::Update(!flipped);
@@ -312,7 +315,7 @@ impl Node for SimuNode {
                 let init_pipeline = pipeline_cache
                     .get_compute_pipeline(pipeline_simu.init_pipeline)
                     .unwrap();
-                pass.set_bind_group(0, &bind_groups.group_ab, &[0]);
+                pass.set_bind_group(0, &bind_groups.group_direct, &[0]);
                 pass.set_pipeline(init_pipeline);
                 true
             }
@@ -322,10 +325,10 @@ impl Node for SimuNode {
                     .unwrap();
                 pass.set_bind_group(
                     0,
-                    if flipped {
-                        &bind_groups.group_ab
+                    if !flipped {
+                        &bind_groups.group_direct
                     } else {
-                        &bind_groups.group_ba
+                        &bind_groups.group_indirect
                     },
                     &[0],
                 );
