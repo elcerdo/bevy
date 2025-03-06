@@ -14,40 +14,38 @@ use std::f32::consts::PI;
 //////////////////////////////////////////////////////////////////////
 
 trait Sdf: TypePath + Clone + Sync + Send {
-    fn raymarching_shader() -> ShaderRef;
+    const RAY_HANDLE: Handle<Shader>;
+    fn raymarching_shader() -> ShaderRef {
+        Self::RAY_HANDLE.into()
+    }
 }
 
 #[derive(Clone, TypePath)]
 struct SphereSdf;
 
-const SPHERE_RAY_HANDLE: Handle<Shader> = weak_handle!("1347c9b7-c46a-0000-abcd-023a354b7cac");
-
 impl Sdf for SphereSdf {
-    fn raymarching_shader() -> ShaderRef {
-        SPHERE_RAY_HANDLE.into()
-    }
+    const RAY_HANDLE: Handle<Shader> = weak_handle!("7987c9b7-c46a-0000-1111-023a354b7cac");
 }
 
 #[derive(Clone, TypePath)]
 struct UnionSdf;
 
-const UNION_RAY_HANDLE: Handle<Shader> = weak_handle!("1347c9b7-c46a-1111-abcd-023a354b7cac");
-
 impl Sdf for UnionSdf {
-    fn raymarching_shader() -> ShaderRef {
-        UNION_RAY_HANDLE.into()
-    }
+    const RAY_HANDLE: Handle<Shader> = weak_handle!("7987c9b7-c46a-1111-1111-023a354b7cac");
 }
 
 #[derive(Clone, TypePath)]
 struct AlienSdf;
 
-const ALIEN_RAY_HANDLE: Handle<Shader> = weak_handle!("1347c9b7-c46a-2222-abcd-023a354b7cac");
-
 impl Sdf for AlienSdf {
-    fn raymarching_shader() -> ShaderRef {
-        ALIEN_RAY_HANDLE.into()
-    }
+    const RAY_HANDLE: Handle<Shader> = weak_handle!("7987c9b7-c46a-2222-1111-023a354b7cac");
+}
+
+#[derive(Clone, TypePath)]
+struct CanSdf;
+
+impl Sdf for CanSdf {
+    const RAY_HANDLE: Handle<Shader> = weak_handle!("7987c9b7-c46a-3333-1111-023a354b7cac");
 }
 
 const RAYMARCHING_SOURCE: &str = r#"
@@ -132,6 +130,7 @@ impl Plugin for MorpheusPlugin {
         app.add_plugins(MaterialPlugin::<MorpheusRaymarchingMaterial<SphereSdf>>::default());
         app.add_plugins(MaterialPlugin::<MorpheusRaymarchingMaterial<UnionSdf>>::default());
         app.add_plugins(MaterialPlugin::<MorpheusRaymarchingMaterial<AlienSdf>>::default());
+        app.add_plugins(MaterialPlugin::<MorpheusRaymarchingMaterial<CanSdf>>::default());
         app.add_systems(PreStartup, prepare_shaders);
 
         app.add_systems(Startup, populate_camera_and_lights);
@@ -154,9 +153,10 @@ fn prepare_shaders(mut shaders: ResMut<Assets<Shader>>, server_asset: Res<AssetS
         shaders.insert(ray_handle.id(), ray_shader);
     };
 
-    make_raymarching_shader_from_sdf("sphere", SPHERE_RAY_HANDLE);
-    make_raymarching_shader_from_sdf("union", UNION_RAY_HANDLE);
-    make_raymarching_shader_from_sdf("alien", ALIEN_RAY_HANDLE);
+    make_raymarching_shader_from_sdf("sphere", SphereSdf::RAY_HANDLE);
+    make_raymarching_shader_from_sdf("union", UnionSdf::RAY_HANDLE);
+    make_raymarching_shader_from_sdf("alien", AlienSdf::RAY_HANDLE);
+    make_raymarching_shader_from_sdf("can", CanSdf::RAY_HANDLE);
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -167,9 +167,11 @@ fn populate_models(
     mut morpheus_sphere_materials: ResMut<Assets<MorpheusRaymarchingMaterial<SphereSdf>>>,
     mut morpheus_union_materials: ResMut<Assets<MorpheusRaymarchingMaterial<UnionSdf>>>,
     mut morpheus_alien_materials: ResMut<Assets<MorpheusRaymarchingMaterial<AlienSdf>>>,
+    mut morpheus_can_materials: ResMut<Assets<MorpheusRaymarchingMaterial<CanSdf>>>,
     mut standard_materials: ResMut<Assets<StandardMaterial>>,
     asset_server: Res<AssetServer>,
 ) {
+    // axis
     let tube = meshes.add(Mesh::from(Cylinder::new(0.1, 2.0)));
     commands.spawn((
         Mesh3d(tube.clone()),
@@ -198,14 +200,18 @@ fn populate_models(
             .with_rotation(Quat::from_axis_angle(Vec3::X, PI / 2.0)),
     ));
 
-    let matcap_texture = asset_server.load("textures/matcap/583629_2E1810_765648_3C1C14-512px.png");
+    // handles
+    let matcap_texture: Handle<Image> =
+        asset_server.load("textures/matcap/583629_2E1810_765648_3C1C14-512px.png");
+    let cube_mesh: Handle<Mesh> = meshes.add(Mesh::from(Cuboid::new(2.0, 2.0, 2.0)));
 
+    // morpheus models
     let sphere_center = Vec3::new(2.0, 0.0, 0.0);
     let sphere_material = morpheus_sphere_materials.add(
         MorpheusRaymarchingMaterial::<SphereSdf>::new(sphere_center, matcap_texture.clone()),
     );
     commands.spawn((
-        Mesh3d(meshes.add(Mesh::from(Cuboid::new(2.0, 2.0, 2.0)))),
+        Mesh3d(cube_mesh.clone()),
         MeshMaterial3d(sphere_material),
         Transform::from_translation(sphere_center),
     ));
@@ -215,7 +221,7 @@ fn populate_models(
         MorpheusRaymarchingMaterial::<UnionSdf>::new(union_center, matcap_texture.clone()),
     );
     commands.spawn((
-        Mesh3d(meshes.add(Mesh::from(Cuboid::new(2.0, 2.0, 2.0)))),
+        Mesh3d(cube_mesh.clone()),
         MeshMaterial3d(union_material),
         Transform::from_translation(union_center),
     ));
@@ -225,9 +231,20 @@ fn populate_models(
         MorpheusRaymarchingMaterial::<AlienSdf>::new(alien_center, matcap_texture.clone()),
     );
     commands.spawn((
-        Mesh3d(meshes.add(Mesh::from(Cuboid::new(2.0, 2.0, 2.0)))),
+        Mesh3d(cube_mesh.clone()),
         MeshMaterial3d(alien_material),
         Transform::from_translation(alien_center),
+    ));
+
+    let can_center = Vec3::new(0.0, 2.0, 0.0);
+    let can_material = morpheus_can_materials.add(MorpheusRaymarchingMaterial::<CanSdf>::new(
+        can_center,
+        matcap_texture.clone(),
+    ));
+    commands.spawn((
+        Mesh3d(cube_mesh.clone()),
+        MeshMaterial3d(can_material),
+        Transform::from_translation(can_center),
     ));
 }
 
@@ -276,7 +293,7 @@ fn populate_camera_and_lights(mut commands: Commands) {
             InheritedVisibility::VISIBLE,
         ))
         .with_child((
-            Transform::from_xyz(0.0, 2.0, -5.0).looking_at(Vec3::new(0., 0., 0.), Vec3::Y),
+            Transform::from_xyz(0.0, 3.0, -7.5).looking_at(Vec3::new(0., 0., 0.), Vec3::Y),
             Camera3d::default(),
         ));
 }
