@@ -30,9 +30,17 @@ pub struct LapStat {
 }
 
 impl LapStat {
-    pub fn invalid() -> Self {
+    fn invalid() -> Self {
         Self {
             top_start: Duration::MAX,
+            checkpoint_to_tops: HashMap::new(),
+            top_finish: Duration::MAX,
+        }
+    }
+
+    pub fn from(top: Duration) -> Self {
+        Self {
+            top_start: top,
             checkpoint_to_tops: HashMap::new(),
             top_finish: Duration::MAX,
         }
@@ -42,10 +50,7 @@ impl LapStat {
         self.top_finish = top;
     }
 
-    pub fn patate(&mut self, checkpoint: u8, checkpoint_count: u8, top: Duration) -> bool {
-        // assert!(self.top_start != Duration::MAX);
-        assert!(self.top_finish != Duration::MAX);
-        // assert!(self.top_start <= self.top_finish);
+    pub fn completed_lap(&mut self, checkpoint: u8, checkpoint_count: u8, top: Duration) -> bool {
         if checkpoint == 0 {
             if self.top_start == Duration::MAX {
                 self.top_start = top;
@@ -70,7 +75,7 @@ impl LapStat {
         if self.top_finish == Duration::MAX {
             return false;
         }
-        if self.top_start <= self.top_finish {
+        if self.top_start > self.top_finish {
             return false;
         }
         true
@@ -93,8 +98,8 @@ pub struct BoatData {
     angle_initial: f32,
     pub angle_current: f32,
     pub current_stat: LapStat,
-    pub maybe_last_stat: Option<LapStat>,
-    pub maybe_best_stat: Option<LapStat>,
+    pub last_stat: LapStat,
+    pub best_stat: LapStat,
     pub lap_count: u32,
 }
 
@@ -109,8 +114,8 @@ impl BoatData {
             angle_initial: angle,
             angle_current: angle,
             current_stat: LapStat::invalid(),
-            maybe_last_stat: None,
-            maybe_best_stat: None,
+            last_stat: LapStat::invalid(),
+            best_stat: LapStat::invalid(),
             lap_count: 0,
         }
     }

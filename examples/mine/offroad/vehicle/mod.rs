@@ -317,10 +317,10 @@ fn update_boards(
     // sort by best lap
     let mut sorted_lap_duration_boats: Vec<(Duration, &BoatData)> = vec![];
     for boat in boats {
-        let Some(best_stat) = &boat.maybe_best_stat else {
+        if !boat.best_stat.is_valid() {
             continue;
-        };
-        let lap_duration = best_stat.lap_duration();
+        }
+        let lap_duration = boat.best_stat.lap_duration();
         sorted_lap_duration_boats.push((lap_duration, boat));
     }
     sorted_lap_duration_boats.sort_by_key(|(lap_duration, _)| *lap_duration);
@@ -409,24 +409,25 @@ fn resolve_checkpoints(
         assert!(closest_segment.item.ii != 255);
         boat.current_stat.update(top_now);
         if closest_segment.item.intersects(&query_segment) {
-            if boat
-                .current_stat
-                .patate(closest_segment.item.ii, track.checkpoint_count, top_now)
-            {
-                boat.maybe_last_stat = Some(boat.current_stat.clone());
-                boat.maybe_best_stat = Some(match &boat.maybe_best_stat {
-                    None => boat.current_stat.clone(),
-                    Some(best_stat) => {
-                        if boat.current_stat.lap_duration() < best_stat.lap_duration() {
+            if boat.current_stat.completed_lap(
+                closest_segment.item.ii,
+                track.checkpoint_count,
+                top_now,
+            ) {
+                assert!(boat.current_stat.is_valid());
+                boat.last_stat = boat.current_stat.clone();
+                boat.best_stat = match boat.best_stat.is_valid() {
+                    false => boat.current_stat.clone(),
+                    true => {
+                        if boat.current_stat.lap_duration() < boat.best_stat.lap_duration() {
                             boat.current_stat.clone()
                         } else {
-                            best_stat.clone()
+                            boat.best_stat.clone()
                         }
                     }
-                });
+                };
                 boat.lap_count += 1;
-                let is_new_best: bool =
-                    boat.maybe_best_stat.clone() == boat.maybe_last_stat.clone();
+                let is_new_best: bool = boat.best_stat.clone() == boat.last_stat.clone();
                 warn!(
                     "player {} completed lap {} in {:>6.3}{}",
                     boat.player,
@@ -434,7 +435,7 @@ fn resolve_checkpoints(
                     boat.current_stat.lap_duration().as_secs_f32(),
                     if is_new_best { " NEW BEST LAP !!!" } else { "" },
                 );
-                boat.current_stat = LapStat::invalid();
+                boat.current_stat = LapStat::from(top_now);
             }
         }
     }
@@ -450,13 +451,13 @@ fn resolve_checkpoints(
                 true => boat.current_stat.lap_duration().as_secs_f32(),
                 false => -1.0,
             },
-            match &boat.maybe_last_stat {
-                None => 0.0,
-                Some(stat) => stat.lap_duration().as_secs_f32(),
+            match boat.last_stat.is_valid() {
+                true => boat.last_stat.lap_duration().as_secs_f32(),
+                false => -1.0,
             },
-            match &boat.maybe_best_stat {
-                None => 0.0,
-                Some(stat) => stat.lap_duration().as_secs_f32(),
+            match boat.best_stat.is_valid() {
+                true => boat.best_stat.lap_duration().as_secs_f32(),
+                false => -1.0,
             },
         ));
 
