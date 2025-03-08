@@ -26,7 +26,7 @@ use bevy::prelude::{Entity, Time, Transform};
 const COLOR_P1: Srgba = bevy::color::palettes::css::LIGHT_GRAY;
 const COLOR_P2: Srgba = bevy::color::palettes::css::HOT_PINK;
 const COLOR_P3: Srgba = bevy::color::palettes::css::LIGHT_GREEN;
-const COLOR_BEST_LAP_BOARD: Srgba = bevy::color::palettes::css::WHITE;
+const COLOR_BEST_LAP_BOARD: Srgba = bevy::color::palettes::css::LIGHT_GRAY;
 
 const MODEL_SCALE: f32 = 0.15;
 
@@ -54,11 +54,11 @@ impl bevy::prelude::Plugin for VehiclePlugin {
             app.add_systems(
                 Update,
                 (
+                    exit_game,
                     reset_vehicle_positions,
                     physics::update_vehicle_physics,
-                    resolve_checkpoints,
-                    update_boards,
-                    exit_game,
+                    bounce_and_resolve_checkpoints,
+                    update_boards_and_cups,
                 )
                     .chain()
                     .run_if(in_state(state)),
@@ -66,6 +66,8 @@ impl bevy::prelude::Plugin for VehiclePlugin {
         }
     }
 }
+
+//////////////////////////////////////////////////////////////////////
 
 #[derive(Component)]
 struct StatusMarker;
@@ -78,6 +80,12 @@ struct PriceMarker(usize);
 
 #[derive(Component)]
 struct VehicleSceneMarker;
+
+fn depopulate_all(mut commands: Commands, query: Query<Entity, With<VehicleSceneMarker>>) {
+    for entity in query {
+        commands.entity(entity).despawn();
+    }
+}
 
 fn populate_boards(mut commands: Commands) {
     use bevy::prelude::*;
@@ -151,12 +159,6 @@ fn populate_boards(mut commands: Commands) {
         StatusMarker,
         VehicleSceneMarker,
     ));
-}
-
-fn depopulate_all(mut commands: Commands, query: Query<Entity, With<VehicleSceneMarker>>) {
-    for entity in query {
-        commands.entity(entity).despawn();
-    }
 }
 
 fn populate_vehicles(
@@ -243,7 +245,6 @@ fn populate_vehicles(
             * Transform::from_scale(Vec3::ONE * MODEL_SCALE)
             * Transform::from_translation(Vec3::Y * MODEL_SCALE),
     ));
-
     commands.spawn((
         VehicleSceneMarker,
         PriceMarker(1),
@@ -260,7 +261,6 @@ fn populate_vehicles(
             * Transform::from_scale(Vec3::ONE * MODEL_SCALE)
             * Transform::from_translation(Vec3::Y * MODEL_SCALE),
     ));
-
     commands.spawn((
         VehicleSceneMarker,
         PriceMarker(2),
@@ -293,7 +293,7 @@ fn reset_vehicle_positions(mut boats: Query<&mut BoatData>, keyboard: Res<Button
     }
 }
 
-fn update_boards(
+fn update_boards_and_cups(
     mut materials: ResMut<Assets<racing_line_material::RacingLineMaterial>>,
     material_handles: Query<&MeshMaterial3d<racing_line_material::RacingLineMaterial>>,
     cup_transforms: Query<(&mut Transform, &PriceMarker)>,
@@ -368,7 +368,7 @@ fn update_boards(
     }
 }
 
-fn resolve_checkpoints(
+fn bounce_and_resolve_checkpoints(
     mut boats: Query<&mut BoatData>,
     status_labels: Query<&mut Text, With<StatusMarker>>,
     tracks: Res<Assets<Track>>,
@@ -449,66 +449,51 @@ fn resolve_checkpoints(
             boat.lap_count,
             match boat.current_stat.is_valid() {
                 true => boat.current_stat.lap_duration().as_secs_f32(),
-                false => -1.0,
+                false => 0.0,
             },
             match boat.last_stat.is_valid() {
                 true => boat.last_stat.lap_duration().as_secs_f32(),
-                false => -1.0,
+                false => 0.0,
             },
             match boat.best_stat.is_valid() {
                 true => boat.best_stat.lap_duration().as_secs_f32(),
-                false => -1.0,
+                false => 0.0,
             },
         ));
 
-        /*
         for kk in 1..track.checkpoint_count {
-            let maybe_checkpoint_top = boat.current_stat.checkpoint_to_tops.get(&kk);
-            let aa: String = match maybe_checkpoint_top {
-                Some(checkpoint_top) => {
-                    let lap_duration =
-                        (*checkpoint_top - boat.current_stat.top_start).as_secs_f32();
-                    format!("{:>6.3}", lap_duration)
-                }
+            let aa: String = match boat.current_stat.checkpoint_duration(kk) {
                 None => "     _".into(),
+                Some(current_duration) => {
+                    format!("{:>6.3}", current_duration.as_secs_f32())
+                }
             };
-            let bb: String = match &boat.maybe_last_stat {
-                Some(stat) => {
-                    let stat_top = stat.checkpoint_to_tops.get(&kk).unwrap();
-                    let stat_duration = (*stat_top - stat.top_start).as_secs_f32();
-                    match maybe_checkpoint_top {
-                        Some(checkpoint_top) => {
-                            let lap_duration =
-                                (*checkpoint_top - boat.current_stat.top_start).as_secs_f32();
-                            format!("{:>+5.3}", lap_duration - stat_duration)
-                        }
-                        None => {
-                            format!("{:>6.3}", stat_duration)
-                        }
-                    }
-                }
+            let bb: String = match boat.last_stat.checkpoint_duration(kk) {
                 None => "     _".into(),
+                Some(stat_duration) => match boat.current_stat.checkpoint_duration(kk) {
+                    Some(current_duration) => {
+                        let delta = current_duration.as_secs_f32() - stat_duration.as_secs_f32();
+                        format!("{:>+5.3}", delta)
+                    }
+                    None => {
+                        format!("{:>6.3}", stat_duration.as_secs_f32())
+                    }
+                },
             };
-            let cc: String = match &boat.maybe_best_stat {
-                Some(stat) => {
-                    let stat_top = stat.checkpoint_to_tops.get(&kk).unwrap();
-                    let stat_duration = (*stat_top - stat.top_start).as_secs_f32();
-                    match maybe_checkpoint_top {
-                        Some(checkpoint_top) => {
-                            let lap_duration =
-                                (*checkpoint_top - boat.current_stat.top_start).as_secs_f32();
-                            format!("{:>+5.3}", lap_duration - stat_duration)
-                        }
-                        None => {
-                            format!("{:>6.3}", stat_duration)
-                        }
-                    }
-                }
+            let cc: String = match boat.best_stat.checkpoint_duration(kk) {
                 None => "     _".into(),
+                Some(stat_duration) => match boat.current_stat.checkpoint_duration(kk) {
+                    Some(current_duration) => {
+                        let delta = current_duration.as_secs_f32() - stat_duration.as_secs_f32();
+                        format!("{:>+5.3}", delta)
+                    }
+                    None => {
+                        format!("{:>6.3}", stat_duration.as_secs_f32())
+                    }
+                },
             };
             ss.push(format!("#{} {} {} {}", kk, aa, bb, cc));
         }
-        */
 
         *status_label = ss.join("\n").into();
     }

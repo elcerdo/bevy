@@ -87,6 +87,19 @@ impl LapStat {
         assert!(self.top_start <= self.top_finish);
         self.top_finish - self.top_start
     }
+
+    pub fn checkpoint_duration(&self, kk: u8) -> Option<Duration> {
+        if self.top_start == Duration::MAX {
+            assert!(self.checkpoint_to_tops.is_empty());
+            return None;
+        }
+        assert!(self.top_start != Duration::MAX);
+        let Some(checkpoint_top) = self.checkpoint_to_tops.get(&kk) else {
+            return None;
+        };
+        assert!(self.top_start <= *checkpoint_top);
+        Some(*checkpoint_top - self.top_start)
+    }
 }
 
 #[derive(Component, Clone)]
