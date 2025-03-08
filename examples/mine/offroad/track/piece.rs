@@ -33,7 +33,7 @@ impl StraightData {
             left: -1.0,
             right: 1.0,
             length: 2.0,
-            num_quads: 4,
+            num_quads: 8,
         }
     }
     pub const fn from_length(length: f32) -> Self {
@@ -42,7 +42,7 @@ impl StraightData {
             num_quads: if 2.0 * length < 1.0 {
                 1
             } else {
-                (2.0 * length) as u32
+                (4.0 * length) as u32
             },
             ..StraightData::default()
         }
@@ -62,7 +62,7 @@ impl StraightData {
             num_quads: if 2.0 * length < 1.0 {
                 1
             } else {
-                (2.0 * length) as u32
+                (4.0 * length) as u32
             },
         }
     }
@@ -80,14 +80,14 @@ impl CornerData {
         Self {
             radius: 2.0,
             angle: PI / 2.0,
-            num_quads: 8,
+            num_quads: 32,
         }
     }
     pub const fn left_turn() -> Self {
         Self {
             radius: -2.0,
             angle: PI / 2.0,
-            num_quads: 8,
+            num_quads: 32,
         }
     }
 }

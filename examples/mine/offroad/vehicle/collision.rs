@@ -24,27 +24,6 @@ pub fn bounce_and_resolve_checkpoints(
 
     let top_now = time.elapsed();
 
-    // resolve layer transition
-    for mut boat in &mut boats {
-        assert!(track.layer_to_collisions.contains_key(&boat.layer));
-        let collision = track.layer_to_collisions.get(&boat.layer).unwrap();
-        if collision.transition_kdtree.is_empty() {
-            continue;
-        }
-        assert!(!collision.transition_kdtree.is_empty());
-        let query_segment = Segment::from_endpoints(boat.position_current, boat.position_previous);
-        let closest_segment = collision.transition_kdtree.nearest(&query_segment).unwrap();
-        assert!(query_segment.ii == 255);
-        assert!(closest_segment.item.ii < 4, "max four layers");
-        if closest_segment.item.intersects(&query_segment) {
-            warn!(
-                "player {} moved to layer {} from layer {}",
-                boat.player, closest_segment.item.ii, boat.layer,
-            );
-            boat.layer = closest_segment.item.ii;
-        }
-    }
-
     // bounce track boundary
     for mut boat in &mut boats {
         assert!(track.layer_to_collisions.contains_key(&boat.layer));
@@ -102,6 +81,27 @@ pub fn bounce_and_resolve_checkpoints(
                 );
                 boat.current_stat = LapStat::from(top_now);
             }
+        }
+    }
+
+    // resolve layer transition
+    for mut boat in &mut boats {
+        assert!(track.layer_to_collisions.contains_key(&boat.layer));
+        let collision = track.layer_to_collisions.get(&boat.layer).unwrap();
+        if collision.transition_kdtree.is_empty() {
+            continue;
+        }
+        assert!(!collision.transition_kdtree.is_empty());
+        let query_segment = Segment::from_endpoints(boat.position_current, boat.position_previous);
+        let closest_segment = collision.transition_kdtree.nearest(&query_segment).unwrap();
+        assert!(query_segment.ii == 255);
+        assert!(closest_segment.item.ii < 4, "max four layers");
+        if closest_segment.item.intersects(&query_segment) {
+            warn!(
+                "player {} moved to layer {} from layer {}",
+                boat.player, closest_segment.item.ii, boat.layer,
+            );
+            boat.layer = closest_segment.item.ii;
         }
     }
 }

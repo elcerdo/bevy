@@ -117,10 +117,10 @@ static TRACK_VERTICAL_PIECES: &[TrackPiece] = &[
     TrackPiece::Checkpoint,
     TrackPiece::Straight(StraightData::from_left_right(-1.0, 1.0)),
     TrackPiece::Straight(StraightData::from_length(8.0)),
-    TrackPiece::Straight(StraightData::from_left_right(-1.0, 2.0)),
     TrackPiece::Checkpoint,
-    TrackPiece::Corner(CornerData::left_turn()),
+    TrackPiece::Straight(StraightData::from_left_right(-1.0, 2.0)),
     TrackPiece::Layer(0),
+    TrackPiece::Corner(CornerData::left_turn()),
     TrackPiece::Straight(StraightData::from_left_right_length(-1.0, 2.0, 1.0)),
     TrackPiece::Corner(CornerData::left_turn()),
     TrackPiece::Checkpoint,
@@ -138,7 +138,7 @@ static TRACK_VERTICAL_DATA: TrackData = TrackData {
     initial_up: Vec3::Y,
     initial_left: -2.0,
     initial_right: 1.0,
-    num_segments: 4,
+    num_segments: 10,
 };
 
 pub const TRACK_VERTICAL_HANDLE: Handle<Track> =
