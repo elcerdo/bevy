@@ -393,9 +393,9 @@ fn update_statuses(
     for (boat, mut status_label) in boats.iter().zip(status_labels) {
         let mut ss: Vec<String> = vec![];
         ss.push(format!(
-            "{} sec{} lap{}\ncurrent   last   best\n{:>6.3} {:>6.3} {:>6.3}",
+            "{} layer{} lap{}\ncurrent   last   best\n{:>6.3} {:>6.3} {:>6.3}",
             boat.player,
-            boat.section,
+            boat.layer,
             boat.lap_count,
             match boat.current_stat.is_valid() {
                 true => boat.current_stat.lap_duration().as_secs_f32(),

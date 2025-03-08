@@ -110,7 +110,7 @@ pub struct BoatData {
     pub position_current: Vec2,
     angle_initial: f32,
     pub angle_current: f32,
-    pub section: u8,
+    pub layer: u8,
     pub current_stat: LapStat,
     pub last_stat: LapStat,
     pub best_stat: LapStat,
@@ -127,7 +127,7 @@ impl BoatData {
             position_current: pos,
             angle_initial: angle,
             angle_current: angle,
-            section: 0,
+            layer: 0,
             current_stat: LapStat::invalid(),
             last_stat: LapStat::invalid(),
             best_stat: LapStat::invalid(),
@@ -139,7 +139,7 @@ impl BoatData {
         self.position_previous = self.position_initial;
         self.position_current = self.position_initial;
         self.angle_current = self.angle_initial;
-        self.section = 0;
+        self.layer = 0;
         self.current_stat = LapStat::invalid();
         self.lap_count = 0;
     }

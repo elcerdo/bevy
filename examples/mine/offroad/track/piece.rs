@@ -15,7 +15,7 @@ pub enum TrackPiece {
     Straight(StraightData),
     Corner(CornerData),
     Checkpoint,
-    Section(u8),
+    Layer(u8),
     Finish,
 }
 
@@ -131,6 +131,30 @@ pub struct Segment {
     pub ii: u8,
 }
 
+impl Default for Segment {
+    fn default() -> Self {
+        Self {
+            aa: Vec2::ZERO,
+            bb: Vec2::ZERO,
+            ii: 255,
+        }
+    }
+}
+
+impl KdPoint for Segment {
+    type Scalar = f32;
+    type Dim = typenum::U4; // 4 dimensional tree.
+    fn at(&self, kk: usize) -> f32 {
+        match kk {
+            0 => self.aa.x,
+            1 => self.bb.x,
+            2 => self.aa.y,
+            3 => self.bb.y,
+            _ => unreachable!(),
+        }
+    }
+}
+
 impl Segment {
     pub fn from_endpoints(aa: Vec2, bb: Vec2) -> Self {
         Self { aa, bb, ii: 255 }
@@ -161,36 +185,11 @@ impl Segment {
     }
 }
 
-impl KdPoint for Segment {
-    type Scalar = f32;
-    type Dim = typenum::U4; // 4 dimensional tree.
-    fn at(&self, kk: usize) -> f32 {
-        match kk {
-            0 => self.aa.x,
-            1 => self.bb.x,
-            2 => self.aa.y,
-            3 => self.bb.y,
-            _ => unreachable!(),
-        }
-    }
-}
-
-impl Default for Segment {
-    fn default() -> Self {
-        Self {
-            aa: Vec2::ZERO,
-            bb: Vec2::ZERO,
-            ii: 255,
-        }
-    }
-}
-
 #[derive(Default)]
 pub struct Collision {
     pub track_kdtree: KdTree<Segment>,
     pub checkpoint_kdtree: KdTree<Segment>,
-    // enter_segment: Segment,
-    // exit_segment: Segment,
+    pub transition_kdtree: KdTree<Segment>,
 }
 
 #[derive(Asset, TypePath)]
@@ -199,7 +198,7 @@ pub struct Track {
     pub checkpoint: Mesh,
     pub total_length: f32,
     pub is_looping: bool,
-    pub section_to_collisions: HashMap<u8, Collision>,
+    pub layer_to_collisions: HashMap<u8, Collision>,
     pub checkpoint_count: u8,
     pub initial_up: Vec3,
     pub initial_position: Vec3,
@@ -257,18 +256,18 @@ pub fn prepare_track(track_data: &TrackData) -> Track {
             next_vertex
         };
 
-    let mut checkpoint_section_to_segments: HashMap<u8, Vec<Segment>> = HashMap::new();
+    let mut checkpoint_layer_to_segments: HashMap<u8, Vec<Segment>> = HashMap::new();
     let mut checkpoint_count: u8 = 0;
     let mut push_checkpoint_segment =
-        |position: &Vec3, forward: &Vec3, left: f32, right: f32, section: u8| -> u8 {
+        |position: &Vec3, forward: &Vec3, left: f32, right: f32, layer: u8| -> u8 {
             let righthand = forward.cross(track_data.initial_up);
             let aa = position + righthand * left;
             let bb = position + righthand * right;
-            let ii = checkpoint_count as u8;
-            if !checkpoint_section_to_segments.contains_key(&section) {
-                checkpoint_section_to_segments.insert(section, vec![]);
+            let ii = checkpoint_count;
+            if !checkpoint_layer_to_segments.contains_key(&layer) {
+                checkpoint_layer_to_segments.insert(layer, vec![]);
             }
-            let checkpoint_segments = checkpoint_section_to_segments.get_mut(&section).unwrap();
+            let checkpoint_segments = checkpoint_layer_to_segments.get_mut(&layer).unwrap();
             checkpoint_segments.push(Segment {
                 aa: aa.xz(),
                 bb: bb.xz(),
@@ -278,14 +277,55 @@ pub fn prepare_track(track_data: &TrackData) -> Track {
             ii
         };
 
+    let mut transition_layer_to_segments: HashMap<u8, Vec<Segment>> = HashMap::new();
+    let mut transition_count: u8 = 0;
+    let mut push_transition_segment = |position: &Vec3,
+                                       forward: &Vec3,
+                                       left: f32,
+                                       right: f32,
+                                       from_layer: u8,
+                                       to_layer: u8|
+     -> u8 {
+        assert!(from_layer != to_layer);
+        let righthand = forward.cross(track_data.initial_up);
+        let aa = position + righthand * left;
+        let bb = position + righthand * right;
+        let ii = transition_count;
+        if !transition_layer_to_segments.contains_key(&from_layer) {
+            transition_layer_to_segments.insert(from_layer, vec![]);
+        }
+        if !transition_layer_to_segments.contains_key(&to_layer) {
+            transition_layer_to_segments.insert(to_layer, vec![]);
+        }
+        {
+            let from_transition_segments =
+                transition_layer_to_segments.get_mut(&from_layer).unwrap();
+            from_transition_segments.push(Segment {
+                aa: aa.xz(),
+                bb: bb.xz(),
+                ii: to_layer,
+            });
+        }
+        {
+            let to_transition_segments = transition_layer_to_segments.get_mut(&to_layer).unwrap();
+            to_transition_segments.push(Segment {
+                aa: aa.xz(),
+                bb: bb.xz(),
+                ii: from_layer,
+            });
+        }
+        transition_count += 1;
+        ii
+    };
+
     let mut track_positions: Vec<Vec3> = vec![];
     let mut track_normals: Vec<Vec3> = vec![];
     let mut track_triangles: Vec<u32> = vec![];
     let mut track_uvs: Vec<Vec2> = vec![];
     let mut track_pqs: Vec<Vec2> = vec![];
-    let mut track_section_to_segments: HashMap<u8, Vec<Segment>> = HashMap::new();
+    let mut track_layer_to_segments: HashMap<u8, Vec<Segment>> = HashMap::new();
     let mut push_track_section =
-        |position: &Vec3, forward: &Vec3, left: f32, right: f32, length: f32, section: u8| -> u32 {
+        |position: &Vec3, forward: &Vec3, left: f32, right: f32, length: f32, layer: u8| -> u32 {
             let left_pos = position + forward.cross(track_data.initial_up) * left;
             let right_pos = position + forward.cross(track_data.initial_up) * right;
             let next_vertex = track_positions.len() as u32;
@@ -328,10 +368,10 @@ pub fn prepare_track(track_data: &TrackData) -> Track {
                 let right_index_ = (next_vertex - 1) as usize;
                 let left_pos_ = track_positions[left_index_];
                 let right_pos_ = track_positions[right_index_];
-                if !track_section_to_segments.contains_key(&section) {
-                    track_section_to_segments.insert(section, vec![]);
+                if !track_layer_to_segments.contains_key(&layer) {
+                    track_layer_to_segments.insert(layer, vec![]);
                 }
-                let track_segments = track_section_to_segments.get_mut(&section).unwrap();
+                let track_segments = track_layer_to_segments.get_mut(&layer).unwrap();
                 track_segments.push(Segment {
                     aa: left_pos_.xz(),
                     bb: left_pos.xz(),
@@ -352,7 +392,7 @@ pub fn prepare_track(track_data: &TrackData) -> Track {
     let mut is_looping: bool = false;
     let mut current_left: f32 = track_data.initial_left;
     let mut current_right: f32 = track_data.initial_right;
-    let mut current_section: u8 = 0;
+    let mut current_layer: u8 = 0;
     for piece in track_data.pieces {
         match piece {
             TrackPiece::Start => {
@@ -367,7 +407,7 @@ pub fn prepare_track(track_data: &TrackData) -> Track {
                     current_left,
                     current_right,
                     current_length,
-                    current_section,
+                    current_layer,
                 );
                 assert!(section_index == 0);
                 let section_index_ = push_checkpoint_segment(
@@ -375,7 +415,7 @@ pub fn prepare_track(track_data: &TrackData) -> Track {
                     &current_forward,
                     current_left,
                     current_right,
-                    current_section,
+                    current_layer,
                 );
                 assert!(section_index_ == 0);
             }
@@ -398,7 +438,7 @@ pub fn prepare_track(track_data: &TrackData) -> Track {
                         current_left * (1.0 - bb) + data.left * bb,
                         current_right * (1.0 - bb) + data.right * bb,
                         len,
-                        current_section,
+                        current_layer,
                     );
                     assert!(section_index > 0);
                 }
@@ -429,7 +469,7 @@ pub fn prepare_track(track_data: &TrackData) -> Track {
                         current_left,
                         current_right,
                         len,
-                        current_section,
+                        current_layer,
                     );
                     assert!(section_index > 0);
                 }
@@ -446,21 +486,21 @@ pub fn prepare_track(track_data: &TrackData) -> Track {
                 let dir_error = (current_forward - track_data.initial_forward).norm();
                 let left_error = ops::abs(current_left - track_data.initial_left);
                 let right_error = ops::abs(current_right - track_data.initial_right);
-                let section_ok = current_section == 0;
+                let layer_ok = current_layer == 0;
                 let eps: f32 = 1e-3;
                 is_looping = pos_error < eps
                     && dir_error < eps
                     && left_error < eps
                     && right_error < eps
                     && current_length > 0.0
-                    && section_ok;
+                    && layer_ok;
                 debug!(
-                    "Finish {:?} pos_err {:0.3e} dir_err {:0.3e} total_length {} section {} loop {}",
+                    "Finish {:?} pos_err {:0.3e} dir_err {:0.3e} total_length {} layer {} loop {}",
                     current_position.clone(),
                     pos_error,
                     dir_error,
                     current_length,
-                    current_section,
+                    current_layer,
                     is_looping,
                 );
             }
@@ -476,13 +516,21 @@ pub fn prepare_track(track_data: &TrackData) -> Track {
                     &current_forward,
                     current_left,
                     current_right,
-                    current_section,
+                    current_layer,
                 );
                 debug!("Checkpoint {}", section_index_);
             }
-            TrackPiece::Section(section) => {
-                warn!("Section {}", section);
-                current_section = *section;
+            TrackPiece::Layer(layer) => {
+                warn!("Layer {}", layer);
+                push_transition_segment(
+                    &current_position,
+                    &current_forward,
+                    current_left,
+                    current_right,
+                    current_layer,
+                    *layer,
+                );
+                current_layer = *layer;
             }
         }
     }
@@ -521,20 +569,27 @@ pub fn prepare_track(track_data: &TrackData) -> Track {
     checkpoint = checkpoint.with_inserted_indices(Indices::U32(checkpoint_triangles));
     // checkpoint = checkpoint.with_generated_tangents().unwrap();
 
-    let mut section_to_collisions = HashMap::new();
-    for (section, track_segments) in track_section_to_segments {
-        if !section_to_collisions.contains_key(&section) {
-            section_to_collisions.insert(section, Collision::default());
+    let mut layer_to_collisions = HashMap::new();
+    for (section, track_segments) in track_layer_to_segments {
+        if !layer_to_collisions.contains_key(&section) {
+            layer_to_collisions.insert(section, Collision::default());
         }
-        let collision = section_to_collisions.get_mut(&section).unwrap();
+        let collision = layer_to_collisions.get_mut(&section).unwrap();
         collision.track_kdtree = KdTree::build_by_ordered_float(track_segments);
     }
-    for (section, checkpoint_segments) in checkpoint_section_to_segments {
-        if !section_to_collisions.contains_key(&section) {
-            section_to_collisions.insert(section, Collision::default());
+    for (section, checkpoint_segments) in checkpoint_layer_to_segments {
+        if !layer_to_collisions.contains_key(&section) {
+            layer_to_collisions.insert(section, Collision::default());
         }
-        let collision = section_to_collisions.get_mut(&section).unwrap();
+        let collision = layer_to_collisions.get_mut(&section).unwrap();
         collision.checkpoint_kdtree = KdTree::build_by_ordered_float(checkpoint_segments);
+    }
+    for (section, transition_segments) in transition_layer_to_segments {
+        if !layer_to_collisions.contains_key(&section) {
+            layer_to_collisions.insert(section, Collision::default());
+        }
+        let collision = layer_to_collisions.get_mut(&section).unwrap();
+        collision.transition_kdtree = KdTree::build_by_ordered_float(transition_segments);
     }
 
     Track {
@@ -543,7 +598,7 @@ pub fn prepare_track(track_data: &TrackData) -> Track {
         total_length: current_length,
         is_looping,
         checkpoint_count,
-        section_to_collisions,
+        layer_to_collisions,
         initial_up: track_data.initial_up,
         initial_position: track_data.initial_position,
         initial_forward: track_data.initial_forward,
