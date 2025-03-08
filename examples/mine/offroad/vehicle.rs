@@ -6,28 +6,37 @@ use bevy::asset::{AssetServer, Assets};
 use bevy::color::Srgba;
 use bevy::math::ops;
 use bevy::math::{Mat2, Quat, Vec2, Vec3, Vec3Swizzles};
+use bevy::pbr::{NotShadowCaster, StandardMaterial};
 
 use bevy::prelude::MeshMaterial3d;
 use bevy::prelude::State;
 use bevy::prelude::Text;
 use bevy::prelude::{info, warn};
 use bevy::prelude::{ButtonInput, KeyCode};
-use bevy::prelude::{Commands, Component, NextState, Query, Res, ResMut, Time, Transform, With};
-use bevy::prelude::{Entity, Gamepad, GamepadAxis, GamepadButton};
+use bevy::prelude::{Commands, Component, NextState, Query, Res, ResMut, With};
+use bevy::prelude::{Entity, Time, Transform};
+use bevy::prelude::{Gamepad, GamepadAxis, GamepadButton};
 
 use std::collections::HashMap;
 use std::fmt;
 use std::time::Duration;
 
-const COLOR_P1: Srgba = bevy::color::palettes::css::LIGHT_GREY;
+const COLOR_P1: Srgba = bevy::color::palettes::css::DARK_GRAY;
 const COLOR_P2: Srgba = bevy::color::palettes::css::HOT_PINK;
-const COLOR_P3: Srgba = bevy::color::palettes::css::LIME;
+const COLOR_P3: Srgba = bevy::color::palettes::css::DARK_GREEN;
+
+const MODEL_SCALE: f32 = 0.15;
 
 const MODEL_P1: &str = "models/offroad/boat_p1.glb";
 const MODEL_P2: &str = "models/offroad/boat_p2.glb";
 const MODEL_P3: &str = "models/offroad/boat_p3.glb";
+const MODEL_CUP: &str = "models/offroad/cup.glb";
 
-use bevy::color::palettes::css::GOLD;
+const COLOR_FIRST: Srgba = bevy::color::palettes::css::GOLD;
+const COLOR_SECOND: Srgba = bevy::color::palettes::css::SILVER;
+const COLOR_THIRD: Srgba = bevy::color::palettes::css::ROSY_BROWN;
+const COLOR_CUP: Srgba = bevy::color::palettes::css::BLACK;
+
 use std::f32::consts::PI;
 
 //////////////////////////////////////////////////////////////////////
@@ -47,7 +56,7 @@ impl bevy::prelude::Plugin for VehiclePlugin {
                     reset_vehicle_positions,
                     update_vehicle_physics,
                     resolve_checkpoints,
-                    update_vehicle_boards,
+                    update_boards,
                     exit_game,
                 )
                     .chain()
@@ -150,7 +159,10 @@ impl BoatData {
 struct StatusMarker;
 
 #[derive(Component)]
-struct FirstPlaceMarker;
+struct BoardBestLapMarker;
+
+#[derive(Component)]
+struct PriceMarker(usize);
 
 #[derive(Component)]
 struct VehicleSceneMarker;
@@ -160,7 +172,7 @@ fn populate_boards(mut commands: Commands) {
 
     info!("** populate_boards **");
 
-    // ui learderboard
+    // best lap board
     commands.spawn((
         Text::new("$$best_lap_leaderboard$$"),
         Node {
@@ -174,8 +186,8 @@ fn populate_boards(mut commands: Commands) {
             ..TextFont::default()
         },
         TextLayout::new_with_justify(JustifyText::Right),
-        TextColor(GOLD.into()),
-        FirstPlaceMarker,
+        TextColor(COLOR_FIRST.into()),
+        BoardBestLapMarker,
         VehicleSceneMarker,
     ));
 
@@ -237,6 +249,7 @@ fn depopulate_all(mut commands: Commands, query: Query<Entity, With<VehicleScene
 
 fn populate_vehicles(
     mut commands: Commands,
+    mut materials: ResMut<Assets<StandardMaterial>>,
     server: Res<AssetServer>,
     tracks: Res<Assets<Track>>,
     state: Res<State<GlobalState>>,
@@ -255,32 +268,86 @@ fn populate_vehicles(
 
     assert!(track.is_looping);
 
+    // vehicles
     let model_p1: Handle<Scene> = server.load(GltfAssetLabel::Scene(0).from_asset(MODEL_P1));
     let model_p2: Handle<Scene> = server.load(GltfAssetLabel::Scene(0).from_asset(MODEL_P2));
     let model_p3: Handle<Scene> = server.load(GltfAssetLabel::Scene(0).from_asset(MODEL_P3));
-
     let initial_righthand = track.initial_forward.cross(track.initial_up);
     let pos_p1 = track.initial_position;
     let pos_p2 = track.initial_position + initial_righthand * track.initial_left / 2.0;
     let pos_p3 = track.initial_position + initial_righthand * track.initial_right / 2.0;
+    commands.spawn((
+        VehicleSceneMarker,
+        SceneRoot(model_p1),
+        BoatData::from_player_position_and_forward(Player::One, pos_p1, track.initial_forward),
+        Transform::from_scale(Vec3::ONE * MODEL_SCALE),
+    ));
+    commands.spawn((
+        VehicleSceneMarker,
+        SceneRoot(model_p2),
+        BoatData::from_player_position_and_forward(Player::Two, pos_p2, track.initial_forward),
+        Transform::from_scale(Vec3::ONE * MODEL_SCALE),
+    ));
+    commands.spawn((
+        VehicleSceneMarker,
+        SceneRoot(model_p3),
+        BoatData::from_player_position_and_forward(Player::Three, pos_p3, track.initial_forward),
+        Transform::from_scale(Vec3::ONE * MODEL_SCALE),
+    ));
+
+    // prices
+    let model_cup: Handle<Mesh> = server.load(
+        GltfAssetLabel::Primitive {
+            mesh: 0,
+            primitive: 0,
+        }
+        .from_asset(MODEL_CUP),
+    );
+    commands.spawn((
+        VehicleSceneMarker,
+        PriceMarker(0),
+        Mesh3d(model_cup.clone()),
+        MeshMaterial3d(materials.add(StandardMaterial {
+            perceptual_roughness: 0.0,
+            metallic: 1.0,
+            emissive: COLOR_FIRST.into(),
+            base_color: COLOR_CUP.into(),
+            ..StandardMaterial::default()
+        })),
+        NotShadowCaster,
+        Transform::from_translation(Vec3::Y * 1.2) * Transform::from_scale(Vec3::ONE * MODEL_SCALE),
+    ));
 
     commands.spawn((
-        SceneRoot(model_p1),
-        Transform::from_scale(Vec3::ONE * 0.15),
-        BoatData::from_player_position_and_forward(Player::One, pos_p1, track.initial_forward),
         VehicleSceneMarker,
+        PriceMarker(1),
+        Mesh3d(model_cup.clone()),
+        MeshMaterial3d(materials.add(StandardMaterial {
+            perceptual_roughness: 0.0,
+            metallic: 1.0,
+            emissive: COLOR_SECOND.into(),
+            base_color: COLOR_CUP.into(),
+            ..StandardMaterial::default()
+        })),
+        NotShadowCaster,
+        Transform::from_translation(Vec3::Y * 1.2 + Vec3::X * 2.0)
+            * Transform::from_scale(Vec3::ONE * MODEL_SCALE),
     ));
+
     commands.spawn((
-        SceneRoot(model_p2),
-        Transform::from_scale(Vec3::ONE * 0.15),
-        BoatData::from_player_position_and_forward(Player::Two, pos_p2, track.initial_forward),
         VehicleSceneMarker,
-    ));
-    commands.spawn((
-        SceneRoot(model_p3),
-        Transform::from_scale(Vec3::ONE * 0.15),
-        BoatData::from_player_position_and_forward(Player::Three, pos_p3, track.initial_forward),
-        VehicleSceneMarker,
+        PriceMarker(2),
+        Mesh3d(model_cup.clone()),
+        MeshMaterial3d(materials.add(StandardMaterial {
+            perceptual_roughness: 0.0,
+            metallic: 1.0,
+            emissive: COLOR_THIRD.into(),
+            base_color: COLOR_CUP.into(),
+            ..StandardMaterial::default()
+        })),
+        NotShadowCaster,
+        Transform::from_translation(Vec3::Y * 1.2 + Vec3::X * 4.0)
+            * Transform::from_scale(Vec3::ONE * MODEL_SCALE),
     ));
 }
 
@@ -298,11 +365,12 @@ fn reset_vehicle_positions(mut boats: Query<&mut BoatData>, keyboard: Res<Button
     }
 }
 
-fn update_vehicle_boards(
+fn update_boards(
     mut materials: ResMut<Assets<racing_line_material::RacingLineMaterial>>,
     material_handles: Query<&MeshMaterial3d<racing_line_material::RacingLineMaterial>>,
+    cup_transforms: Query<(&mut Transform, &PriceMarker)>,
     boats: Query<&BoatData>,
-    first_place_labels: Query<&mut Text, With<FirstPlaceMarker>>,
+    best_lap_labels: Query<&mut Text, With<BoardBestLapMarker>>,
     tracks: Res<Assets<Track>>,
     state: Res<State<GlobalState>>,
 ) {
@@ -328,7 +396,7 @@ fn update_vehicle_boards(
         let lap_duration = best_stat.top_finish - best_stat.top_start;
         sorted_lap_duration_boats.push((lap_duration, boat));
     }
-    sorted_lap_duration_boats.sort_by_key(|(duration, _)| *duration);
+    sorted_lap_duration_boats.sort_by_key(|(lap_duration, _)| *lap_duration);
 
     // update racing line cursors
     if !sorted_lap_duration_boats.is_empty() {
@@ -343,9 +411,20 @@ fn update_vehicle_boards(
         }
     }
 
+    // udpate cups
+    for (mut cup_transform, PriceMarker(nn)) in cup_transforms {
+        let nn = *nn;
+        if nn >= sorted_lap_duration_boats.len() {
+            continue;
+        }
+        let position_current = sorted_lap_duration_boats[nn].1.position_current;
+        cup_transform.translation.x = position_current.x;
+        cup_transform.translation.z = position_current.y;
+    }
+
     // update labels
     const RANK_NAMES: [&str; 3] = ["1st", "2nd", "3rd"];
-    assert!(sorted_lap_duration_boats.len() < RANK_NAMES.len());
+    assert!(sorted_lap_duration_boats.len() <= RANK_NAMES.len());
     let mut rr = vec![];
     for ((duration, boat), rank_name) in sorted_lap_duration_boats.iter().zip(RANK_NAMES) {
         rr.push(format!(
@@ -356,8 +435,8 @@ fn update_vehicle_boards(
         ));
     }
     let label = format!("{}\nBEST LAP", rr.join("\n"));
-    for mut first_place_label in first_place_labels {
-        *first_place_label = label.clone().into();
+    for mut best_lap_label in best_lap_labels {
+        *best_lap_label = label.clone().into();
     }
 }
 
