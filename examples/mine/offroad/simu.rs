@@ -28,8 +28,10 @@ const WORKGROUP_SIZE: u32 = 8;
 struct SimuSettings {
     rng_seed: u32,
 }
-
 pub struct SimuPlugin;
+
+#[derive(Hash, Clone, Eq, PartialEq, Debug, RenderLabel)]
+struct SimuNodeMarker;
 
 impl Plugin for SimuPlugin {
     fn build(&self, app: &mut App) {
@@ -250,9 +252,6 @@ enum SimuState {
 struct SimuNode {
     state: SimuState,
 }
-
-#[derive(Hash, Clone, Eq, PartialEq, Debug, RenderLabel)]
-struct SimuNodeMarker;
 
 impl Node for SimuNode {
     fn update(&mut self, world: &mut World) {
