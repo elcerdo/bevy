@@ -21,9 +21,10 @@ use std::collections::HashMap;
 use std::fmt;
 use std::time::Duration;
 
-const COLOR_P1: Srgba = bevy::color::palettes::css::DARK_GRAY;
+const COLOR_P1: Srgba = bevy::color::palettes::css::LIGHT_GRAY;
 const COLOR_P2: Srgba = bevy::color::palettes::css::HOT_PINK;
-const COLOR_P3: Srgba = bevy::color::palettes::css::DARK_GREEN;
+const COLOR_P3: Srgba = bevy::color::palettes::css::LIGHT_GREEN;
+const COLOR_BEST_LAP_BOARD: Srgba = bevy::color::palettes::css::WHITE;
 
 const MODEL_SCALE: f32 = 0.15;
 
@@ -186,7 +187,7 @@ fn populate_boards(mut commands: Commands) {
             ..TextFont::default()
         },
         TextLayout::new_with_justify(JustifyText::Right),
-        TextColor(COLOR_FIRST.into()),
+        TextColor(COLOR_BEST_LAP_BOARD.into()),
         BoardBestLapMarker,
         VehicleSceneMarker,
     ));
@@ -315,7 +316,9 @@ fn populate_vehicles(
             ..StandardMaterial::default()
         })),
         NotShadowCaster,
-        Transform::from_translation(Vec3::Y * 1.2) * Transform::from_scale(Vec3::ONE * MODEL_SCALE),
+        Transform::from_translation(-10.0 * Vec3::Y)
+            * Transform::from_scale(Vec3::ONE * MODEL_SCALE)
+            * Transform::from_translation(Vec3::Y * MODEL_SCALE),
     ));
 
     commands.spawn((
@@ -330,8 +333,9 @@ fn populate_vehicles(
             ..StandardMaterial::default()
         })),
         NotShadowCaster,
-        Transform::from_translation(Vec3::Y * 1.2 + Vec3::X * 2.0)
-            * Transform::from_scale(Vec3::ONE * MODEL_SCALE),
+        Transform::from_translation(-10.0 * Vec3::Y)
+            * Transform::from_scale(Vec3::ONE * MODEL_SCALE)
+            * Transform::from_translation(Vec3::Y * MODEL_SCALE),
     ));
 
     commands.spawn((
@@ -346,8 +350,9 @@ fn populate_vehicles(
             ..StandardMaterial::default()
         })),
         NotShadowCaster,
-        Transform::from_translation(Vec3::Y * 1.2 + Vec3::X * 4.0)
-            * Transform::from_scale(Vec3::ONE * MODEL_SCALE),
+        Transform::from_translation(-10.0 * Vec3::Y)
+            * Transform::from_scale(Vec3::ONE * MODEL_SCALE)
+            * Transform::from_translation(Vec3::Y * MODEL_SCALE),
     ));
 }
 
@@ -419,6 +424,7 @@ fn update_boards(
         }
         let position_current = sorted_lap_duration_boats[nn].1.position_current;
         cup_transform.translation.x = position_current.x;
+        cup_transform.translation.y = 1.2;
         cup_transform.translation.z = position_current.y;
     }
 
