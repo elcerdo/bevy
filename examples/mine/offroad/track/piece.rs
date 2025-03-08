@@ -521,7 +521,7 @@ pub fn prepare_track(track_data: &TrackData) -> Track {
                 debug!("Checkpoint {}", section_index_);
             }
             TrackPiece::Layer(layer) => {
-                warn!("Layer {}", layer);
+                debug!("Layer {} -> {}", current_layer, *layer);
                 push_transition_segment(
                     &current_position,
                     &current_forward,

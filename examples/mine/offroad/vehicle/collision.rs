@@ -37,7 +37,10 @@ pub fn bounce_and_resolve_checkpoints(
         assert!(query_segment.ii == 255);
         assert!(closest_segment.item.ii < 4, "max four layers");
         if closest_segment.item.intersects(&query_segment) {
-            warn!("{} to layer {}", boat.player, closest_segment.item.ii);
+            warn!(
+                "player {} moved to layer {} from layer {}",
+                boat.player, closest_segment.item.ii, boat.layer,
+            );
             boat.layer = closest_segment.item.ii;
         }
     }
@@ -91,7 +94,7 @@ pub fn bounce_and_resolve_checkpoints(
                 boat.lap_count += 1;
                 let is_new_best: bool = boat.best_stat.clone() == boat.last_stat.clone();
                 warn!(
-                    "player {} completed lap {} in {:>6.3}{}",
+                    "player {} completed lap {} in {:.3}{}",
                     boat.player,
                     boat.lap_count,
                     boat.current_stat.lap_duration().as_secs_f32(),
