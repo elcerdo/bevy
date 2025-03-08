@@ -1,27 +1,26 @@
+mod collision;
 mod data;
 mod physics;
 
 use data::BoatData;
-use data::LapStat;
 use data::Player;
 
 use crate::global_state::{GlobalState, TrackNickname, TRACK_NICKNAMES};
 use crate::material::racing_line_material;
-use crate::track::{Segment, Track, TRACK_HANDLES};
+use crate::track::{Track, TRACK_HANDLES};
 
 use bevy::asset::{AssetServer, Assets};
 use bevy::color::Srgba;
 use bevy::math::Vec3Swizzles;
 use bevy::pbr::{NotShadowCaster, StandardMaterial};
 
+use bevy::prelude::info;
 use bevy::prelude::MeshMaterial3d;
 use bevy::prelude::State;
 use bevy::prelude::Text;
-use bevy::prelude::{info, warn};
 use bevy::prelude::{ButtonInput, KeyCode};
 use bevy::prelude::{Commands, Component, NextState, Query, Res, ResMut, With};
-use bevy::prelude::{Entity, Time, Transform};
-// use bevy::prelude::{Gamepad, GamepadAxis, GamepadButton};
+use bevy::prelude::{Entity, Transform};
 
 const COLOR_P1: Srgba = bevy::color::palettes::css::LIGHT_GRAY;
 const COLOR_P2: Srgba = bevy::color::palettes::css::HOT_PINK;
@@ -57,12 +56,29 @@ impl bevy::prelude::Plugin for VehiclePlugin {
                     exit_game,
                     reset_vehicle_positions,
                     physics::update_vehicle_physics,
-                    bounce_and_resolve_checkpoints,
+                    collision::bounce_and_resolve_checkpoints,
+                    update_statuses,
                     update_boards_and_cups,
                 )
                     .chain()
                     .run_if(in_state(state)),
             );
+        }
+    }
+}
+
+//////////////////////////////////////////////////////////////////////
+
+fn exit_game(mut next_state: ResMut<NextState<GlobalState>>, keyboard: Res<ButtonInput<KeyCode>>) {
+    if keyboard.just_pressed(KeyCode::Escape) {
+        next_state.set(GlobalState::GameDone);
+    }
+}
+
+fn reset_vehicle_positions(mut boats: Query<&mut BoatData>, keyboard: Res<ButtonInput<KeyCode>>) {
+    if keyboard.just_pressed(KeyCode::KeyR) {
+        for mut boat in &mut boats {
+            boat.reset();
         }
     }
 }
@@ -279,19 +295,7 @@ fn populate_vehicles(
     ));
 }
 
-fn exit_game(mut next_state: ResMut<NextState<GlobalState>>, keyboard: Res<ButtonInput<KeyCode>>) {
-    if keyboard.just_pressed(KeyCode::Escape) {
-        next_state.set(GlobalState::GameDone);
-    }
-}
-
-fn reset_vehicle_positions(mut boats: Query<&mut BoatData>, keyboard: Res<ButtonInput<KeyCode>>) {
-    if keyboard.just_pressed(KeyCode::KeyR) {
-        for mut boat in &mut boats {
-            boat.reset();
-        }
-    }
-}
+//////////////////////////////////////////////////////////////////////
 
 fn update_boards_and_cups(
     mut materials: ResMut<Assets<racing_line_material::RacingLineMaterial>>,
@@ -368,12 +372,11 @@ fn update_boards_and_cups(
     }
 }
 
-fn bounce_and_resolve_checkpoints(
-    mut boats: Query<&mut BoatData>,
+fn update_statuses(
+    boats: Query<&BoatData>,
     status_labels: Query<&mut Text, With<StatusMarker>>,
     tracks: Res<Assets<Track>>,
     state: Res<State<GlobalState>>,
-    time: Res<Time>,
 ) {
     let track = match state.get() {
         GlobalState::InGame(TrackNickname::Beginner) => tracks.get(&TRACK_HANDLES[0]),
@@ -387,58 +390,6 @@ fn bounce_and_resolve_checkpoints(
     assert!(!track.track_kdtree.is_empty());
     assert!(!track.checkpoint_kdtree.is_empty());
     assert!(boats.iter().len() == status_labels.iter().len());
-
-    // bounce track boundary
-    for mut boat in &mut boats {
-        let query_segment = Segment::from_endpoints(boat.position_current, boat.position_previous);
-        let closest_segment = track.track_kdtree.nearest(&query_segment).unwrap();
-        assert!(query_segment.ii == 255);
-        assert!(closest_segment.item.ii == 0 || closest_segment.item.ii == 1);
-        if closest_segment.item.clips(&query_segment) {
-            boat.position_previous = closest_segment.item.mirror(boat.position_previous);
-            boat.position_current = closest_segment.item.mirror(boat.position_current);
-        }
-    }
-
-    // update crossed checkpoints
-    let top_now = time.elapsed();
-    for mut boat in &mut boats {
-        let query_segment = Segment::from_endpoints(boat.position_current, boat.position_previous);
-        let closest_segment = track.checkpoint_kdtree.nearest(&query_segment).unwrap();
-        assert!(query_segment.ii == 255);
-        assert!(closest_segment.item.ii != 255);
-        boat.current_stat.update(top_now);
-        if closest_segment.item.intersects(&query_segment) {
-            if boat.current_stat.completed_lap(
-                closest_segment.item.ii,
-                track.checkpoint_count,
-                top_now,
-            ) {
-                assert!(boat.current_stat.is_valid());
-                boat.last_stat = boat.current_stat.clone();
-                boat.best_stat = match boat.best_stat.is_valid() {
-                    false => boat.current_stat.clone(),
-                    true => {
-                        if boat.current_stat.lap_duration() < boat.best_stat.lap_duration() {
-                            boat.current_stat.clone()
-                        } else {
-                            boat.best_stat.clone()
-                        }
-                    }
-                };
-                boat.lap_count += 1;
-                let is_new_best: bool = boat.best_stat.clone() == boat.last_stat.clone();
-                warn!(
-                    "player {} completed lap {} in {:>6.3}{}",
-                    boat.player,
-                    boat.lap_count,
-                    boat.current_stat.lap_duration().as_secs_f32(),
-                    if is_new_best { " NEW BEST LAP !!!" } else { "" },
-                );
-                boat.current_stat = LapStat::from(top_now);
-            }
-        }
-    }
 
     // prepare ui status label
     for (boat, mut status_label) in boats.iter().zip(status_labels) {
