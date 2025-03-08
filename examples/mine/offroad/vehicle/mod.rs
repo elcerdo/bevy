@@ -387,16 +387,15 @@ fn update_statuses(
     .unwrap();
 
     assert!(track.is_looping);
-    assert!(!track.track_kdtree.is_empty());
-    assert!(!track.checkpoint_kdtree.is_empty());
     assert!(boats.iter().len() == status_labels.iter().len());
 
     // prepare ui status label
     for (boat, mut status_label) in boats.iter().zip(status_labels) {
         let mut ss: Vec<String> = vec![];
         ss.push(format!(
-            "{} lap{}\ncurrent   last   best\n{:>6.3} {:>6.3} {:>6.3}",
+            "{} sec{} lap{}\ncurrent   last   best\n{:>6.3} {:>6.3} {:>6.3}",
             boat.player,
+            boat.section,
             boat.lap_count,
             match boat.current_stat.is_valid() {
                 true => boat.current_stat.lap_duration().as_secs_f32(),
