@@ -175,14 +175,31 @@ impl KdPoint for Segment {
     }
 }
 
+impl Default for Segment {
+    fn default() -> Self {
+        Self {
+            aa: Vec2::ZERO,
+            bb: Vec2::ZERO,
+            ii: 255,
+        }
+    }
+}
+
+#[derive(Default)]
+pub struct Collision {
+    pub track_kdtree: KdTree<Segment>,
+    pub checkpoint_kdtree: KdTree<Segment>,
+    // enter_segment: Segment,
+    // exit_segment: Segment,
+}
+
 #[derive(Asset, TypePath)]
 pub struct Track {
     pub track: Mesh,
     pub checkpoint: Mesh,
     pub total_length: f32,
     pub is_looping: bool,
-    pub track_section_to_kdtrees: HashMap<u8, KdTree<Segment>>,
-    pub checkpoint_section_to_kdtrees: HashMap<u8, KdTree<Segment>>,
+    pub section_to_collisions: HashMap<u8, Collision>,
     pub checkpoint_count: u8,
     pub initial_up: Vec3,
     pub initial_position: Vec3,
@@ -488,7 +505,6 @@ pub fn prepare_track(track_data: &TrackData) -> Track {
         PrimitiveTopology::TriangleList,
         RenderAssetUsages::MAIN_WORLD | RenderAssetUsages::RENDER_WORLD,
     );
-
     track = track.with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, track_positions);
     track = track.with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, track_normals);
     track = track.with_inserted_indices(Indices::U32(track_triangles));
@@ -496,24 +512,29 @@ pub fn prepare_track(track_data: &TrackData) -> Track {
     track = track.with_inserted_attribute(Mesh::ATTRIBUTE_UV_1, track_pqs);
     track = track.with_generated_tangents().unwrap();
 
-    let mut track_section_to_kdtrees = HashMap::new();
-    for (section, segments) in track_section_to_segments {
-        track_section_to_kdtrees.insert(section, KdTree::build_by_ordered_float(segments));
-    }
-
     let mut checkpoint = Mesh::new(
         PrimitiveTopology::TriangleList,
         RenderAssetUsages::MAIN_WORLD | RenderAssetUsages::RENDER_WORLD,
     );
-
     checkpoint = checkpoint.with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, checkpoint_positions);
     checkpoint = checkpoint.with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, checkpoint_normals);
     checkpoint = checkpoint.with_inserted_indices(Indices::U32(checkpoint_triangles));
     // checkpoint = checkpoint.with_generated_tangents().unwrap();
 
-    let mut checkpoint_section_to_kdtrees = HashMap::new();
-    for (section, segments) in checkpoint_section_to_segments {
-        checkpoint_section_to_kdtrees.insert(section, KdTree::build_by_ordered_float(segments));
+    let mut section_to_collisions = HashMap::new();
+    for (section, track_segments) in track_section_to_segments {
+        if !section_to_collisions.contains_key(&section) {
+            section_to_collisions.insert(section, Collision::default());
+        }
+        let collision = section_to_collisions.get_mut(&section).unwrap();
+        collision.track_kdtree = KdTree::build_by_ordered_float(track_segments);
+    }
+    for (section, checkpoint_segments) in checkpoint_section_to_segments {
+        if !section_to_collisions.contains_key(&section) {
+            section_to_collisions.insert(section, Collision::default());
+        }
+        let collision = section_to_collisions.get_mut(&section).unwrap();
+        collision.checkpoint_kdtree = KdTree::build_by_ordered_float(checkpoint_segments);
     }
 
     Track {
@@ -522,8 +543,7 @@ pub fn prepare_track(track_data: &TrackData) -> Track {
         total_length: current_length,
         is_looping,
         checkpoint_count,
-        track_section_to_kdtrees,
-        checkpoint_section_to_kdtrees,
+        section_to_collisions,
         initial_up: track_data.initial_up,
         initial_position: track_data.initial_position,
         initial_forward: track_data.initial_forward,
