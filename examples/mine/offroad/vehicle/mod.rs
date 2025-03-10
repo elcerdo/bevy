@@ -342,7 +342,7 @@ fn update_boards_and_cups(
         }
     }
 
-    // udpate cups
+    // update cups
     for (mut cup_transform, PriceMarker(nn)) in cup_transforms {
         let nn = *nn;
         if nn >= sorted_lap_duration_boats.len() {
