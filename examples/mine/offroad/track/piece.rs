@@ -264,9 +264,9 @@ pub fn prepare_track(track_data: &TrackData) -> Track {
             let aa = position + righthand * left;
             let bb = position + righthand * right;
             let ii = checkpoint_count;
-            if !checkpoint_layer_to_segments.contains_key(&layer) {
-                checkpoint_layer_to_segments.insert(layer, vec![]);
-            }
+            checkpoint_layer_to_segments
+                .entry(layer)
+                .or_insert_with(|| vec![]);
             let checkpoint_segments = checkpoint_layer_to_segments.get_mut(&layer).unwrap();
             checkpoint_segments.push(Segment {
                 aa: aa.xz(),
@@ -291,12 +291,12 @@ pub fn prepare_track(track_data: &TrackData) -> Track {
         let aa = position + righthand * left;
         let bb = position + righthand * right;
         let ii = transition_count;
-        if !transition_layer_to_segments.contains_key(&from_layer) {
-            transition_layer_to_segments.insert(from_layer, vec![]);
-        }
-        if !transition_layer_to_segments.contains_key(&to_layer) {
-            transition_layer_to_segments.insert(to_layer, vec![]);
-        }
+        transition_layer_to_segments
+            .entry(from_layer)
+            .or_insert_with(|| vec![]);
+        transition_layer_to_segments
+            .entry(to_layer)
+            .or_insert_with(|| vec![]);
         {
             let from_transition_segments =
                 transition_layer_to_segments.get_mut(&from_layer).unwrap();
@@ -368,9 +368,9 @@ pub fn prepare_track(track_data: &TrackData) -> Track {
                 let right_index_ = (next_vertex - 1) as usize;
                 let left_pos_ = track_positions[left_index_];
                 let right_pos_ = track_positions[right_index_];
-                if !track_layer_to_segments.contains_key(&layer) {
-                    track_layer_to_segments.insert(layer, vec![]);
-                }
+                track_layer_to_segments
+                    .entry(layer)
+                    .or_insert_with(|| vec![]);
                 let track_segments = track_layer_to_segments.get_mut(&layer).unwrap();
                 track_segments.push(Segment {
                     aa: left_pos_.xz(),
@@ -571,23 +571,23 @@ pub fn prepare_track(track_data: &TrackData) -> Track {
 
     let mut layer_to_collisions = HashMap::new();
     for (section, track_segments) in track_layer_to_segments {
-        if !layer_to_collisions.contains_key(&section) {
-            layer_to_collisions.insert(section, Collision::default());
-        }
+        layer_to_collisions
+            .entry(section)
+            .or_insert_with(|| Collision::default());
         let collision = layer_to_collisions.get_mut(&section).unwrap();
         collision.track_kdtree = KdTree::build_by_ordered_float(track_segments);
     }
     for (section, checkpoint_segments) in checkpoint_layer_to_segments {
-        if !layer_to_collisions.contains_key(&section) {
-            layer_to_collisions.insert(section, Collision::default());
-        }
+        layer_to_collisions
+            .entry(section)
+            .or_insert_with(|| Collision::default());
         let collision = layer_to_collisions.get_mut(&section).unwrap();
         collision.checkpoint_kdtree = KdTree::build_by_ordered_float(checkpoint_segments);
     }
     for (section, transition_segments) in transition_layer_to_segments {
-        if !layer_to_collisions.contains_key(&section) {
-            layer_to_collisions.insert(section, Collision::default());
-        }
+        layer_to_collisions
+            .entry(section)
+            .or_insert_with(|| Collision::default());
         let collision = layer_to_collisions.get_mut(&section).unwrap();
         collision.transition_kdtree = KdTree::build_by_ordered_float(transition_segments);
     }

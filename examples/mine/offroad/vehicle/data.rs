@@ -94,9 +94,7 @@ impl LapStat {
             return None;
         }
         assert!(self.top_start != Duration::MAX);
-        let Some(checkpoint_top) = self.checkpoint_to_tops.get(&kk) else {
-            return None;
-        };
+        let checkpoint_top = self.checkpoint_to_tops.get(&kk)?;
         assert!(self.top_start <= *checkpoint_top);
         Some(*checkpoint_top - self.top_start)
     }
