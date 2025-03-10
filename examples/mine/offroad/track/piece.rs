@@ -266,7 +266,7 @@ pub fn prepare_track(track_data: &TrackData) -> Track {
             let ii = checkpoint_count;
             checkpoint_layer_to_segments
                 .entry(layer)
-                .or_insert_with(Vec::new);
+                .or_default();
             let checkpoint_segments = checkpoint_layer_to_segments.get_mut(&layer).unwrap();
             checkpoint_segments.push(Segment {
                 aa: aa.xz(),
@@ -293,10 +293,10 @@ pub fn prepare_track(track_data: &TrackData) -> Track {
         let ii = transition_count;
         transition_layer_to_segments
             .entry(from_layer)
-            .or_insert_with(Vec::new);
+            .or_default();
         transition_layer_to_segments
             .entry(to_layer)
-            .or_insert_with(Vec::new);
+            .or_default();
         {
             let from_transition_segments =
                 transition_layer_to_segments.get_mut(&from_layer).unwrap();
@@ -370,7 +370,7 @@ pub fn prepare_track(track_data: &TrackData) -> Track {
                 let right_pos_ = track_positions[right_index_];
                 track_layer_to_segments
                     .entry(layer)
-                    .or_insert_with(Vec::new);
+                    .or_default();
                 let track_segments = track_layer_to_segments.get_mut(&layer).unwrap();
                 track_segments.push(Segment {
                     aa: left_pos_.xz(),
