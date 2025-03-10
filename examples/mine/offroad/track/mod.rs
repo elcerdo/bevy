@@ -20,7 +20,7 @@ pub use data::TRACK_HANDLES;
 pub use piece::Segment;
 pub use piece::Track;
 
-const TRACK_GROUND_COLOR: Srgba = bevy::color::palettes::basic::WHITE;
+const TRACK_GROUND_COLOR: Srgba = Srgba::rgb(0.4, 0.4, 0.4);
 const TRACK_EPSILON: f32 = 5e-2;
 
 //////////////////////////////////////////////////////////////////////
@@ -65,12 +65,12 @@ fn populate_camera_and_lights(mut commands: Commands, asset_server: Res<AssetSer
         GameSceneMarker,
         PointLight {
             shadows_enabled: true,
-            intensity: 5.0e6,
+            intensity: 8e6,
             range: 100.0,
             shadow_depth_bias: 0.2,
             ..default()
         },
-        Transform::from_xyz(-16.0, 16.0, 8.0),
+        Transform::from_translation(Vec3::Y * 20.0),
     ));
     // commands.spawn((
     //     GameSceneMarker,
@@ -109,7 +109,7 @@ fn populate_camera_and_lights(mut commands: Commands, asset_server: Res<AssetSer
         EnvironmentMapLight {
             diffuse_map: asset_server.load("environment_maps/pisa_diffuse_rgb9e5_zstd.ktx2"),
             specular_map: asset_server.load("environment_maps/pisa_specular_rgb9e5_zstd.ktx2"),
-            intensity: 500.0,
+            intensity: 10e2,
             ..default()
         },
         Transform::from_xyz(-10.0, 10.0, 15.0).looking_at(Vec3::ZERO, Vec3::Y),
@@ -211,7 +211,12 @@ fn populate_track(
     commands.spawn((
         GameSceneMarker,
         Mesh3d(meshes.add(Plane3d::default().mesh().size(30.0, 40.0).subdivisions(20))),
-        MeshMaterial3d(standard_materials.add(Color::from(TRACK_GROUND_COLOR))),
+        MeshMaterial3d(standard_materials.add(StandardMaterial {
+            perceptual_roughness: 1.0,
+            metallic: 0.0,
+            base_color: TRACK_GROUND_COLOR.into(),
+            ..default()
+        })),
         Transform::from_translation(-1.0 * TRACK_EPSILON * track_up),
     ));
 }

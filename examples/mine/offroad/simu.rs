@@ -122,6 +122,8 @@ fn populate_simu_plane_and_images(
             ),
         ),
         MeshMaterial3d(materials.add(StandardMaterial {
+            perceptual_roughness: 1.0,
+            metallic: 0.0,
             base_color_texture: Some(image_a.clone()),
             ..StandardMaterial::default()
         })),

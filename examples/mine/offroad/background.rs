@@ -61,7 +61,7 @@ fn populate_background(
             base_color_texture: Some(asset_server.load("textures/array_texture.png")),
             ..default()
         })),
-        Transform::from_xyz(8.0, 3.0, 5.0),
+        Transform::from_xyz(12.0, 0.5, -2.0),
     ));
 
     // parallal
