@@ -266,7 +266,7 @@ pub fn prepare_track(track_data: &TrackData) -> Track {
             let ii = checkpoint_count;
             checkpoint_layer_to_segments
                 .entry(layer)
-                .or_insert_with(|| vec![]);
+                .or_insert_with(Vec::new);
             let checkpoint_segments = checkpoint_layer_to_segments.get_mut(&layer).unwrap();
             checkpoint_segments.push(Segment {
                 aa: aa.xz(),
@@ -293,10 +293,10 @@ pub fn prepare_track(track_data: &TrackData) -> Track {
         let ii = transition_count;
         transition_layer_to_segments
             .entry(from_layer)
-            .or_insert_with(|| vec![]);
+            .or_insert_with(Vec::new);
         transition_layer_to_segments
             .entry(to_layer)
-            .or_insert_with(|| vec![]);
+            .or_insert_with(Vec::new);
         {
             let from_transition_segments =
                 transition_layer_to_segments.get_mut(&from_layer).unwrap();
@@ -370,7 +370,7 @@ pub fn prepare_track(track_data: &TrackData) -> Track {
                 let right_pos_ = track_positions[right_index_];
                 track_layer_to_segments
                     .entry(layer)
-                    .or_insert_with(|| vec![]);
+                    .or_insert_with(Vec::new);
                 let track_segments = track_layer_to_segments.get_mut(&layer).unwrap();
                 track_segments.push(Segment {
                     aa: left_pos_.xz(),
@@ -573,21 +573,21 @@ pub fn prepare_track(track_data: &TrackData) -> Track {
     for (section, track_segments) in track_layer_to_segments {
         layer_to_collisions
             .entry(section)
-            .or_insert_with(|| Collision::default());
+            .or_insert_with(Collision::default);
         let collision = layer_to_collisions.get_mut(&section).unwrap();
         collision.track_kdtree = KdTree::build_by_ordered_float(track_segments);
     }
     for (section, checkpoint_segments) in checkpoint_layer_to_segments {
         layer_to_collisions
             .entry(section)
-            .or_insert_with(|| Collision::default());
+            .or_insert_with(Collision::default);
         let collision = layer_to_collisions.get_mut(&section).unwrap();
         collision.checkpoint_kdtree = KdTree::build_by_ordered_float(checkpoint_segments);
     }
     for (section, transition_segments) in transition_layer_to_segments {
         layer_to_collisions
             .entry(section)
-            .or_insert_with(|| Collision::default());
+            .or_insert_with(Collision::default);
         let collision = layer_to_collisions.get_mut(&section).unwrap();
         collision.transition_kdtree = KdTree::build_by_ordered_float(transition_segments);
     }
