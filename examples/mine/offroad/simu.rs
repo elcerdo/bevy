@@ -18,9 +18,9 @@ use bevy::prelude::*;
 
 use std::borrow::Cow;
 
-const SHADER_ASSET_PATH: &str = "shaders/offroad/simu_compute.wgsl";
+const SHADER_PATH: &str = "shaders/offroad/simu_compute.wgsl";
 const TEXTURE_FORMAT: TextureFormat = TextureFormat::Rgba32Float;
-const SIMU_SIZE: (u32, u32) = (1024, 1024);
+const TEXTURE_SIZE: (u32, u32) = (1024, 1024);
 const WORKGROUP_SIZE: u32 = 8;
 
 //////////////////////////////////////////////////////////////////////
@@ -115,8 +115,8 @@ fn populate_simu_plane_and_images(
 
     let mut image = Image::new_fill(
         Extent3d {
-            width: SIMU_SIZE.0,
-            height: SIMU_SIZE.1,
+            width: TEXTURE_SIZE.0,
+            height: TEXTURE_SIZE.1,
             depth_or_array_layers: 1,
         },
         TextureDimension::D2,
@@ -145,7 +145,7 @@ fn populate_simu_plane_and_images(
             perceptual_roughness: 1.0,
             metallic: 0.0,
             base_color_texture: Some(image_a.clone()),
-            ..StandardMaterial::default()
+            ..default()
         })),
         Transform::from_xyz(100.0, -0.25, -100.0),
         SimuSettings::default(),
@@ -189,7 +189,7 @@ impl FromWorld for SimuPipeline {
             ),
         );
 
-        let shader: Handle<Shader> = world.load_asset(SHADER_ASSET_PATH);
+        let shader: Handle<Shader> = world.load_asset(SHADER_PATH);
 
         let init_pipeline = pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
             label: Some(Cow::from("init_pipeline")),
@@ -333,9 +333,9 @@ impl Node for MainNode {
     ) -> Result<(), bevy::render::render_graph::NodeRunError> {
         use bevy::render::render_resource::*;
 
+        let pipeline = world.resource::<SimuPipeline>();
         let bind_groups = world.resource::<SimuBindGroups>();
         let pipeline_cache = world.resource::<PipelineCache>();
-        let pipeline_simu = world.resource::<SimuPipeline>();
 
         let mut pass = render_context
             .command_encoder()
@@ -346,7 +346,7 @@ impl Node for MainNode {
             MainState::Loading => false,
             MainState::Init => {
                 let init_pipeline = pipeline_cache
-                    .get_compute_pipeline(pipeline_simu.init_pipeline)
+                    .get_compute_pipeline(pipeline.init_pipeline)
                     .unwrap();
                 pass.set_bind_group(0, &bind_groups.group_a_to_b, &[0]);
                 pass.set_pipeline(init_pipeline);
@@ -354,7 +354,7 @@ impl Node for MainNode {
             }
             MainState::Update(flipped) => {
                 let update_pipeline = pipeline_cache
-                    .get_compute_pipeline(pipeline_simu.update_pipeline)
+                    .get_compute_pipeline(pipeline.update_pipeline)
                     .unwrap();
                 pass.set_bind_group(
                     0,
@@ -372,8 +372,8 @@ impl Node for MainNode {
 
         if should_dispatch {
             pass.dispatch_workgroups(
-                SIMU_SIZE.0 / WORKGROUP_SIZE,
-                SIMU_SIZE.1 / WORKGROUP_SIZE,
+                TEXTURE_SIZE.0 / WORKGROUP_SIZE,
+                TEXTURE_SIZE.1 / WORKGROUP_SIZE,
                 1,
             );
         }
