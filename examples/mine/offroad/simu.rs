@@ -64,24 +64,23 @@ impl Plugin for SimuPlugin {
         // for operation on by the compute shader and display on the sprite.
         app.add_plugins(ExtractResourcePlugin::<SimuImages>::default());
         app.add_plugins(ExtractResourcePlugin::<SimuTriggers>::default());
-
         app.add_systems(Startup, populate_simu_plane_and_images);
         app.add_systems(Update, update_simu_triggers);
 
         let render_app = app.sub_app_mut(RenderApp);
-
-        let mut render_graph = render_app.world_mut().resource_mut::<RenderGraph>();
-        render_graph.add_node(SimuNodes::Main, SimuNode::default());
-        render_graph.add_node_edge(SimuNodes::Main, bevy::render::graph::CameraDriverLabel);
-        // render_app.add_systems(Render, update_simu_node_state);
         render_app.add_systems(
             Render,
             (copy_triggers, update_bind_groups).in_set(RenderSet::PrepareBindGroups),
         );
+        let mut render_graph = render_app.world_mut().resource_mut::<RenderGraph>();
+        render_graph.add_node(SimuNodes::Main, SimuNode::default());
+        render_graph.add_node_edge(SimuNodes::Main, bevy::render::graph::CameraDriverLabel);
     }
     fn finish(&self, app: &mut App) {
         info!("** simu_finish **");
+
         app.init_resource::<SimuTriggers>();
+
         let render_app = app.sub_app_mut(RenderApp);
         render_app.init_resource::<SimuPipeline>();
     }
