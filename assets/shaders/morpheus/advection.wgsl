@@ -1,58 +1,32 @@
 // Morpheus advection snippet
 
-#import "shaders/morpheus/sdf/alien.wgsl"::signed_distance_function
+// #import "shaders/morpheus/sdf/alien.wgsl"::signed_distance_function
+#import "shaders/morpheus/sdf/union.wgsl"::signed_distance_function
+
+const DIFF_EPSILON: f32 = 1e-5;
+// const LEARNING_RATE: f32 = 95e-2;
+const LEARNING_RATE: f32 = 2e-2;
+const DIFF_DIRECTION_UU: vec3<f32> = vec3(1.0, 0.0, 0.0);
+const DIFF_DIRECTION_VV: vec3<f32> = vec3(0.0, 1.0, 0.0);
 
 struct Settings {
-    rng_seed: u32,
-    bbox_center: vec3<f32>,
+    texture_size: vec2<u32>,
 }
 
 @group(0) @binding(0) var input: texture_storage_2d<rgba32float, read>;
 @group(0) @binding(1) var output: texture_storage_2d<rgba32float, write>;
 @group(0) @binding(2) var<uniform> settings: Settings;
 
-fn hash(value: u32) -> u32 {
-    var state = value;
-    state += settings.rng_seed;
-    state = state ^ 2747636419u;
-    state = state * 2654435769u;
-    state = state ^ state >> 16u;
-    state = state * 2654435769u;
-    state = state ^ state >> 16u;
-    state = state * 2654435769u;
-    return state;
-}
-
-fn random_float_aa(value: u32) -> f32 {
-    return f32(hash(value)) / 4294967295.0;
-}
-
-fn random_float_bb(value: u32) -> f32 {
-    return f32(hash(hash(value))) / 4294967295.0;
-}
-
-fn is_alive(location: vec2<i32>, offset_x: i32, offset_y: i32, index: u32) -> u32 {
-    let value: vec4<f32> = textureLoad(input, location + vec2<i32>(offset_x, offset_y));
-    return u32(value[index]);
-}
-
-fn count_alive_neighbors(location: vec2<i32>, index: u32) -> u32 {
-    return is_alive(location, - 1, - 1, index) + is_alive(location, - 1, 0, index) + is_alive(location, - 1, 1, index) + is_alive(location, 0, - 1, index) + is_alive(location, 0, 1, index) + is_alive(location, 1, - 1, index) + is_alive(location, 1, 0, index) + is_alive(location, 1, 1, index);
-}
-
 @compute @workgroup_size(8, 8, 1)
 fn init(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
     let location = vec2<i32>(i32(invocation_id.x), i32(invocation_id.y));
 
-    let aa = random_float_aa(invocation_id.y << 16u | invocation_id.x);
-    let bb = random_float_bb(invocation_id.y << 16u | invocation_id.x);
-    let aa_alive: bool = aa > 0.9;
-    let bb_alive: bool = bb > 0.9;
+    let hx: f32 = f32(settings.texture_size.x) / 2.0;
+    let hy: f32 = f32(settings.texture_size.y) / 2.0;
+    let pos = vec3((f32(invocation_id.x) - hx) / hx, (f32(invocation_id.y) - hy) / hy, 0.0);
+    let is_inside: bool = signed_distance_function(pos) < 0.0;
 
-    let pos = vec3(f32(i32(location.x) - 128) / 128.0, f32(i32(invocation_id.y) - 128) / 128.0, 0.0);
-    let cc_alive: bool = signed_distance_function(pos) < 0.0;
-
-    let color = vec4<f32>(f32(aa_alive), f32(bb_alive), f32(cc_alive), 1.0);
+    let color = vec4<f32>(pos.xy, f32(is_inside), 1.0);
 
     textureStore(output, location, color);
 }
@@ -63,23 +37,20 @@ fn update(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
     
     var color: vec4<f32> = textureLoad(input, location);
 
-    for (var ii: u32 = 0; ii < 2; ii++) {
-        let num_alive_neighbors = count_alive_neighbors(location, ii);
+    let pos = vec3(color.xy, 0.0);
 
-        var next_alive: bool = false;
-        if (num_alive_neighbors == 3) {
-            next_alive = true;
-        }
-        else if (num_alive_neighbors == 2) {
-            let current_alive = bool(is_alive(location, 0, 0, ii));
-            next_alive = current_alive;
-        }
-        else {
-            next_alive = false;
-        }
+    let dist_center = signed_distance_function(pos);
+    let dist_right = signed_distance_function(pos + DIFF_EPSILON * DIFF_DIRECTION_UU);
+    let dist_left = signed_distance_function(pos - DIFF_EPSILON * DIFF_DIRECTION_UU);
+    let dist_above = signed_distance_function(pos + DIFF_EPSILON * DIFF_DIRECTION_VV);
+    let dist_below = signed_distance_function(pos - DIFF_EPSILON * DIFF_DIRECTION_VV);
 
-        color[ii] = f32(next_alive);
-    }
+    let gu = (dist_right - dist_left) / 2.0 / DIFF_EPSILON;
+    let gv = (dist_above - dist_below) / 2.0 / DIFF_EPSILON;
+    let gg: vec2<f32> = vec2(gu, gv);
+
+    color.x -= LEARNING_RATE * dist_center * gg.x;
+    color.y -= LEARNING_RATE * dist_center * gg.y;
 
     textureStore(output, location, color);
 }

@@ -84,7 +84,7 @@ impl Node for MainNode {
                 let init_pipeline = pipeline_cache
                     .get_compute_pipeline(pipeline.init_id)
                     .unwrap();
-                pass.set_bind_group(0, &bind_groups.group_a_to_b, &[]);
+                pass.set_bind_group(0, &bind_groups.group_b_to_a, &[]);
                 pass.set_pipeline(init_pipeline);
                 true
             }
@@ -94,7 +94,7 @@ impl Node for MainNode {
                     .unwrap();
                 pass.set_bind_group(
                     0,
-                    if !flipped {
+                    if flipped {
                         &bind_groups.group_a_to_b
                     } else {
                         &bind_groups.group_b_to_a
