@@ -4,6 +4,8 @@ mod morpheus;
 
 use bevy::prelude::*;
 
+use bevy::color::palettes::css::YELLOW;
+
 fn main() {
     let mut app = App::new();
 
@@ -43,5 +45,23 @@ fn main() {
 
     app.add_plugins(morpheus::MorpheusPlugin);
 
+    app.add_systems(Startup, setup);
+
     app.run();
+}
+
+fn setup(
+    mut commands: Commands,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    // assets: Res<AssetServer>,
+) {
+    commands.spawn((
+        Mesh3d(meshes.add(Sphere { radius: 0.05 })),
+        MeshMaterial3d(materials.add(StandardMaterial {
+            emissive: YELLOW.into(),
+            ..default()
+        })),
+        Transform::from_xyz(-0.5, 1.0, -0.5),
+    ));
 }

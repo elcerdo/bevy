@@ -36,12 +36,12 @@ fn vertex(vertex: Vertex) -> VertexOutput {
 
 @fragment
 fn fragment(
-    out: VertexOutput,
+    in: VertexOutput,
 ) -> @location(0) vec4<f32> {
     let eye_position = view_transformations::position_ndc_to_world(vec3(0.0, 0.0, -1.0));
-    let world_direction = normalize(out.world_position - eye_position);
+    let world_direction = normalize(in.world_position - eye_position);
 
-    var pos = out.world_position - bbox_center;
+    var pos = in.world_position - bbox_center;
     var dist = signed_distance_function(pos);
     for (var kk=0; kk<64; kk++) {
         if (dist <= 0.0) { break; }
