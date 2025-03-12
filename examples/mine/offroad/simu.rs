@@ -35,11 +35,6 @@ impl Default for SimuSettings {
     }
 }
 
-#[derive(Component, Debug, ExtractComponent, Clone, Default)]
-struct TriggerSettings {
-    should_reinit: bool,
-}
-
 pub struct SimuPlugin;
 
 #[derive(Hash, Clone, Eq, PartialEq, Debug, RenderLabel)]
@@ -59,7 +54,6 @@ impl Plugin for SimuPlugin {
             // It's important to derive [`ExtractComponent`] on [`PostProcessingSettings`]
             // for this plugin to work correctly.
             ExtractComponentPlugin::<SimuSettings>::default(),
-            ExtractComponentPlugin::<TriggerSettings>::default(),
             // The settings will also be the data used in the shader.
             // This plugin will prepare the component for the GPU by creating a uniform buffer
             // and writing the data to that buffer every frame.
@@ -69,9 +63,10 @@ impl Plugin for SimuPlugin {
         // Extract the game of life image resource from the main world into the render world
         // for operation on by the compute shader and display on the sprite.
         app.add_plugins(ExtractResourcePlugin::<SimuImages>::default());
+        app.add_plugins(ExtractResourcePlugin::<SimuTriggers>::default());
 
         app.add_systems(Startup, populate_simu_plane_and_images);
-        app.add_systems(Update, handle_simu_triggers);
+        app.add_systems(Update, update_simu_triggers);
 
         let render_app = app.sub_app_mut(RenderApp);
 
@@ -81,60 +76,26 @@ impl Plugin for SimuPlugin {
         // render_app.add_systems(Render, update_simu_node_state);
         render_app.add_systems(
             Render,
-            update_bind_groups.in_set(RenderSet::PrepareBindGroups),
+            (copy_triggers, update_bind_groups).in_set(RenderSet::PrepareBindGroups),
         );
     }
     fn finish(&self, app: &mut App) {
         info!("** simu_finish **");
+        app.init_resource::<SimuTriggers>();
         let render_app = app.sub_app_mut(RenderApp);
         render_app.init_resource::<SimuPipeline>();
     }
 }
 
-//////////////////////////////////////////////////////////////////////
-
-fn handle_simu_triggers(
-    all_trigger_settings: Query<&mut TriggerSettings>,
+fn update_simu_triggers(
+    mut simu_triggers: ResMut<SimuTriggers>,
     keyboard: Res<ButtonInput<KeyCode>>,
 ) {
     let should_reinit = keyboard.pressed(KeyCode::Space);
-    for mut trigger_settings in all_trigger_settings {
-        trigger_settings.should_reinit = should_reinit;
-    }
-    // if keyboard.just_pressed(KeyCode::Space) {
-    //     warn!("AAAA");
-
-    //     // for mut trigger in triggers.iter_mut() {
-    //     //     *trigger = RetriggerMarker(true);
-    //     //     // simu_settings.reinit_aa += 1;
-    //     // }
-    //     // for trigger in triggers.iter() {
-    //     //     warn!("AAAA {:?}", trigger);
-    //     // }
-    // }
+    simu_triggers.should_reinit = should_reinit;
 }
 
-// fn update_simu_node_state(
-//     trigger_settings: Query<&TriggerSettings>,
-//     // mut triggers: Query<&mut RetriggerMarker>,
-//     render_graph: Res<RenderGraph>,
-// ) {
-//     // let mut should_reinit = false;
-//     // for mut trigger in triggers.iter_mut() {
-//     //     if matches!(*trigger, RetriggerMarker(true)) {
-//     //         should_reinit = true;
-//     //         warn!("BBBB {:?}", trigger);
-//     //     }
-//     //     *trigger = RetriggerMarker(false);
-//     // }
-//     // // warn!("CCCC {}", should_reinit);
-//     // if should_reinit {
-//     //     warn!("trigger_reinit");
-//     //     let simu_node = render_graph
-//     //         .get_node::<SimuNode>(NodeMarkers::Main)
-//     //         .unwrap();
-//     // }
-// }
+//////////////////////////////////////////////////////////////////////
 
 #[derive(Resource, Clone, ExtractResource)]
 struct SimuImages {
@@ -188,7 +149,6 @@ fn populate_simu_plane_and_images(
         })),
         Transform::from_xyz(100.0, -0.25, -100.0),
         SimuSettings::default(),
-        TriggerSettings::default(),
     ));
 
     // insert images
@@ -197,8 +157,14 @@ fn populate_simu_plane_and_images(
 
 //////////////////////////////////////////////////////////////////////
 
+#[derive(Resource, Clone, Default, ExtractResource)]
+struct SimuTriggers {
+    should_reinit: bool,
+}
+
 #[derive(Resource)]
 struct SimuPipeline {
+    simu_triggers: SimuTriggers,
     group_layout: BindGroupLayout,
     init_pipeline: CachedComputePipelineId,
     update_pipeline: CachedComputePipelineId,
@@ -246,11 +212,16 @@ impl FromWorld for SimuPipeline {
         });
 
         SimuPipeline {
+            simu_triggers: SimuTriggers::default(),
             group_layout,
             init_pipeline,
             update_pipeline,
         }
     }
+}
+
+fn copy_triggers(simu_triggers: Res<SimuTriggers>, mut simu_pipeline: ResMut<SimuPipeline>) {
+    simu_pipeline.simu_triggers = simu_triggers.clone();
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -264,16 +235,11 @@ struct SimuBindGroups {
 fn update_bind_groups(
     mut commands: Commands,
     simu_settings: Res<ComponentUniforms<SimuSettings>>,
-    all_trigger_settings: Query<&TriggerSettings>,
     simu_pipeline: Res<SimuPipeline>,
     simu_images: Res<SimuImages>,
     gpu_images: Res<RenderAssets<GpuImage>>,
     render_device: Res<RenderDevice>,
 ) {
-    for trigger_settings in all_trigger_settings {
-        warn!("$$$$ {}", trigger_settings.should_reinit);
-    }
-
     let simu_binding = simu_settings.uniforms().binding();
     assert!(simu_binding.is_some());
 
@@ -327,6 +293,8 @@ impl Node for SimuNode {
         let pipeline = world.resource::<SimuPipeline>();
         let pipeline_cache = world.resource::<PipelineCache>();
 
+        let should_reinit = pipeline.simu_triggers.should_reinit;
+
         // if the corresponding pipeline has loaded, transition to the next stage
         match self.state {
             SimuState::Loading => {
@@ -343,12 +311,18 @@ impl Node for SimuNode {
                 }
             }
             SimuState::Init => {
-                self.state = SimuState::Update(true);
+                self.state = match should_reinit {
+                    false => SimuState::Update(true),
+                    true => SimuState::Init,
+                };
             }
             SimuState::Update(flipped) => {
-                self.state = SimuState::Update(!flipped);
+                self.state = match should_reinit {
+                    false => SimuState::Update(!flipped),
+                    true => SimuState::Init,
+                };
             }
-        }
+        };
     }
 
     fn run(
