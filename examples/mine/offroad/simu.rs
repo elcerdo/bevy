@@ -73,7 +73,7 @@ impl Plugin for SimuPlugin {
             (copy_triggers, update_bind_groups).in_set(RenderSet::PrepareBindGroups),
         );
         let mut render_graph = render_app.world_mut().resource_mut::<RenderGraph>();
-        render_graph.add_node(SimuNodes::Main, SimuNode::default());
+        render_graph.add_node(SimuNodes::Main, MainNode::default());
         render_graph.add_node_edge(SimuNodes::Main, bevy::render::graph::CameraDriverLabel);
     }
     fn finish(&self, app: &mut App) {
@@ -273,7 +273,7 @@ fn update_bind_groups(
 //////////////////////////////////////////////////////////////////////
 
 #[derive(Default)]
-enum SimuState {
+enum MainState {
     #[default]
     Loading,
     Init,
@@ -281,11 +281,11 @@ enum SimuState {
 }
 
 #[derive(Default)]
-struct SimuNode {
-    state: SimuState,
+struct MainNode {
+    state: MainState,
 }
 
-impl Node for SimuNode {
+impl Node for MainNode {
     fn update(&mut self, world: &mut World) {
         use bevy::render::render_resource::*;
 
@@ -296,7 +296,7 @@ impl Node for SimuNode {
 
         // if the corresponding pipeline has loaded, transition to the next stage
         match self.state {
-            SimuState::Loading => {
+            MainState::Loading => {
                 let init_ok = matches!(
                     pipeline_cache.get_compute_pipeline_state(pipeline.init_pipeline),
                     CachedPipelineState::Ok(_)
@@ -306,19 +306,19 @@ impl Node for SimuNode {
                     CachedPipelineState::Ok(_)
                 );
                 if init_ok && update_ok {
-                    self.state = SimuState::Init;
+                    self.state = MainState::Init;
                 }
             }
-            SimuState::Init => {
+            MainState::Init => {
                 self.state = match should_reinit {
-                    false => SimuState::Update(true),
-                    true => SimuState::Init,
+                    false => MainState::Update(true),
+                    true => MainState::Init,
                 };
             }
-            SimuState::Update(flipped) => {
+            MainState::Update(flipped) => {
                 self.state = match should_reinit {
-                    false => SimuState::Update(!flipped),
-                    true => SimuState::Init,
+                    false => MainState::Update(!flipped),
+                    true => MainState::Init,
                 };
             }
         };
@@ -342,8 +342,8 @@ impl Node for SimuNode {
 
         // select the pipeline based on the current state
         let should_dispatch = match self.state {
-            SimuState::Loading => false,
-            SimuState::Init => {
+            MainState::Loading => false,
+            MainState::Init => {
                 let init_pipeline = pipeline_cache
                     .get_compute_pipeline(pipeline_simu.init_pipeline)
                     .unwrap();
@@ -351,7 +351,7 @@ impl Node for SimuNode {
                 pass.set_pipeline(init_pipeline);
                 true
             }
-            SimuState::Update(flipped) => {
+            MainState::Update(flipped) => {
                 let update_pipeline = pipeline_cache
                     .get_compute_pipeline(pipeline_simu.update_pipeline)
                     .unwrap();
