@@ -49,7 +49,6 @@ fn init(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
 
     let pos = vec3(f32(i32(location.x) - 128) / 128.0, f32(i32(invocation_id.y) - 128) / 128.0, 0.0);
     let cc_alive: bool = signed_distance_function(pos) < 0.0;
-    // let cc_alive: bool = location.x > 128;
 
     let color = vec4<f32>(f32(aa_alive), f32(bb_alive), f32(cc_alive), 1.0);
 
@@ -60,10 +59,6 @@ fn init(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
 fn update(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
     let location = vec2<i32>(i32(invocation_id.x), i32(invocation_id.y));
     
-    // // FIXME weird
-    // location.x += i32(RNG_SEED);
-    // location.x -= i32(RNG_SEED);
-
     var color: vec4<f32> = textureLoad(input, location);
 
     for (var ii: u32 = 0; ii < 2; ii++) {
