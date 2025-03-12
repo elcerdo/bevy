@@ -47,21 +47,21 @@ impl Plugin for AdvectionPlugin {
         // Extract the game of life image resource from the main world into the render world
         // for operation on by the compute shader and display on the sprite.
         app.add_plugins(ExtractResourcePlugin::<AdvectionImages>::default());
-        // app.add_plugins(ExtractResourcePlugin::<SimuTriggers>::default());
+        app.add_plugins(ExtractResourcePlugin::<AdvectionTriggers>::default());
         app.add_systems(Startup, populate_plane_and_images);
-        // app.add_systems(Update, update_simu_triggers);
+        app.add_systems(Update, update_triggers_keyboard);
 
         let render_app = app.sub_app_mut(RenderApp);
         render_app.add_systems(
             Render,
-            update_bind_groups.in_set(RenderSet::PrepareBindGroups),
+            (copy_triggers, prepare_bind_groups).in_set(RenderSet::PrepareBindGroups),
         );
         let mut render_graph = render_app.world_mut().resource_mut::<RenderGraph>();
         render_graph.add_node(AdvectionNodes::Main, MainNode::default());
         render_graph.add_node_edge(AdvectionNodes::Main, CameraDriverLabel);
     }
     fn finish(&self, app: &mut App) {
-        // app.init_resource::<SimuTriggers>();
+        app.init_resource::<AdvectionTriggers>();
 
         let render_app = app.sub_app_mut(RenderApp);
         render_app.init_resource::<AdvectionPipeline>();
@@ -123,14 +123,14 @@ fn populate_plane_and_images(
 
 //////////////////////////////////////////////////////////////////////
 
-// #[derive(Resource, Clone, Default, ExtractResource)]
-// struct SimuTriggers {
-//     should_reinit: bool,
-// }
+#[derive(Resource, Clone, Default, ExtractResource)]
+struct AdvectionTriggers {
+    should_reinit: bool,
+}
 
 #[derive(Resource)]
 struct AdvectionPipeline {
-    // simu_triggers: SimuTriggers,
+    triggers: AdvectionTriggers,
     group_layout: BindGroupLayout,
     init_pipeline: CachedComputePipelineId,
     update_pipeline: CachedComputePipelineId,
@@ -178,7 +178,7 @@ impl FromWorld for AdvectionPipeline {
         });
 
         AdvectionPipeline {
-            // simu_triggers: SimuTriggers::default(),
+            triggers: AdvectionTriggers::default(),
             group_layout,
             init_pipeline,
             update_pipeline,
@@ -186,9 +186,21 @@ impl FromWorld for AdvectionPipeline {
     }
 }
 
-// fn copy_triggers(simu_triggers: Res<SimuTriggers>, mut simu_pipeline: ResMut<SimuPipeline>) {
-//     simu_pipeline.simu_triggers = simu_triggers.clone();
-// }
+// in main app
+
+fn update_triggers_keyboard(
+    mut triggers: ResMut<AdvectionTriggers>,
+    keyboard: Res<ButtonInput<KeyCode>>,
+) {
+    let should_reinit = keyboard.pressed(KeyCode::Space);
+    triggers.should_reinit = should_reinit;
+}
+
+// in render app after extraction
+
+fn copy_triggers(triggers: Res<AdvectionTriggers>, mut pipeline: ResMut<AdvectionPipeline>) {
+    pipeline.triggers = triggers.clone();
+}
 
 //////////////////////////////////////////////////////////////////////
 
@@ -198,22 +210,22 @@ struct AdvectionBindGroups {
     group_b_to_a: BindGroup,
 }
 
-fn update_bind_groups(
+fn prepare_bind_groups(
     mut commands: Commands,
     // simu_settings: Res<ComponentUniforms<SimuSettings>>,
-    advection_pipeline: Res<AdvectionPipeline>,
-    advection_images: Res<AdvectionImages>,
+    pipeline: Res<AdvectionPipeline>,
+    images: Res<AdvectionImages>,
     gpu_images: Res<RenderAssets<GpuImage>>,
     render_device: Res<RenderDevice>,
 ) {
     // let simu_binding = simu_settings.uniforms().binding();
     // assert!(simu_binding.is_some());
 
-    let view_a = gpu_images.get(&advection_images.image_a).unwrap();
-    let view_b = gpu_images.get(&advection_images.image_b).unwrap();
+    let view_a = gpu_images.get(&images.image_a).unwrap();
+    let view_b = gpu_images.get(&images.image_b).unwrap();
     let group_a_to_b = render_device.create_bind_group(
         Some("group_a_to_b"),
-        &advection_pipeline.group_layout,
+        &pipeline.group_layout,
         &BindGroupEntries::sequential((
             &view_a.texture_view,
             &view_b.texture_view,
@@ -222,7 +234,7 @@ fn update_bind_groups(
     );
     let group_b_to_a = render_device.create_bind_group(
         Some("group_b_to_a"),
-        &advection_pipeline.group_layout,
+        &pipeline.group_layout,
         &BindGroupEntries::sequential((
             &view_b.texture_view,
             &view_a.texture_view,
@@ -259,9 +271,9 @@ impl Node for MainNode {
         let pipeline = world.resource::<AdvectionPipeline>();
         let pipeline_cache = world.resource::<PipelineCache>();
 
-        // let should_reinit = pipeline.simu_triggers.should_reinit;
+        let should_reinit = pipeline.triggers.should_reinit;
 
-        // if the corresponding pipeline has loaded, transition to the next stage
+        // advance to next state
         match self.state {
             MainState::Loading => {
                 let init_ok = matches!(
@@ -277,10 +289,16 @@ impl Node for MainNode {
                 }
             }
             MainState::Init => {
-                self.state = MainState::Update(true);
+                self.state = match should_reinit {
+                    false => MainState::Update(true),
+                    true => MainState::Init,
+                };
             }
             MainState::Update(flipped) => {
-                self.state = MainState::Update(!flipped);
+                self.state = match should_reinit {
+                    false => MainState::Update(!flipped),
+                    true => MainState::Init,
+                };
             }
         };
     }
