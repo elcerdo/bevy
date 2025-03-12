@@ -28,10 +28,24 @@ const WORKGROUP_SIZE: u32 = 8;
 struct SimuSettings {
     rng_seed: u32,
 }
+
+impl Default for SimuSettings {
+    fn default() -> Self {
+        Self { rng_seed: 42 }
+    }
+}
+
+#[derive(Component, Debug, ExtractComponent, Clone, Default)]
+struct TriggerSettings {
+    should_reinit: bool,
+}
+
 pub struct SimuPlugin;
 
 #[derive(Hash, Clone, Eq, PartialEq, Debug, RenderLabel)]
-struct SimuNodeMarker;
+enum NodeMarkers {
+    Main,
+}
 
 impl Plugin for SimuPlugin {
     fn build(&self, app: &mut App) {
@@ -45,6 +59,7 @@ impl Plugin for SimuPlugin {
             // It's important to derive [`ExtractComponent`] on [`PostProcessingSettings`]
             // for this plugin to work correctly.
             ExtractComponentPlugin::<SimuSettings>::default(),
+            ExtractComponentPlugin::<TriggerSettings>::default(),
             // The settings will also be the data used in the shader.
             // This plugin will prepare the component for the GPU by creating a uniform buffer
             // and writing the data to that buffer every frame.
@@ -56,13 +71,14 @@ impl Plugin for SimuPlugin {
         app.add_plugins(ExtractResourcePlugin::<SimuImages>::default());
 
         app.add_systems(Startup, populate_simu_plane_and_images);
+        app.add_systems(Update, handle_simu_triggers);
 
         let render_app = app.sub_app_mut(RenderApp);
 
         let mut render_graph = render_app.world_mut().resource_mut::<RenderGraph>();
-        render_graph.add_node(SimuNodeMarker, SimuNode::default());
-        render_graph.add_node_edge(SimuNodeMarker, bevy::render::graph::CameraDriverLabel);
-
+        render_graph.add_node(NodeMarkers::Main, SimuNode::default());
+        render_graph.add_node_edge(NodeMarkers::Main, bevy::render::graph::CameraDriverLabel);
+        // render_app.add_systems(Render, update_simu_node_state);
         render_app.add_systems(
             Render,
             update_bind_groups.in_set(RenderSet::PrepareBindGroups),
@@ -76,6 +92,49 @@ impl Plugin for SimuPlugin {
 }
 
 //////////////////////////////////////////////////////////////////////
+
+fn handle_simu_triggers(
+    all_trigger_settings: Query<&mut TriggerSettings>,
+    keyboard: Res<ButtonInput<KeyCode>>,
+) {
+    let should_reinit = keyboard.pressed(KeyCode::Space);
+    for mut trigger_settings in all_trigger_settings {
+        trigger_settings.should_reinit = should_reinit;
+    }
+    // if keyboard.just_pressed(KeyCode::Space) {
+    //     warn!("AAAA");
+
+    //     // for mut trigger in triggers.iter_mut() {
+    //     //     *trigger = RetriggerMarker(true);
+    //     //     // simu_settings.reinit_aa += 1;
+    //     // }
+    //     // for trigger in triggers.iter() {
+    //     //     warn!("AAAA {:?}", trigger);
+    //     // }
+    // }
+}
+
+// fn update_simu_node_state(
+//     trigger_settings: Query<&TriggerSettings>,
+//     // mut triggers: Query<&mut RetriggerMarker>,
+//     render_graph: Res<RenderGraph>,
+// ) {
+//     // let mut should_reinit = false;
+//     // for mut trigger in triggers.iter_mut() {
+//     //     if matches!(*trigger, RetriggerMarker(true)) {
+//     //         should_reinit = true;
+//     //         warn!("BBBB {:?}", trigger);
+//     //     }
+//     //     *trigger = RetriggerMarker(false);
+//     // }
+//     // // warn!("CCCC {}", should_reinit);
+//     // if should_reinit {
+//     //     warn!("trigger_reinit");
+//     //     let simu_node = render_graph
+//     //         .get_node::<SimuNode>(NodeMarkers::Main)
+//     //         .unwrap();
+//     // }
+// }
 
 #[derive(Resource, Clone, ExtractResource)]
 struct SimuImages {
@@ -128,7 +187,8 @@ fn populate_simu_plane_and_images(
             ..StandardMaterial::default()
         })),
         Transform::from_xyz(100.0, -0.25, -100.0),
-        SimuSettings { rng_seed: 42 },
+        SimuSettings::default(),
+        TriggerSettings::default(),
     ));
 
     // insert images
@@ -204,11 +264,16 @@ struct SimuBindGroups {
 fn update_bind_groups(
     mut commands: Commands,
     simu_settings: Res<ComponentUniforms<SimuSettings>>,
+    all_trigger_settings: Query<&TriggerSettings>,
     simu_pipeline: Res<SimuPipeline>,
     simu_images: Res<SimuImages>,
     gpu_images: Res<RenderAssets<GpuImage>>,
     render_device: Res<RenderDevice>,
 ) {
+    for trigger_settings in all_trigger_settings {
+        warn!("$$$$ {}", trigger_settings.should_reinit);
+    }
+
     let simu_binding = simu_settings.uniforms().binding();
     assert!(simu_binding.is_some());
 
