@@ -1,11 +1,29 @@
+use bevy::math::Vec3;
 use bevy::prelude::*;
+use bevy::render::extract_component::ExtractComponent;
 use bevy::render::extract_resource::ExtractResource;
 use bevy::render::render_asset::RenderAssetUsages;
+use bevy::render::render_resource::ShaderType;
 
 use crate::advection::consts::TEXTURE_FORMAT;
 use crate::advection::consts::TEXTURE_SIZE;
 
 //////////////////////////////////////////////////////////////////////
+
+#[derive(Component, ShaderType, ExtractComponent, Clone)]
+pub struct AdvectionSettings {
+    rng_seed: u32,
+    bbox_center: Vec3,
+}
+
+impl Default for AdvectionSettings {
+    fn default() -> Self {
+        Self {
+            rng_seed: 42,
+            bbox_center: Vec3::ZERO,
+        }
+    }
+}
 
 #[derive(Resource, Clone, ExtractResource)]
 pub struct AdvectionImages {
@@ -51,7 +69,7 @@ pub fn populate_plane_and_images(
             ..default()
         })),
         Transform::from_xyz(-2.6, -1.2, -2.6),
-        // SimuSettings::default(),
+        AdvectionSettings::default(),
     ));
 
     // insert images

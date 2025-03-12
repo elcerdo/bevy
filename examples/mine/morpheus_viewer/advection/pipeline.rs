@@ -1,3 +1,5 @@
+use crate::advection::image::AdvectionSettings;
+
 use bevy::prelude::*;
 use bevy::render::extract_resource::ExtractResource;
 
@@ -41,7 +43,7 @@ impl FromWorld for AdvectionPipeline {
                 (
                     texture_storage_2d(TEXTURE_FORMAT, StorageTextureAccess::ReadOnly),
                     texture_storage_2d(TEXTURE_FORMAT, StorageTextureAccess::WriteOnly),
-                    // uniform_buffer::<SimuSettings>(true),
+                    // uniform_buffer::<AdvectionSettings>(true),
                 ),
             ),
         );

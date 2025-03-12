@@ -1,9 +1,11 @@
 use crate::advection::image::AdvectionImages;
+use crate::advection::image::AdvectionSettings;
 use crate::advection::pipeline::AdvectionPipeline;
 
 use bevy::prelude::*;
+use bevy::render::extract_component::ComponentUniforms;
 use bevy::render::render_asset::RenderAssets;
-use bevy::render::render_resource::{BindGroup, BindGroupEntries /* ShaderType */};
+use bevy::render::render_resource::{BindGroup, BindGroupEntries};
 use bevy::render::renderer::RenderDevice;
 use bevy::render::texture::GpuImage;
 
@@ -17,14 +19,14 @@ pub struct AdvectionBindGroups {
 
 pub fn prepare_bind_groups(
     mut commands: Commands,
-    // simu_settings: Res<ComponentUniforms<SimuSettings>>,
+    settings: Res<ComponentUniforms<AdvectionSettings>>,
     pipeline: Res<AdvectionPipeline>,
     images: Res<AdvectionImages>,
     gpu_images: Res<RenderAssets<GpuImage>>,
     render_device: Res<RenderDevice>,
 ) {
-    // let simu_binding = simu_settings.uniforms().binding();
-    // assert!(simu_binding.is_some());
+    let settings = settings.uniforms().binding();
+    assert!(settings.is_some());
 
     let view_a = gpu_images.get(&images.image_a).unwrap();
     let view_b = gpu_images.get(&images.image_b).unwrap();
@@ -34,7 +36,7 @@ pub fn prepare_bind_groups(
         &BindGroupEntries::sequential((
             &view_a.texture_view,
             &view_b.texture_view,
-            // simu_binding.clone().unwrap(),
+            // settings.clone().unwrap(),
         )),
     );
     let group_b_to_a = render_device.create_bind_group(
@@ -43,7 +45,7 @@ pub fn prepare_bind_groups(
         &BindGroupEntries::sequential((
             &view_b.texture_view,
             &view_a.texture_view,
-            // simu_binding.unwrap(),
+            // settings.unwrap(),
         )),
     );
 

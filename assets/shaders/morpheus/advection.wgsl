@@ -2,10 +2,14 @@
 
 #import "shaders/morpheus/sdf/alien.wgsl"::signed_distance_function
 
-@group(0) @binding(0)
-var input: texture_storage_2d<rgba32float, read>;
-@group(0) @binding(1)
-var output: texture_storage_2d<rgba32float, write>;
+struct Settings {
+    rng_seed: u32,
+    bbox_center: vec3<f32>,
+}
+
+@group(0) @binding(0) var input: texture_storage_2d<rgba32float, read>;
+@group(0) @binding(1) var output: texture_storage_2d<rgba32float, write>;
+@group(0) @binding(2) var<uniform> settings: Settings;
 
 const RNG_SEED: u32 = 42;
 
