@@ -1,7 +1,8 @@
 use bevy::prelude::*;
 use bevy::render::extract_resource::{ExtractResource, ExtractResourcePlugin};
+use bevy::render::graph::CameraDriverLabel;
 use bevy::render::render_asset::{RenderAssetUsages, RenderAssets};
-use bevy::render::render_graph::{CameraDriverLabel, Node, RenderGraph, RenderLabel};
+use bevy::render::render_graph::{Node, RenderGraph, RenderLabel};
 use bevy::render::render_resource::{
     // binding_types::{texture_storage_2d, uniform_buffer},
     BindGroup,
@@ -31,8 +32,6 @@ enum AdvectionNodes {
 
 impl Plugin for AdvectionPlugin {
     fn build(&self, app: &mut App) {
-        // use bevy::render::render_resource::*;
-
         app.add_plugins(ExtractResourcePlugin::<AdvectionImages>::default());
         app.add_systems(Startup, populate_plane_and_images);
 
@@ -46,11 +45,9 @@ impl Plugin for AdvectionPlugin {
         render_graph.add_node_edge(AdvectionNodes::Main, CameraDriverLabel);
     }
     fn finish(&self, app: &mut App) {
-        // info!("** simu_finish **");
-
         // app.init_resource::<SimuTriggers>();
 
-        // let render_app = app.sub_app_mut(RenderApp);
+        let render_app = app.sub_app_mut(RenderApp);
         // render_app.init_resource::<SimuPipeline>();
     }
 }

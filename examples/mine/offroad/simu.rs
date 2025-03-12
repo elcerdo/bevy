@@ -2,6 +2,7 @@ use bevy::render::extract_component::{
     ComponentUniforms, ExtractComponent, ExtractComponentPlugin, UniformComponentPlugin,
 };
 use bevy::render::extract_resource::{ExtractResource, ExtractResourcePlugin};
+use bevy::render::graph::CameraDriverLabel;
 use bevy::render::render_asset::{RenderAssetUsages, RenderAssets};
 use bevy::render::render_graph::{Node, RenderGraph, RenderLabel};
 use bevy::render::render_resource::{
@@ -74,7 +75,7 @@ impl Plugin for SimuPlugin {
         );
         let mut render_graph = render_app.world_mut().resource_mut::<RenderGraph>();
         render_graph.add_node(SimuNodes::Main, MainNode::default());
-        render_graph.add_node_edge(SimuNodes::Main, bevy::render::graph::CameraDriverLabel);
+        render_graph.add_node_edge(SimuNodes::Main, CameraDriverLabel);
     }
     fn finish(&self, app: &mut App) {
         info!("** simu_finish **");
