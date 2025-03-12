@@ -1,5 +1,6 @@
 //! morpheus model viewer
 
+mod advection;
 mod morpheus;
 
 use bevy::prelude::*;
@@ -44,6 +45,7 @@ fn main() {
     }
 
     app.add_plugins(morpheus::MorpheusPlugin);
+    app.add_plugins(advection::AdvectionPlugin);
 
     app.add_systems(Startup, setup);
 
