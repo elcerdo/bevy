@@ -228,8 +228,8 @@ fn copy_triggers(simu_triggers: Res<SimuTriggers>, mut simu_pipeline: ResMut<Sim
 
 #[derive(Resource)]
 struct SimuBindGroups {
-    group_direct: BindGroup,
-    group_indirect: BindGroup,
+    group_a_to_b: BindGroup,
+    group_b_to_a: BindGroup,
 }
 
 fn update_bind_groups(
@@ -245,8 +245,8 @@ fn update_bind_groups(
 
     let view_a = gpu_images.get(&simu_images.image_a).unwrap();
     let view_b = gpu_images.get(&simu_images.image_b).unwrap();
-    let group_direct = render_device.create_bind_group(
-        Some("group_direct"),
+    let group_a_to_b = render_device.create_bind_group(
+        Some("group_a_to_b"),
         &simu_pipeline.group_layout,
         &BindGroupEntries::sequential((
             &view_a.texture_view,
@@ -254,8 +254,8 @@ fn update_bind_groups(
             simu_binding.clone().unwrap(),
         )),
     );
-    let group_indirect = render_device.create_bind_group(
-        Some("group_indirect"),
+    let group_b_to_a = render_device.create_bind_group(
+        Some("group_b_to_a"),
         &simu_pipeline.group_layout,
         &BindGroupEntries::sequential((
             &view_b.texture_view,
@@ -266,8 +266,8 @@ fn update_bind_groups(
 
     // insert bind groups
     commands.insert_resource(SimuBindGroups {
-        group_direct,
-        group_indirect,
+        group_a_to_b,
+        group_b_to_a,
     });
 }
 
@@ -348,7 +348,7 @@ impl Node for SimuNode {
                 let init_pipeline = pipeline_cache
                     .get_compute_pipeline(pipeline_simu.init_pipeline)
                     .unwrap();
-                pass.set_bind_group(0, &bind_groups.group_direct, &[0]);
+                pass.set_bind_group(0, &bind_groups.group_a_to_b, &[0]);
                 pass.set_pipeline(init_pipeline);
                 true
             }
@@ -359,9 +359,9 @@ impl Node for SimuNode {
                 pass.set_bind_group(
                     0,
                     if !flipped {
-                        &bind_groups.group_direct
+                        &bind_groups.group_a_to_b
                     } else {
-                        &bind_groups.group_indirect
+                        &bind_groups.group_b_to_a
                     },
                     &[0],
                 );
