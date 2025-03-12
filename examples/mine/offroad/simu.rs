@@ -38,7 +38,7 @@ impl Default for SimuSettings {
 pub struct SimuPlugin;
 
 #[derive(Hash, Clone, Eq, PartialEq, Debug, RenderLabel)]
-enum NodeMarkers {
+enum SimuNodes {
     Main,
 }
 
@@ -71,8 +71,8 @@ impl Plugin for SimuPlugin {
         let render_app = app.sub_app_mut(RenderApp);
 
         let mut render_graph = render_app.world_mut().resource_mut::<RenderGraph>();
-        render_graph.add_node(NodeMarkers::Main, SimuNode::default());
-        render_graph.add_node_edge(NodeMarkers::Main, bevy::render::graph::CameraDriverLabel);
+        render_graph.add_node(SimuNodes::Main, SimuNode::default());
+        render_graph.add_node_edge(SimuNodes::Main, bevy::render::graph::CameraDriverLabel);
         // render_app.add_systems(Render, update_simu_node_state);
         render_app.add_systems(
             Render,
