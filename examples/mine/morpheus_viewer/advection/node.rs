@@ -35,11 +35,11 @@ impl Node for MainNode {
         match self.state {
             MainState::Loading => {
                 let init_ok = matches!(
-                    pipeline_cache.get_compute_pipeline_state(pipeline.init_pipeline),
+                    pipeline_cache.get_compute_pipeline_state(pipeline.init_id),
                     CachedPipelineState::Ok(_)
                 );
                 let update_ok = matches!(
-                    pipeline_cache.get_compute_pipeline_state(pipeline.init_pipeline),
+                    pipeline_cache.get_compute_pipeline_state(pipeline.update_id),
                     CachedPipelineState::Ok(_)
                 );
                 if init_ok && update_ok {
@@ -82,7 +82,7 @@ impl Node for MainNode {
             MainState::Loading => false,
             MainState::Init => {
                 let init_pipeline = pipeline_cache
-                    .get_compute_pipeline(pipeline.init_pipeline)
+                    .get_compute_pipeline(pipeline.init_id)
                     .unwrap();
                 pass.set_bind_group(0, &bind_groups.group_a_to_b, &[]);
                 pass.set_pipeline(init_pipeline);
@@ -90,7 +90,7 @@ impl Node for MainNode {
             }
             MainState::Update(flipped) => {
                 let update_pipeline = pipeline_cache
-                    .get_compute_pipeline(pipeline.update_pipeline)
+                    .get_compute_pipeline(pipeline.update_id)
                     .unwrap();
                 pass.set_bind_group(
                     0,

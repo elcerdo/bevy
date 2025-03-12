@@ -48,6 +48,8 @@ fn main() {
     app.add_plugins(advection::AdvectionPlugin);
 
     app.add_systems(Startup, setup);
+    app.add_systems(Update, quit_with_escape);
+    app.add_systems(Update, space_reinit_advection);
 
     app.run();
 }
@@ -66,4 +68,18 @@ fn setup(
         })),
         Transform::from_xyz(-0.5, 1.0, -0.5),
     ));
+}
+
+fn quit_with_escape(mut writer: EventWriter<AppExit>, keyboard: Res<ButtonInput<KeyCode>>) {
+    if keyboard.just_pressed(KeyCode::Escape) {
+        writer.write(AppExit::Success);
+    }
+}
+
+fn space_reinit_advection(
+    mut triggers: ResMut<advection::AdvectionTriggers>,
+    keyboard: Res<ButtonInput<KeyCode>>,
+) {
+    let should_reinit = keyboard.pressed(KeyCode::Space);
+    triggers.should_reinit = should_reinit;
 }

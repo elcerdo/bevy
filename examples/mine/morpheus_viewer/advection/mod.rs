@@ -8,7 +8,8 @@ use image::AdvectionImages;
 use image::AdvectionSettings;
 use node::MainNode;
 use pipeline::AdvectionPipeline;
-use pipeline::AdvectionTriggers;
+
+pub use pipeline::AdvectionTriggers;
 
 use bevy::prelude::*;
 use bevy::render::extract_component::ExtractComponentPlugin;
@@ -38,7 +39,6 @@ impl Plugin for AdvectionPlugin {
         app.add_plugins(ExtractResourcePlugin::<AdvectionImages>::default());
         app.add_plugins(ExtractResourcePlugin::<AdvectionTriggers>::default());
         app.add_systems(Startup, image::populate_plane_and_images);
-        app.add_systems(Update, pipeline::update_triggers_keyboard);
 
         // render app
         let render_app = app.sub_app_mut(RenderApp);

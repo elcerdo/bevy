@@ -4,8 +4,8 @@ use bevy::prelude::*;
 use bevy::render::extract_resource::ExtractResource;
 
 use bevy::render::render_resource::{
-    binding_types::{texture_storage_2d /*, uniform_buffer */},
-    BindGroupLayout, CachedComputePipelineId, /* ShaderType */
+    binding_types::{texture_storage_2d, uniform_buffer},
+    BindGroupLayout, CachedComputePipelineId,
 };
 use bevy::render::renderer::RenderDevice;
 
@@ -25,8 +25,8 @@ pub struct AdvectionTriggers {
 pub struct AdvectionPipeline {
     pub triggers: AdvectionTriggers,
     pub group_layout: BindGroupLayout,
-    pub init_pipeline: CachedComputePipelineId,
-    pub update_pipeline: CachedComputePipelineId,
+    pub init_id: CachedComputePipelineId,
+    pub update_id: CachedComputePipelineId,
 }
 
 impl FromWorld for AdvectionPipeline {
@@ -43,15 +43,15 @@ impl FromWorld for AdvectionPipeline {
                 (
                     texture_storage_2d(TEXTURE_FORMAT, StorageTextureAccess::ReadOnly),
                     texture_storage_2d(TEXTURE_FORMAT, StorageTextureAccess::WriteOnly),
-                    // uniform_buffer::<AdvectionSettings>(true),
+                    uniform_buffer::<AdvectionSettings>(false),
                 ),
             ),
         );
 
         let shader: Handle<Shader> = world.load_asset(SHADER_PATH);
 
-        let init_pipeline = pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
-            label: Some(Cow::from("init_pipeline")),
+        let init_id = pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
+            label: Some(Cow::from("init_pipeline_id")),
             layout: vec![group_layout.clone()],
             push_constant_ranges: Vec::new(),
             shader: shader.clone(),
@@ -60,8 +60,8 @@ impl FromWorld for AdvectionPipeline {
             zero_initialize_workgroup_memory: false,
         });
 
-        let update_pipeline = pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
-            label: Some(Cow::from("update_pipeline")),
+        let update_id = pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
+            label: Some(Cow::from("update_pipeline_id")),
             layout: vec![group_layout.clone()],
             push_constant_ranges: Vec::new(),
             shader,
@@ -73,20 +73,10 @@ impl FromWorld for AdvectionPipeline {
         AdvectionPipeline {
             triggers: AdvectionTriggers::default(),
             group_layout,
-            init_pipeline,
-            update_pipeline,
+            init_id,
+            update_id,
         }
     }
-}
-
-// should be used in main app
-
-pub fn update_triggers_keyboard(
-    mut triggers: ResMut<AdvectionTriggers>,
-    keyboard: Res<ButtonInput<KeyCode>>,
-) {
-    let should_reinit = keyboard.pressed(KeyCode::Space);
-    triggers.should_reinit = should_reinit;
 }
 
 // should be used in render app after extraction

@@ -25,8 +25,7 @@ pub fn prepare_bind_groups(
     gpu_images: Res<RenderAssets<GpuImage>>,
     render_device: Res<RenderDevice>,
 ) {
-    let settings = settings.uniforms().binding();
-    assert!(settings.is_some());
+    let settings = settings.uniforms().binding().unwrap();
 
     let view_a = gpu_images.get(&images.image_a).unwrap();
     let view_b = gpu_images.get(&images.image_b).unwrap();
@@ -36,7 +35,7 @@ pub fn prepare_bind_groups(
         &BindGroupEntries::sequential((
             &view_a.texture_view,
             &view_b.texture_view,
-            // settings.clone().unwrap(),
+            settings.clone(),
         )),
     );
     let group_b_to_a = render_device.create_bind_group(
@@ -45,7 +44,7 @@ pub fn prepare_bind_groups(
         &BindGroupEntries::sequential((
             &view_b.texture_view,
             &view_a.texture_view,
-            // settings.unwrap(),
+            settings.clone(),
         )),
     );
 

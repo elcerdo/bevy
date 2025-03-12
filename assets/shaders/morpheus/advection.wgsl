@@ -11,11 +11,9 @@ struct Settings {
 @group(0) @binding(1) var output: texture_storage_2d<rgba32float, write>;
 @group(0) @binding(2) var<uniform> settings: Settings;
 
-const RNG_SEED: u32 = 42;
-
 fn hash(value: u32) -> u32 {
     var state = value;
-    state += RNG_SEED;
+    state += settings.rng_seed;
     state = state ^ 2747636419u;
     state = state * 2654435769u;
     state = state ^ state >> 16u;
