@@ -80,6 +80,7 @@ impl FromWorld for AdvectionPipeline {
 }
 
 // should be used in render app after extraction
+// make sure trigger are extracted properly
 
 pub fn copy_triggers(triggers: Res<AdvectionTriggers>, mut pipeline: ResMut<AdvectionPipeline>) {
     pipeline.triggers = triggers.clone();
