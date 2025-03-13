@@ -30,9 +30,16 @@ fn init(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
     let pos = vec3((f32(invocation_id.x) - hx) / hx, (f32(invocation_id.y) - hy) / hy, 0.0);
     let is_inside: bool = signed_distance_function(pos) < 0.0;
 
-    let color = vec4<f32>(pos.xy, f32(is_inside), 1.0);
+    let color = vec4(pos.xy, f32(is_inside), 1.0);
+
+    // warped pattern
+
+    // FIXME panic when uncommenting
+    // var color_ = textureSample(voronoi_texture, voronoi_sampler, pos_, 0);
+    let color_ = vec4(pos.xy, 0.0, 1.0);
 
     textureStore(output, location, color);
+    textureStore(pattern, location, color_);
 }
 
 @compute @workgroup_size(8, 8, 1)
@@ -63,13 +70,12 @@ fn update(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
     color.x -= settings.learning_rate * dist_center * gg.x;
     color.y -= settings.learning_rate * dist_center * gg.y;
 
-    textureStore(output, location, color);
-
     // warped pattern
 
     // FIXME panic when uncommenting
-    // var color_ = textureSample(voronoi_texture, voronoi_sampler, );
-    // let color_ = vec4((pos + 1.0) / 2.0, 0.0, 1.0);
+    // var color_ = textureSample(voronoi_texture, voronoi_sampler, pos_, 0);
+    let color_ = vec4(pos.xy, 0.0, 1.0);
 
-    // textureStore(pattern, location, color_);
+    textureStore(output, location, color);
+    textureStore(pattern, location, color_);
 }
