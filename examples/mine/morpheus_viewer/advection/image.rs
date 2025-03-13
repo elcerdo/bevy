@@ -13,12 +13,14 @@ use crate::advection::consts::TEXTURE_SIZE;
 #[derive(Component, ShaderType, ExtractComponent, Clone)]
 pub struct AdvectionSettings {
     texture_size: UVec2,
+    pub learning_rate: f32,
 }
 
 impl Default for AdvectionSettings {
     fn default() -> Self {
         Self {
             texture_size: UVec2::new(TEXTURE_SIZE.0, TEXTURE_SIZE.1),
+            learning_rate: 45e-2,
         }
     }
 }

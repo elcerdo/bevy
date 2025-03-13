@@ -1,16 +1,17 @@
 // Morpheus advection snippet
 
-// #import "shaders/morpheus/sdf/alien.wgsl"::signed_distance_function
 #import "shaders/morpheus/sdf/union.wgsl"::signed_distance_function
+// #import "shaders/morpheus/sdf/sphere.wgsl"::signed_distance_function
+// #import "shaders/morpheus/sdf/alien.wgsl"::signed_distance_function
+// #import "shaders/morpheus/sdf/can.wgsl"::signed_distance_function
 
 const DIFF_EPSILON: f32 = 1e-5;
-// const LEARNING_RATE: f32 = 95e-2;
-const LEARNING_RATE: f32 = 2e-2;
 const DIFF_DIRECTION_UU: vec3<f32> = vec3(1.0, 0.0, 0.0);
 const DIFF_DIRECTION_VV: vec3<f32> = vec3(0.0, 1.0, 0.0);
 
 struct Settings {
     texture_size: vec2<u32>,
+    learning_rate: f32,
 }
 
 @group(0) @binding(0) var input: texture_storage_2d<rgba32float, read>;
@@ -47,10 +48,15 @@ fn update(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
 
     let gu = (dist_right - dist_left) / 2.0 / DIFF_EPSILON;
     let gv = (dist_above - dist_below) / 2.0 / DIFF_EPSILON;
-    let gg: vec2<f32> = vec2(gu, gv);
+    var gg: vec2<f32> = vec2(gu, gv);
+    if length(gg) > 0.0 {
+        gg = normalize(gg);
+    } else {
+        gg = vec2(0.0);
+    }
 
-    color.x -= LEARNING_RATE * dist_center * gg.x;
-    color.y -= LEARNING_RATE * dist_center * gg.y;
+    color.x -= settings.learning_rate * dist_center * gg.x;
+    color.y -= settings.learning_rate * dist_center * gg.y;
 
     textureStore(output, location, color);
 }

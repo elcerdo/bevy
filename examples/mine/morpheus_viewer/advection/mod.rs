@@ -4,6 +4,7 @@ mod image;
 mod node;
 mod pipeline;
 
+pub use image::AdvectionSettings;
 pub use pipeline::AdvectionTriggers;
 
 use bevy::prelude::*;
@@ -25,8 +26,8 @@ impl Plugin for AdvectionPlugin {
     fn build(&self, app: &mut App) {
         // sync between main and render app
         app.add_plugins((
-            ExtractComponentPlugin::<image::AdvectionSettings>::default(),
-            UniformComponentPlugin::<image::AdvectionSettings>::default(),
+            ExtractComponentPlugin::<AdvectionSettings>::default(),
+            UniformComponentPlugin::<AdvectionSettings>::default(),
         ));
 
         // main app

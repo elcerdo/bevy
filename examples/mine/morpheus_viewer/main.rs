@@ -49,7 +49,8 @@ fn main() {
 
     app.add_systems(Startup, setup);
     app.add_systems(Update, quit_with_escape);
-    app.add_systems(Update, space_reinit_advection);
+    app.add_systems(Update, reinit_advection);
+    app.add_systems(Update, toggle_advection_learning_rate);
 
     app.run();
 }
@@ -76,10 +77,26 @@ fn quit_with_escape(mut writer: EventWriter<AppExit>, keyboard: Res<ButtonInput<
     }
 }
 
-fn space_reinit_advection(
+fn reinit_advection(
     mut triggers: ResMut<advection::AdvectionTriggers>,
     keyboard: Res<ButtonInput<KeyCode>>,
 ) {
-    let should_reinit = keyboard.pressed(KeyCode::Space);
+    let should_reinit = keyboard.pressed(KeyCode::Space) || keyboard.just_pressed(KeyCode::Tab);
     triggers.should_reinit = should_reinit;
+}
+
+fn toggle_advection_learning_rate(
+    mut all_settings: Query<&mut advection::AdvectionSettings>,
+    keyboard: Res<ButtonInput<KeyCode>>,
+) {
+    if keyboard.just_pressed(KeyCode::Tab) {
+        for mut settings in all_settings.iter_mut() {
+            settings.learning_rate = if settings.learning_rate > 1e-1 {
+                4.5e-2
+            } else {
+                advection::AdvectionSettings::default().learning_rate
+            };
+            warn!("learning_rate {:.3e}", settings.learning_rate);
+        }
+    }
 }
