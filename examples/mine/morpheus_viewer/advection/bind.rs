@@ -29,8 +29,6 @@ pub fn prepare_bind_groups(
 
     let view_a = gpu_images.get(&images.image_a).unwrap();
     let view_b = gpu_images.get(&images.image_b).unwrap();
-    let view_dummy = gpu_images.get(&images.image_dummy).unwrap();
-    let view_voronoi = gpu_images.get(&images.image_voronoi).unwrap_or(view_dummy);
     let view_pattern = gpu_images.get(&images.image_pattern).unwrap();
 
     let group_a_to_b = render_device.create_bind_group(
@@ -39,8 +37,6 @@ pub fn prepare_bind_groups(
         &BindGroupEntries::sequential((
             &view_a.texture_view,
             &view_b.texture_view,
-            &view_voronoi.texture_view,
-            &view_voronoi.sampler,
             &view_pattern.texture_view,
             settings.clone(),
         )),
@@ -51,8 +47,6 @@ pub fn prepare_bind_groups(
         &BindGroupEntries::sequential((
             &view_b.texture_view,
             &view_a.texture_view,
-            &view_voronoi.texture_view,
-            &view_voronoi.sampler,
             &view_pattern.texture_view,
             settings.clone(),
         )),
