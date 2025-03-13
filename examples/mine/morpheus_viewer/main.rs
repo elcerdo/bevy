@@ -92,7 +92,7 @@ fn toggle_advection_learning_rate(
     if keyboard.just_pressed(KeyCode::Tab) {
         for mut settings in all_settings.iter_mut() {
             settings.learning_rate = if settings.learning_rate > 1e-1 {
-                4.5e-2
+                2e-2
             } else {
                 advection::AdvectionSettings::default().learning_rate
             };
