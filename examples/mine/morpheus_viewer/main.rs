@@ -66,7 +66,7 @@ fn setup(
             emissive: YELLOW.into(),
             ..default()
         })),
-        Transform::from_xyz(-0.5, 1.0, -0.5),
+        Transform::from_xyz(0.5, 1.0, 0.5),
     ));
 }
 

@@ -68,7 +68,7 @@ pub fn populate_plane_and_images(
             base_color_texture: Some(image_a.clone()),
             ..default()
         })),
-        Transform::from_xyz(-2.6, -1.2, -2.6),
+        Transform::from_xyz(-1.0, -0.0, -1.0),
         AdvectionSettings::default(),
     ));
 
