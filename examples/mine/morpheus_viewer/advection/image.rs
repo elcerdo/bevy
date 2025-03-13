@@ -32,27 +32,6 @@ pub struct AdvectionImages {
     pub image_pattern: Handle<Image>,
 }
 
-// let image_voronoi = asset_server.load::<Image>("textures/voronoi.png");
-// let image_dummy = images.add(make_dummy_image());
-// fn make_dummy_image() -> Image {
-//     use bevy::render::render_resource::*;
-//     let image = Image::new_fill(
-//         Extent3d {
-//             width: 16,
-//             height: 16,
-//             depth_or_array_layers: 1,
-//         },
-//         TextureDimension::D2,
-//         &[255, 0, 255, 255],
-//         TextureFormat::Rgba8UnormSrgb,
-//         RenderAssetUsages::RENDER_WORLD,
-//     );
-//     // image.texture_descriptor.usage =
-//     //     TextureUsages::COPY_DST | TextureUsages::STORAGE_BINDING | TextureUsages::TEXTURE_BINDING;
-//     // image.sampler = bevy::image::ImageSampler::nearest();
-//     image
-// }
-
 pub fn populate_planes_and_images(
     mut commands: Commands,
     mut images: ResMut<Assets<Image>>,
@@ -117,24 +96,23 @@ pub fn populate_planes_and_images(
         Transform::from_xyz(1.0, 0.0, -1.0),
         AdvectionSettings::default(),
     ));
-    // commands.spawn((
-    //     Mesh3d(meshes.add(Plane3d::new(Vec3::Y, Vec2::ONE))),
-    //     MeshMaterial3d(materials.add(StandardMaterial {
-    //         perceptual_roughness: 1.0,
-    //         metallic: 0.0,
-    //         base_color_texture: Some(image_voronoi.clone()),
-    //         ..default()
-    //     })),
-    //     Transform::from_xyz(3.0, 0.0, -1.0),
-    //     AdvectionSettings::default(),
-    // ));
+
+    let image_voronoi = asset_server.load::<Image>("textures/voronoi.png");
+    commands.spawn((
+        Mesh3d(meshes.add(Plane3d::new(Vec3::Y, Vec2::ONE))),
+        MeshMaterial3d(materials.add(StandardMaterial {
+            perceptual_roughness: 1.0,
+            metallic: 0.0,
+            base_color_texture: Some(image_voronoi.clone()),
+            ..default()
+        })),
+        Transform::from_xyz(3.0, 0.0, -1.0),
+    ));
 
     // insert images
     commands.insert_resource(AdvectionImages {
         image_a,
         image_b,
         image_pattern,
-        // image_voronoi,
-        // image_dummy,
     });
 }

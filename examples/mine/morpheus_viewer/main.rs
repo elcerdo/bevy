@@ -82,6 +82,9 @@ fn reinit_advection(
 ) {
     let should_reinit = keyboard.pressed(KeyCode::Space) || keyboard.just_pressed(KeyCode::Tab);
     triggers.should_reinit = should_reinit;
+    if should_reinit {
+        warn!("reinit");
+    }
 }
 
 fn toggle_advection_learning_rate(
@@ -95,7 +98,7 @@ fn toggle_advection_learning_rate(
             } else {
                 advection::AdvectionSettings::default().learning_rate
             };
-            warn!("learning_rate {:.3e}", settings.learning_rate);
+            warn!("learning_rate {:04.2}", settings.learning_rate);
         }
     }
 }

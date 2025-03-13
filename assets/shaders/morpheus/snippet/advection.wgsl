@@ -60,14 +60,14 @@ fn update(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
     let gu = (dist_right - dist_left) / 2.0 / DIFF_EPSILON;
     let gv = (dist_above - dist_below) / 2.0 / DIFF_EPSILON;
     var gg: vec2<f32> = vec2(gu, gv);
-    if length(gg) > 0.0 {
-        gg = normalize(gg);
-    } else {
-        gg = vec2(0.0);
-    }
+    // if length(gg) > 0.0 {
+    //     gg = normalize(gg);
+    // } else {
+    //     gg = vec2(0.0);
+    // }
 
-    color.x -= settings.learning_rate * dist_center * gg.x;
-    color.y -= settings.learning_rate * dist_center * gg.y;
+    color.x -= 2.0 * settings.learning_rate * dist_center * gg.x;
+    color.y -= 2.0 * settings.learning_rate * dist_center * gg.y;
 
     // warped pattern
 
