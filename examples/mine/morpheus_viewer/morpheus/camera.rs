@@ -17,17 +17,17 @@ impl CameraPivot {
 pub fn populate_camera_and_lights(mut commands: Commands) {
     info!("** populate_camera_and_lights **");
 
-    // lights
-    commands.spawn((
-        PointLight {
-            shadows_enabled: true,
-            intensity: 5.0e6,
-            range: 100.0,
-            shadow_depth_bias: 0.2,
-            ..default()
-        },
-        Transform::from_xyz(-4.0, 16.0, 8.0),
-    ));
+    // // lights
+    // commands.spawn((
+    //     PointLight {
+    //         shadows_enabled: true,
+    //         intensity: 5.0e6,
+    //         range: 100.0,
+    //         shadow_depth_bias: 0.2,
+    //         ..default()
+    //     },
+    //     Transform::from_xyz(-4.0, 16.0, 8.0),
+    // ));
     commands.spawn((
         DirectionalLight {
             color: Color::WHITE,

@@ -34,9 +34,10 @@ fn init(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
 
     // warped pattern
 
+    let pos_ = (pos.xy + 1.0) / 2.0;
     // FIXME panic when uncommenting
-    // var color_ = textureSample(voronoi_texture, voronoi_sampler, pos_, 0);
-    let color_ = vec4(pos.xy, 0.0, 1.0);
+    // var color_ = textureSample(voronoi_texture, voronoi_sampler, pos_);
+    let color_ = vec4(pos_, 0.0, 1.0);
 
     textureStore(output, location, color);
     textureStore(pattern, location, color_);
@@ -72,9 +73,10 @@ fn update(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
 
     // warped pattern
 
+    let pos_ = (pos.xy + 1.0) / 2.0;
     // FIXME panic when uncommenting
-    // var color_ = textureSample(voronoi_texture, voronoi_sampler, pos_, 0);
-    let color_ = vec4(pos.xy, 0.0, 1.0);
+    // var color_ = textureSample(voronoi_texture, voronoi_sampler, pos_);
+    let color_ = vec4(pos_, 0.0, 1.0);
 
     textureStore(output, location, color);
     textureStore(pattern, location, color_);
