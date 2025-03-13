@@ -29,13 +29,15 @@ impl Default for AdvectionSettings {
 pub struct AdvectionImages {
     pub image_a: Handle<Image>,
     pub image_b: Handle<Image>,
+    pub image_pattern: Handle<Image>,
 }
 
-pub fn populate_plane_and_images(
+pub fn populate_planes_and_images(
     mut commands: Commands,
     mut images: ResMut<Assets<Image>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    asset_server: Res<AssetServer>,
 ) {
     use bevy::render::render_resource::*;
 
@@ -57,9 +59,10 @@ pub fn populate_plane_and_images(
     image.sampler = bevy::image::ImageSampler::nearest();
 
     let image_a = images.add(image.clone());
-    let image_b = images.add(image);
+    let image_b = images.add(image.clone());
+    let image_pattern = images.add(image);
 
-    // magic plane
+    // magic planes
     commands.spawn((
         Mesh3d(meshes.add(Plane3d::new(Vec3::Y, Vec2::ONE))),
         MeshMaterial3d(materials.add(StandardMaterial {
@@ -71,7 +74,33 @@ pub fn populate_plane_and_images(
         Transform::from_xyz(-1.0, -0.0, -1.0),
         AdvectionSettings::default(),
     ));
+    commands.spawn((
+        Mesh3d(meshes.add(Plane3d::new(Vec3::Y, Vec2::ONE))),
+        MeshMaterial3d(materials.add(StandardMaterial {
+            perceptual_roughness: 1.0,
+            metallic: 0.0,
+            base_color_texture: Some(image_b.clone()),
+            ..default()
+        })),
+        Transform::from_xyz(1.0, -0.0, -1.0),
+        AdvectionSettings::default(),
+    ));
+    commands.spawn((
+        Mesh3d(meshes.add(Plane3d::new(Vec3::Y, Vec2::ONE))),
+        MeshMaterial3d(materials.add(StandardMaterial {
+            perceptual_roughness: 1.0,
+            metallic: 0.0,
+            base_color_texture: Some(image_pattern.clone()),
+            ..default()
+        })),
+        Transform::from_xyz(3.0, -0.0, -1.0),
+        AdvectionSettings::default(),
+    ));
 
     // insert images
-    commands.insert_resource(AdvectionImages { image_a, image_b });
+    commands.insert_resource(AdvectionImages {
+        image_a,
+        image_b,
+        image_pattern,
+    });
 }

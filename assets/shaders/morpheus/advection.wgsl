@@ -16,7 +16,8 @@ struct Settings {
 
 @group(0) @binding(0) var input: texture_storage_2d<rgba32float, read>;
 @group(0) @binding(1) var output: texture_storage_2d<rgba32float, write>;
-@group(0) @binding(2) var<uniform> settings: Settings;
+@group(0) @binding(2) var pattern: texture_storage_2d<rgba32float, read>;
+@group(0) @binding(3) var<uniform> settings: Settings;
 
 @compute @workgroup_size(8, 8, 1)
 fn init(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
@@ -57,6 +58,9 @@ fn update(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
 
     color.x -= settings.learning_rate * dist_center * gg.x;
     color.y -= settings.learning_rate * dist_center * gg.y;
+
+    // var color = textureSample(matcap_texture, matcap_sampler, (view_grad.xy + 1.0) / 2.0);
+
 
     textureStore(output, location, color);
 }

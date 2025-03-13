@@ -33,7 +33,7 @@ impl Plugin for AdvectionPlugin {
         // main app
         app.add_plugins(ExtractResourcePlugin::<image::AdvectionImages>::default());
         app.add_plugins(ExtractResourcePlugin::<AdvectionTriggers>::default());
-        app.add_systems(Startup, image::populate_plane_and_images);
+        app.add_systems(Startup, image::populate_planes_and_images);
 
         // render app
         let render_app = app.sub_app_mut(RenderApp);
