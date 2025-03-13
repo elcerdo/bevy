@@ -31,6 +31,28 @@ pub struct AdvectionImages {
     pub image_b: Handle<Image>,
     pub image_voronoi: Handle<Image>,
     pub image_pattern: Handle<Image>,
+    pub image_dummy: Handle<Image>,
+}
+
+fn make_dummy_image() -> Image {
+    use bevy::render::render_resource::*;
+
+    let image = Image::new_fill(
+        Extent3d {
+            width: 16,
+            height: 16,
+            depth_or_array_layers: 1,
+        },
+        TextureDimension::D2,
+        &[255, 0, 255, 255],
+        TextureFormat::Rgba8UnormSrgb,
+        RenderAssetUsages::RENDER_WORLD,
+    );
+    // image.texture_descriptor.usage =
+    //     TextureUsages::COPY_DST | TextureUsages::STORAGE_BINDING | TextureUsages::TEXTURE_BINDING;
+    // image.sampler = bevy::image::ImageSampler::nearest();
+
+    image
 }
 
 pub fn populate_planes_and_images(
@@ -63,6 +85,7 @@ pub fn populate_planes_and_images(
     let image_b = images.add(image.clone());
     let image_voronoi = asset_server.load::<Image>("textures/voronoi.png");
     let image_pattern = images.add(image);
+    let image_dummy = images.add(make_dummy_image());
 
     // magic planes
     commands.spawn((
@@ -116,5 +139,6 @@ pub fn populate_planes_and_images(
         image_b,
         image_voronoi,
         image_pattern,
+        image_dummy,
     });
 }

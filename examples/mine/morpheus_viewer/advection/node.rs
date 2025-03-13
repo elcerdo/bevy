@@ -1,9 +1,12 @@
 use crate::advection::bind::AdvectionBindGroups;
+use crate::advection::image::AdvectionImages;
 use crate::advection::pipeline::AdvectionPipeline;
 use crate::advection::AdvectionTriggers;
 
 use bevy::prelude::*;
+use bevy::render::render_asset::RenderAssets;
 use bevy::render::render_graph::Node;
+use bevy::render::texture::GpuImage;
 
 use crate::advection::consts::TEXTURE_SIZE;
 use crate::advection::consts::WORKGROUP_SIZE;
@@ -30,6 +33,9 @@ impl Node for MainNode {
         let pipeline = world.resource::<AdvectionPipeline>();
         let pipeline_cache = world.resource::<PipelineCache>();
         let triggers = world.resource::<AdvectionTriggers>();
+        let images = world.resource::<AdvectionImages>();
+
+        let gpu_images = world.resource::<RenderAssets<GpuImage>>();
 
         let should_reinit = triggers.should_reinit;
 
@@ -44,7 +50,9 @@ impl Node for MainNode {
                     pipeline_cache.get_compute_pipeline_state(pipeline.update_id),
                     CachedPipelineState::Ok(_)
                 );
-                if init_ok && update_ok {
+                let voronoi_ok = gpu_images.get(&images.image_pattern).is_some();
+                debug!("loading {} {} {}", init_ok, update_ok, voronoi_ok);
+                if init_ok && update_ok && voronoi_ok {
                     self.state = MainState::Init;
                 }
             }

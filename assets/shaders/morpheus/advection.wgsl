@@ -16,9 +16,10 @@ struct Settings {
 
 @group(0) @binding(0) var input: texture_storage_2d<rgba32float, read>;
 @group(0) @binding(1) var output: texture_storage_2d<rgba32float, write>;
-// @group(0) @binding(2) var voronoi: texture_storage_2d<rgba32float, read>;
-@group(0) @binding(2) var pattern: texture_storage_2d<rgba32float, write>;
-@group(0) @binding(3) var<uniform> settings: Settings;
+@group(0) @binding(2) var voronoi_texture: texture_2d<f32>;
+@group(0) @binding(3) var voronoi_sampler: sampler;
+@group(0) @binding(4) var pattern: texture_storage_2d<rgba32float, write>;
+@group(0) @binding(5) var<uniform> settings: Settings;
 
 @compute @workgroup_size(8, 8, 1)
 fn init(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
@@ -38,6 +39,8 @@ fn init(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
 fn update(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
     let location = vec2<i32>(i32(invocation_id.x), i32(invocation_id.y));
     
+    // moves toward 0-isosurface with performing a gradient descent if f(p)^2
+
     var color: vec4<f32> = textureLoad(input, location);
 
     let pos = vec3(color.xy, 0.0);
@@ -60,8 +63,13 @@ fn update(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
     color.x -= settings.learning_rate * dist_center * gg.x;
     color.y -= settings.learning_rate * dist_center * gg.y;
 
-    // var color = textureSample(matcap_texture, matcap_sampler, (view_grad.xy + 1.0) / 2.0);
-
-
     textureStore(output, location, color);
+
+    // warped pattern
+
+    // FIXME panic when uncommenting
+    // var color_ = textureSample(voronoi_texture, voronoi_sampler, );
+    // let color_ = vec4((pos + 1.0) / 2.0, 0.0, 1.0);
+
+    // textureStore(pattern, location, color_);
 }

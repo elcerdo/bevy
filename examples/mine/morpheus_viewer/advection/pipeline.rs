@@ -3,7 +3,7 @@ use crate::advection::image::AdvectionSettings;
 use bevy::prelude::*;
 
 use bevy::render::render_resource::{
-    binding_types::{texture_storage_2d, uniform_buffer},
+    binding_types::{sampler, texture_2d, texture_storage_2d, uniform_buffer},
     BindGroupLayout, CachedComputePipelineId,
 };
 use bevy::render::renderer::RenderDevice;
@@ -36,7 +36,8 @@ impl FromWorld for AdvectionPipeline {
                 (
                     texture_storage_2d(TEXTURE_FORMAT, StorageTextureAccess::ReadOnly),
                     texture_storage_2d(TEXTURE_FORMAT, StorageTextureAccess::WriteOnly),
-                    // texture_storage_2d(TEXTURE_FORMAT, StorageTextureAccess::ReadOnly),
+                    texture_2d(TextureSampleType::Float { filterable: true }),
+                    sampler(SamplerBindingType::Filtering),
                     texture_storage_2d(TEXTURE_FORMAT, StorageTextureAccess::WriteOnly),
                     uniform_buffer::<AdvectionSettings>(false),
                 ),
