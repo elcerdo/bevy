@@ -59,7 +59,6 @@ fn setup(
     mut commands: Commands,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut meshes: ResMut<Assets<Mesh>>,
-    // assets: Res<AssetServer>,
 ) {
     commands.spawn((
         Mesh3d(meshes.add(Sphere { radius: 0.05 })),

@@ -1,5 +1,6 @@
 use crate::advection::bind::AdvectionBindGroups;
 use crate::advection::pipeline::AdvectionPipeline;
+use crate::advection::AdvectionTriggers;
 
 use bevy::prelude::*;
 use bevy::render::render_graph::Node;
@@ -28,8 +29,9 @@ impl Node for MainNode {
 
         let pipeline = world.resource::<AdvectionPipeline>();
         let pipeline_cache = world.resource::<PipelineCache>();
+        let triggers = world.resource::<AdvectionTriggers>();
 
-        let should_reinit = pipeline.triggers.should_reinit;
+        let should_reinit = triggers.should_reinit;
 
         // advance to next state
         match self.state {

@@ -1,7 +1,6 @@
 use crate::advection::image::AdvectionSettings;
 
 use bevy::prelude::*;
-use bevy::render::extract_resource::ExtractResource;
 
 use bevy::render::render_resource::{
     binding_types::{texture_storage_2d, uniform_buffer},
@@ -16,14 +15,8 @@ use crate::advection::consts::TEXTURE_FORMAT;
 
 //////////////////////////////////////////////////////////////////////
 
-#[derive(Resource, Clone, Default, ExtractResource)]
-pub struct AdvectionTriggers {
-    pub should_reinit: bool,
-}
-
 #[derive(Resource)]
 pub struct AdvectionPipeline {
-    pub triggers: AdvectionTriggers,
     pub group_layout: BindGroupLayout,
     pub init_id: CachedComputePipelineId,
     pub update_id: CachedComputePipelineId,
@@ -71,17 +64,9 @@ impl FromWorld for AdvectionPipeline {
         });
 
         AdvectionPipeline {
-            triggers: AdvectionTriggers::default(),
             group_layout,
             init_id,
             update_id,
         }
     }
-}
-
-// should be used in render app after extraction
-// make sure trigger are extracted properly
-
-pub fn copy_triggers(triggers: Res<AdvectionTriggers>, mut pipeline: ResMut<AdvectionPipeline>) {
-    pipeline.triggers = triggers.clone();
 }

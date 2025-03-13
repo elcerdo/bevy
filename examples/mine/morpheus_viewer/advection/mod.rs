@@ -5,11 +5,11 @@ mod node;
 mod pipeline;
 
 pub use image::AdvectionSettings;
-pub use pipeline::AdvectionTriggers;
 
 use bevy::prelude::*;
 use bevy::render::extract_component::ExtractComponentPlugin;
 use bevy::render::extract_component::UniformComponentPlugin;
+use bevy::render::extract_resource::ExtractResource;
 use bevy::render::extract_resource::ExtractResourcePlugin;
 use bevy::render::graph::CameraDriverLabel;
 use bevy::render::render_graph::{RenderGraph, RenderLabel};
@@ -39,8 +39,7 @@ impl Plugin for AdvectionPlugin {
         let render_app = app.sub_app_mut(RenderApp);
         render_app.add_systems(
             Render,
-            (pipeline::copy_triggers, bind::prepare_bind_groups)
-                .in_set(RenderSet::PrepareBindGroups),
+            bind::prepare_bind_groups.in_set(RenderSet::PrepareBindGroups),
         );
         let mut render_graph = render_app.world_mut().resource_mut::<RenderGraph>();
         render_graph.add_node(AdvectionMainNode, node::MainNode::default());
@@ -54,4 +53,11 @@ impl Plugin for AdvectionPlugin {
         let render_app = app.sub_app_mut(RenderApp);
         render_app.init_resource::<pipeline::AdvectionPipeline>();
     }
+}
+
+//////////////////////////////////////////////////////////////////////
+
+#[derive(Resource, Clone, Default, ExtractResource)]
+pub struct AdvectionTriggers {
+    pub should_reinit: bool,
 }
