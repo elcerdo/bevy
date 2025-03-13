@@ -36,7 +36,8 @@ impl FromWorld for AdvectionPipeline {
                 (
                     texture_storage_2d(TEXTURE_FORMAT, StorageTextureAccess::ReadOnly),
                     texture_storage_2d(TEXTURE_FORMAT, StorageTextureAccess::WriteOnly),
-                    texture_storage_2d(TEXTURE_FORMAT, StorageTextureAccess::ReadOnly),
+                    // texture_storage_2d(TEXTURE_FORMAT, StorageTextureAccess::ReadOnly),
+                    texture_storage_2d(TEXTURE_FORMAT, StorageTextureAccess::WriteOnly),
                     uniform_buffer::<AdvectionSettings>(false),
                 ),
             ),

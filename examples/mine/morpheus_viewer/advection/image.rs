@@ -29,6 +29,7 @@ impl Default for AdvectionSettings {
 pub struct AdvectionImages {
     pub image_a: Handle<Image>,
     pub image_b: Handle<Image>,
+    pub image_voronoi: Handle<Image>,
     pub image_pattern: Handle<Image>,
 }
 
@@ -60,6 +61,7 @@ pub fn populate_planes_and_images(
 
     let image_a = images.add(image.clone());
     let image_b = images.add(image.clone());
+    let image_voronoi = asset_server.load::<Image>("textures/voronoi.png");
     let image_pattern = images.add(image);
 
     // magic planes
@@ -71,7 +73,7 @@ pub fn populate_planes_and_images(
             base_color_texture: Some(image_a.clone()),
             ..default()
         })),
-        Transform::from_xyz(-1.0, -0.0, -1.0),
+        Transform::from_xyz(-3.0, 0.0, -1.0),
         AdvectionSettings::default(),
     ));
     commands.spawn((
@@ -82,7 +84,7 @@ pub fn populate_planes_and_images(
             base_color_texture: Some(image_b.clone()),
             ..default()
         })),
-        Transform::from_xyz(1.0, -0.0, -1.0),
+        Transform::from_xyz(-1.0, 0.0, -1.0),
         AdvectionSettings::default(),
     ));
     commands.spawn((
@@ -93,7 +95,18 @@ pub fn populate_planes_and_images(
             base_color_texture: Some(image_pattern.clone()),
             ..default()
         })),
-        Transform::from_xyz(3.0, -0.0, -1.0),
+        Transform::from_xyz(1.0, 0.0, -1.0),
+        AdvectionSettings::default(),
+    ));
+    commands.spawn((
+        Mesh3d(meshes.add(Plane3d::new(Vec3::Y, Vec2::ONE))),
+        MeshMaterial3d(materials.add(StandardMaterial {
+            perceptual_roughness: 1.0,
+            metallic: 0.0,
+            base_color_texture: Some(image_voronoi.clone()),
+            ..default()
+        })),
+        Transform::from_xyz(3.0, 0.0, -1.0),
         AdvectionSettings::default(),
     ));
 
@@ -101,6 +114,7 @@ pub fn populate_planes_and_images(
     commands.insert_resource(AdvectionImages {
         image_a,
         image_b,
+        image_voronoi,
         image_pattern,
     });
 }
