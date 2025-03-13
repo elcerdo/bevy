@@ -8,7 +8,7 @@ use bevy::prelude::MeshMaterial3d;
 use bevy::prelude::{Component, Handle, Query, Res, ResMut, Time, With};
 
 const COLOR_START_LINE: Srgba = bevy::color::palettes::basic::WHITE;
-const SHADER_ASSET_PATH: &str = "shaders/offroad/racing_line_material.wgsl";
+const SHADER_PATH: &str = "shaders/offroad/racing_line.wgsl";
 
 // This struct defines the data that will be passed to your shader
 #[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
@@ -38,7 +38,7 @@ pub struct RacingLineMaterial {
 /// You only need to implement functions for features that need non-default behavior. See the Material api docs for details!
 impl bevy::prelude::Material for RacingLineMaterial {
     fn fragment_shader() -> ShaderRef {
-        SHADER_ASSET_PATH.into()
+        SHADER_PATH.into()
     }
 
     fn alpha_mode(&self) -> bevy::prelude::AlphaMode {

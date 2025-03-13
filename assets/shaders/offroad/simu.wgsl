@@ -1,9 +1,4 @@
-// The shader reads the previous frame's state from the `input` texture, and writes the new state of
-// each pixel to the `output` texture. The textures are flipped each step to progress the
-// simulation.
-// Two textures are needed for the game of life as each pixel of step N depends on the state of its
-// neighbors at step N-1.
-
+// Game of life compute
 
 struct Settings {
     rng_seed: u32,
@@ -33,21 +28,6 @@ fn random_float_bb(value: u32) -> f32 {
     return f32(hash(hash(value))) / 4294967295.0;
 }
 
-@compute @workgroup_size(8, 8, 1)
-fn init(@builtin(global_invocation_id) invocation_id: vec3<u32>, @builtin(num_workgroups) num_workgroups: vec3<u32>) {
-    let location = vec2<i32>(i32(invocation_id.x), i32(invocation_id.y));
-
-    let aa = random_float_aa(invocation_id.y << 16u | invocation_id.x);
-    let bb = random_float_bb(invocation_id.y << 16u | invocation_id.x);
-    let aa_alive = aa > 0.9;
-    let bb_alive = bb > 0.9;
-    let cc_alive = aa > 0.899;
-
-    let color = vec4<f32>(f32(aa_alive), f32(bb_alive), f32(cc_alive), 1.0);
-
-    textureStore(output, location, color);
-}
-
 fn is_alive(location: vec2<i32>, offset_x: i32, offset_y: i32, index: u32) -> u32 {
     let value: vec4<f32> = textureLoad(input, location + vec2<i32>(offset_x, offset_y));
     return u32(value[index]);
@@ -63,6 +43,21 @@ fn count_alive_neighbors(location: vec2<i32>, index: u32) -> u32 {
         is_alive(location,  1, -1, index) +
         is_alive(location,  1,  0, index) +
         is_alive(location,  1,  1, index);
+}
+
+@compute @workgroup_size(8, 8, 1)
+fn init(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
+    let location = vec2<i32>(i32(invocation_id.x), i32(invocation_id.y));
+
+    let aa = random_float_aa(invocation_id.y << 16u | invocation_id.x);
+    let bb = random_float_bb(invocation_id.y << 16u | invocation_id.x);
+    let aa_alive = aa > 0.9;
+    let bb_alive = bb > 0.9;
+    let cc_alive = aa > 0.899;
+
+    let color = vec4<f32>(f32(aa_alive), f32(bb_alive), f32(cc_alive), 1.0);
+
+    textureStore(output, location, color);
 }
 
 @compute @workgroup_size(8, 8, 1)
