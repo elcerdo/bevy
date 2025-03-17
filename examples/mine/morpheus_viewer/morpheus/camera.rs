@@ -14,10 +14,10 @@ impl CameraPivot {
     }
 }
 
-pub fn populate_camera_and_lights(mut commands: Commands) {
+pub fn populate_camera_and_lights(mut commands: Commands, asset_server: Res<AssetServer>) {
     info!("** populate_camera_and_lights **");
 
-    // // lights
+    // lights
     // commands.spawn((
     //     PointLight {
     //         shadows_enabled: true,
@@ -28,15 +28,15 @@ pub fn populate_camera_and_lights(mut commands: Commands) {
     //     },
     //     Transform::from_xyz(-4.0, 16.0, 8.0),
     // ));
-    commands.spawn((
-        DirectionalLight {
-            color: Color::WHITE,
-            shadows_enabled: true,
-            illuminance: light_consts::lux::OVERCAST_DAY,
-            ..default()
-        },
-        Transform::from_translation(Vec3::Y).looking_at(Vec3::ZERO, Vec3::Y),
-    ));
+    // commands.spawn((
+    //     DirectionalLight {
+    //         color: Color::WHITE,
+    //         shadows_enabled: true,
+    //         illuminance: light_consts::lux::OVERCAST_DAY,
+    //         ..default()
+    //     },
+    //     Transform::from_translation(Vec3::Y).looking_at(Vec3::X + Vec3::Z, Vec3::Y),
+    // ));
 
     // camera
     commands
@@ -48,6 +48,12 @@ pub fn populate_camera_and_lights(mut commands: Commands) {
         .with_child((
             Transform::from_xyz(0.0, 3.0, -7.5).looking_at(Vec3::new(0., 0., 0.), Vec3::Y),
             Camera3d::default(),
+            EnvironmentMapLight {
+                diffuse_map: asset_server.load("environment_maps/pisa_diffuse_rgb9e5_zstd.ktx2"),
+                specular_map: asset_server.load("environment_maps/pisa_specular_rgb9e5_zstd.ktx2"),
+                intensity: 5e2,
+                ..default()
+            },
         ));
 }
 

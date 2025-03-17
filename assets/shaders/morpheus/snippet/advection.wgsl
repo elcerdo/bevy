@@ -1,8 +1,8 @@
 // Morpheus advection snippet
 
-#import "shaders/morpheus/sdf/union.wgsl"::signed_distance_function
+// #import "shaders/morpheus/sdf/union.wgsl"::signed_distance_function
 // #import "shaders/morpheus/sdf/sphere.wgsl"::signed_distance_function
-// #import "shaders/morpheus/sdf/alien.wgsl"::signed_distance_function
+#import "shaders/morpheus/sdf/alien.wgsl"::signed_distance_function
 // #import "shaders/morpheus/sdf/can.wgsl"::signed_distance_function
 
 const DIFF_EPSILON: f32 = 1e-5;
@@ -74,7 +74,8 @@ fn update(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
     let pos_ = (pos.xy + 1.0) / 2.0;
     // FIXME panic when uncommenting
     // var color_ = textureSample(voronoi_texture, voronoi_sampler, pos_);
-    let color_ = vec4(pos_, 0.0, 1.0);
+    let has_converged = abs(dist_center) < 1e-1;
+    let color_ = vec4(pos_, f32(has_converged), 1.0);
 
     textureStore(output, location, color);
     textureStore(pattern, location, color_);

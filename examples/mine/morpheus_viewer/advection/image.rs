@@ -1,3 +1,5 @@
+use crate::advection::warped_material::WarpedMaterial;
+
 use bevy::math::Vec3;
 use bevy::prelude::*;
 use bevy::render::extract_component::ExtractComponent;
@@ -36,7 +38,8 @@ pub fn populate_planes_and_images(
     mut commands: Commands,
     mut images: ResMut<Assets<Image>>,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut standard_materials: ResMut<Assets<StandardMaterial>>,
+    mut warped_materials: ResMut<Assets<WarpedMaterial>>,
     asset_server: Res<AssetServer>,
 ) {
     use bevy::render::render_resource::*;
@@ -65,7 +68,7 @@ pub fn populate_planes_and_images(
     // magic planes
     commands.spawn((
         Mesh3d(meshes.add(Plane3d::new(Vec3::Y, Vec2::ONE))),
-        MeshMaterial3d(materials.add(StandardMaterial {
+        MeshMaterial3d(standard_materials.add(StandardMaterial {
             perceptual_roughness: 1.0,
             metallic: 0.0,
             base_color_texture: Some(image_a.clone()),
@@ -76,7 +79,7 @@ pub fn populate_planes_and_images(
     ));
     commands.spawn((
         Mesh3d(meshes.add(Plane3d::new(Vec3::Y, Vec2::ONE))),
-        MeshMaterial3d(materials.add(StandardMaterial {
+        MeshMaterial3d(standard_materials.add(StandardMaterial {
             perceptual_roughness: 1.0,
             metallic: 0.0,
             base_color_texture: Some(image_b.clone()),
@@ -87,7 +90,7 @@ pub fn populate_planes_and_images(
     ));
     commands.spawn((
         Mesh3d(meshes.add(Plane3d::new(Vec3::Y, Vec2::ONE))),
-        MeshMaterial3d(materials.add(StandardMaterial {
+        MeshMaterial3d(standard_materials.add(StandardMaterial {
             perceptual_roughness: 1.0,
             metallic: 0.0,
             base_color_texture: Some(image_pattern.clone()),
@@ -100,14 +103,22 @@ pub fn populate_planes_and_images(
     let image_voronoi = asset_server.load::<Image>("textures/voronoi.png");
     commands.spawn((
         Mesh3d(meshes.add(Plane3d::new(Vec3::Y, Vec2::ONE))),
-        MeshMaterial3d(materials.add(StandardMaterial {
-            perceptual_roughness: 1.0,
-            metallic: 0.0,
-            base_color_texture: Some(image_voronoi.clone()),
-            ..default()
-        })),
+        MeshMaterial3d(warped_materials.add(WarpedMaterial::new(
+            image_voronoi.clone(),
+            image_pattern.clone(),
+        ))),
         Transform::from_xyz(3.0, 0.0, -1.0),
     ));
+    // commands.spawn((
+    //     Mesh3d(meshes.add(Plane3d::new(Vec3::Y, Vec2::ONE))),
+    //     MeshMaterial3d(standard_materials.add(StandardMaterial {
+    //         perceptual_roughness: 1.0,
+    //         metallic: 0.0,
+    //         base_color_texture: Some(image_voronoi.clone()),
+    //         ..default()
+    //     })),
+    //     Transform::from_xyz(3.0, 0.0, -3.0),
+    // ));
 
     // insert images
     commands.insert_resource(AdvectionImages {
