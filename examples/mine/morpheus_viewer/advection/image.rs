@@ -75,7 +75,6 @@ pub fn populate_planes_and_images(
             ..default()
         })),
         Transform::from_xyz(-3.0, 0.0, -1.0),
-        AdvectionSettings::default(),
     ));
     commands.spawn((
         Mesh3d(meshes.add(Plane3d::new(Vec3::Y, Vec2::ONE))),
@@ -86,7 +85,6 @@ pub fn populate_planes_and_images(
             ..default()
         })),
         Transform::from_xyz(-1.0, 0.0, -1.0),
-        AdvectionSettings::default(),
     ));
     commands.spawn((
         Mesh3d(meshes.add(Plane3d::new(Vec3::Y, Vec2::ONE))),
@@ -97,7 +95,6 @@ pub fn populate_planes_and_images(
             ..default()
         })),
         Transform::from_xyz(1.0, 0.0, -1.0),
-        AdvectionSettings::default(),
     ));
 
     let image_voronoi = asset_server.load::<Image>("textures/voronoi.png");

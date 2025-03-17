@@ -14,6 +14,6 @@ fn fragment(
 ) -> @location(0) vec4<f32> {
     var color = vec4(0.0);
     let uv_ = textureSample(warp_texture, warp_sampler, in.uv).xy;
-    color = textureSample(pattern_texture, pattern_sampler, uv_);
+    color = textureSample(pattern_texture, pattern_sampler, mix(in.uv, uv_, warp_amount));
     return color;
 }

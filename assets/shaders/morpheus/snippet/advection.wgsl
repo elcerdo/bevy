@@ -74,7 +74,7 @@ fn update(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
     let pos_ = (pos.xy + 1.0) / 2.0;
     // FIXME panic when uncommenting
     // var color_ = textureSample(voronoi_texture, voronoi_sampler, pos_);
-    let has_converged = abs(dist_center) < 1e-1;
+    let has_converged = abs(dist_center) < 1e-2;
     let color_ = vec4(pos_, f32(has_converged), 1.0);
 
     textureStore(output, location, color);

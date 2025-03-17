@@ -16,10 +16,6 @@ pub struct WarpedMaterial {
 }
 
 impl Material for WarpedMaterial {
-    // fn vertex_shader() -> ShaderRef {
-    //     SHADER_PATH.into()
-    // }
-
     fn fragment_shader() -> ShaderRef {
         SHADER_PATH.into()
     }

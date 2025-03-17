@@ -2,6 +2,7 @@
 
 mod advection;
 mod morpheus;
+mod ui;
 
 use bevy::prelude::*;
 
@@ -46,11 +47,14 @@ fn main() {
 
     app.add_plugins(morpheus::MorpheusPlugin);
     app.add_plugins(advection::AdvectionPlugin);
+    app.add_plugins(ui::UiPlugin);
 
     app.add_systems(Startup, setup);
-    app.add_systems(Update, quit_with_escape);
-    app.add_systems(Update, reinit_advection);
-    app.add_systems(Update, toggle_advection_learning_rate);
+    app.add_systems(Update, keyboard_quit_with_escape);
+    app.add_systems(Update, keyboard_reinit_advection);
+    app.add_systems(Update, keyboard_toggle_advection_learning_rate);
+    app.add_systems(Update, ui_update_buttons);
+    app.add_systems(Update, ui_update_sliders);
 
     app.run();
 }
@@ -70,13 +74,57 @@ fn setup(
     ));
 }
 
-fn quit_with_escape(mut writer: EventWriter<AppExit>, keyboard: Res<ButtonInput<KeyCode>>) {
+fn ui_update_buttons(
+    query: Query<&ui::ButtonData, Changed<ui::ButtonData>>,
+    mut triggers: ResMut<advection::AdvectionTriggers>,
+) {
+    for data in query {
+        match data.index {
+            0 => {
+                triggers.should_reinit = true;
+            }
+            _ => {
+                warn!("clicked {} {}", data.index, data.count);
+            }
+        }
+    }
+}
+
+fn ui_update_sliders(
+    query: Query<&ui::SliderData, Changed<ui::SliderData>>,
+    mut all_settings: Query<&mut advection::AdvectionSettings>,
+    mut triggers: ResMut<advection::AdvectionTriggers>,
+) {
+    for data in query {
+        match data.index {
+            0 => {
+                assert!(data.ratio >= 0.0);
+                assert!(data.ratio <= 1.0);
+                let learning_rate = 3.0 * (data.ratio - 1.0);
+                let learning_rate = ops::powf(10.0, learning_rate);
+                for mut settings in all_settings.iter_mut() {
+                    settings.learning_rate = learning_rate;
+                    warn!("learning_rate {:04.2}", settings.learning_rate);
+                }
+                triggers.should_reinit = true;
+            }
+            _ => {
+                warn!("slided {} {}", data.index, data.ratio);
+            }
+        }
+    }
+}
+
+fn keyboard_quit_with_escape(
+    mut writer: EventWriter<AppExit>,
+    keyboard: Res<ButtonInput<KeyCode>>,
+) {
     if keyboard.just_pressed(KeyCode::Escape) {
         writer.write(AppExit::Success);
     }
 }
 
-fn reinit_advection(
+fn keyboard_reinit_advection(
     mut triggers: ResMut<advection::AdvectionTriggers>,
     keyboard: Res<ButtonInput<KeyCode>>,
 ) {
@@ -87,18 +135,18 @@ fn reinit_advection(
     }
 }
 
-fn toggle_advection_learning_rate(
+fn keyboard_toggle_advection_learning_rate(
     mut all_settings: Query<&mut advection::AdvectionSettings>,
     keyboard: Res<ButtonInput<KeyCode>>,
 ) {
     if keyboard.just_pressed(KeyCode::Tab) {
         for mut settings in all_settings.iter_mut() {
             settings.learning_rate = if settings.learning_rate > 1e-1 {
-                2e-2
+                1e-2
             } else {
                 advection::AdvectionSettings::default().learning_rate
             };
-            debug!("learning_rate {:04.2}", settings.learning_rate);
+            warn!("learning_rate {:04.2}", settings.learning_rate);
         }
     }
 }
