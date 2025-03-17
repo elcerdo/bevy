@@ -6,6 +6,7 @@ mod pipeline;
 mod warped_material;
 
 pub use image::AdvectionSettings;
+pub use warped_material::WarpedMaterial;
 
 use bevy::prelude::*;
 use bevy::render::extract_component::ExtractComponentPlugin;
@@ -32,7 +33,7 @@ impl Plugin for AdvectionPlugin {
         ));
 
         // main app
-        app.add_plugins(MaterialPlugin::<warped_material::WarpedMaterial>::default());
+        app.add_plugins(MaterialPlugin::<WarpedMaterial>::default());
         app.add_plugins(ExtractResourcePlugin::<image::AdvectionImages>::default());
         app.add_plugins(ExtractResourcePlugin::<AdvectionTriggers>::default());
         app.add_systems(Startup, image::populate_planes_and_images);

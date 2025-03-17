@@ -1,8 +1,8 @@
 // Morpheus advection snippet
 
-// #import "shaders/morpheus/sdf/union.wgsl"::signed_distance_function
+#import "shaders/morpheus/sdf/union.wgsl"::signed_distance_function
 // #import "shaders/morpheus/sdf/sphere.wgsl"::signed_distance_function
-#import "shaders/morpheus/sdf/alien.wgsl"::signed_distance_function
+// #import "shaders/morpheus/sdf/alien.wgsl"::signed_distance_function
 // #import "shaders/morpheus/sdf/can.wgsl"::signed_distance_function
 
 const DIFF_EPSILON: f32 = 1e-5;
@@ -26,16 +26,17 @@ fn init(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
     let hx: f32 = f32(settings.texture_size.x) / 2.0;
     let hy: f32 = f32(settings.texture_size.y) / 2.0;
     let pos = vec3((f32(invocation_id.x) - hx) / hx, (f32(invocation_id.y) - hy) / hy, 0.0);
-    let is_inside: bool = signed_distance_function(pos) < 0.0;
 
+    let dist_center = signed_distance_function(pos);
+
+    let is_inside: bool = dist_center < 0.0;
     let color = vec4(pos.xy, f32(is_inside), 1.0);
 
     // warped pattern
 
     let pos_ = (pos.xy + 1.0) / 2.0;
-    // FIXME panic when uncommenting
-    // var color_ = textureSample(voronoi_texture, voronoi_sampler, pos_);
-    let color_ = vec4(pos_, 0.0, 1.0);
+    let has_converged: bool = abs(dist_center) < 1e-2;
+    let color_ = vec4(pos_, f32(has_converged), 1.0);
 
     textureStore(output, location, color);
     textureStore(pattern, location, color_);
@@ -72,9 +73,7 @@ fn update(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
     // warped pattern
 
     let pos_ = (pos.xy + 1.0) / 2.0;
-    // FIXME panic when uncommenting
-    // var color_ = textureSample(voronoi_texture, voronoi_sampler, pos_);
-    let has_converged = abs(dist_center) < 1e-2;
+    let has_converged: bool = abs(dist_center) < 1e-2;
     let color_ = vec4(pos_, f32(has_converged), 1.0);
 
     textureStore(output, location, color);

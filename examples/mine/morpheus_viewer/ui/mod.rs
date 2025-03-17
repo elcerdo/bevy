@@ -8,6 +8,11 @@ use bevy::ui::RelativeCursorPosition;
 static UI_WIDGETS: &[WidgetType] = &[
     WidgetType::Button(ButtonData::new("Reinit", 0)),
     WidgetType::Slider(SliderData::new("LR", 0)),
+    WidgetType::Slider(SliderData {
+        label: "Alpha",
+        index: 1,
+        ratio: 1.0,
+    }),
 ];
 
 pub struct UiPlugin;

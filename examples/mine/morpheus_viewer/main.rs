@@ -92,7 +92,9 @@ fn ui_update_buttons(
 
 fn ui_update_sliders(
     query: Query<&ui::SliderData, Changed<ui::SliderData>>,
-    mut all_settings: Query<&mut advection::AdvectionSettings>,
+    mut query_: Query<&mut advection::AdvectionSettings>,
+    query__: Query<&MeshMaterial3d<advection::WarpedMaterial>>,
+    mut materials: ResMut<Assets<advection::WarpedMaterial>>,
     mut triggers: ResMut<advection::AdvectionTriggers>,
 ) {
     for data in query {
@@ -102,11 +104,20 @@ fn ui_update_sliders(
                 assert!(data.ratio <= 1.0);
                 let learning_rate = 3.0 * (data.ratio - 1.0);
                 let learning_rate = ops::powf(10.0, learning_rate);
-                for mut settings in all_settings.iter_mut() {
+                for mut settings in query_.iter_mut() {
                     settings.learning_rate = learning_rate;
                     warn!("learning_rate {:04.2}", settings.learning_rate);
                 }
                 triggers.should_reinit = true;
+            }
+            1 => {
+                assert!(data.ratio >= 0.0);
+                assert!(data.ratio <= 1.0);
+                for material_handle in query__.iter() {
+                    let material = materials.get_mut(material_handle).unwrap();
+                    material.warp_amount = data.ratio;
+                    warn!("warp {:04.2}", material.warp_amount);
+                }
             }
             _ => {
                 warn!("slided {} {}", data.index, data.ratio);
