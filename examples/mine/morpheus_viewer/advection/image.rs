@@ -112,7 +112,7 @@ pub fn populate_planes_and_images(
     ));
 
     commands.spawn((
-        Mesh3d(meshes.add(make_cubes_mesh(64, 0.02))),
+        Mesh3d(meshes.add(make_cubes_mesh(256, 0.01))),
         MeshMaterial3d(displaced_materials.add(DisplacedMaterial::new(image_pattern.clone()))),
         Transform::from_xyz(-4.0, 1e-2, -2.0),
     ));

@@ -2,13 +2,10 @@ use bevy::prelude::*;
 use bevy::render::render_resource::{AsBindGroup, ShaderRef};
 
 pub const SHADER_PATH: &str = "shaders/morpheus/material/displaced.wgsl";
-// pub const TEXTURE_FORMAT: TextureFormat = TextureFormat::Rgba32Float;
 
 #[derive(Asset, TypePath, AsBindGroup, Clone)]
 pub struct DisplacedMaterial {
-    // #[storage_texture(0, visibility(all), image_format = Rgba32Float, access = ReadOnly)]
     #[texture(0)]
-    #[sampler(1)]
     pub pattern_texture: Handle<Image>,
 }
 

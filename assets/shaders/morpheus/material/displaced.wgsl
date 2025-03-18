@@ -28,7 +28,7 @@ fn vertex(in: Vertex) -> VertexOutput {
     let ii: u32 = in.vertex_index / 4;
     // let loc = vec2(f32(ii / 8), f32(ii % 8)) / 7.0;
     // var color_ = textureLoad(pattern_texture, pattern_sampler, loc);
-    let loc = vec2(u32(ii / 8) * 128 + 64, u32(ii % 8) * 128 + 64);
+    let loc = vec2(u32(ii / 16) * 64 + 32, u32(ii % 16) * 64 + 32);
     var color_: vec4<f32> = textureLoad(pattern_texture, loc, 0);
     
     var pos = in.position;

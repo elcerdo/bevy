@@ -1,8 +1,8 @@
 // Morpheus advection snippet
 
-#import "shaders/morpheus/sdf/union.wgsl"::signed_distance_function
+// #import "shaders/morpheus/sdf/union.wgsl"::signed_distance_function
 // #import "shaders/morpheus/sdf/sphere.wgsl"::signed_distance_function
-// #import "shaders/morpheus/sdf/alien.wgsl"::signed_distance_function
+#import "shaders/morpheus/sdf/alien.wgsl"::signed_distance_function
 // #import "shaders/morpheus/sdf/can.wgsl"::signed_distance_function
 // #import "shaders/morpheus/sdf/icescream.wgsl"::signed_distance_function
 
