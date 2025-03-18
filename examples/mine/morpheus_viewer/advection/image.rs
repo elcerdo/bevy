@@ -10,6 +10,8 @@ use bevy::render::render_resource::ShaderType;
 use crate::advection::consts::TEXTURE_FORMAT;
 use crate::advection::consts::TEXTURE_SIZE;
 
+use super::displaced_material::DisplacedMaterial;
+
 //////////////////////////////////////////////////////////////////////
 
 #[derive(Component, ShaderType, ExtractComponent, Clone)]
@@ -40,6 +42,7 @@ pub fn populate_planes_and_images(
     mut meshes: ResMut<Assets<Mesh>>,
     mut standard_materials: ResMut<Assets<StandardMaterial>>,
     mut warped_materials: ResMut<Assets<WarpedMaterial>>,
+    mut displaced_materials: ResMut<Assets<DisplacedMaterial>>,
     asset_server: Res<AssetServer>,
 ) {
     use bevy::render::render_resource::*;
@@ -108,10 +111,55 @@ pub fn populate_planes_and_images(
         Transform::from_xyz(3.0, 0.0, -1.0),
     ));
 
+    commands.spawn((
+        Mesh3d(meshes.add(make_cubes_mesh(64, 0.02))),
+        MeshMaterial3d(displaced_materials.add(DisplacedMaterial::new(image_pattern.clone()))),
+        Transform::from_xyz(-4.0, 1e-2, -2.0),
+    ));
+
     // insert images
     commands.insert_resource(AdvectionImages {
         image_a,
         image_b,
         image_pattern,
     });
+}
+
+fn make_cubes_mesh(num_points: u32, half_width: f32) -> Mesh {
+    use bevy::render::mesh::Indices;
+    use bevy::render::mesh::Mesh;
+    use bevy::render::render_asset::RenderAssetUsages;
+    use bevy::render::render_resource::PrimitiveTopology;
+
+    // Keep the mesh data accessible in future frames to be able to mutate it in toggle_texture.
+
+    let mut vertices: Vec<Vec3> = vec![];
+    let mut normals: Vec<Vec3> = vec![];
+    let mut indices: Vec<u32> = vec![];
+    for _ in 0..num_points {
+        let ii = vertices.len() as u32;
+        vertices.push(Vec3::new(-half_width, 0.0, -half_width));
+        vertices.push(Vec3::new(half_width, 0.0, -half_width));
+        vertices.push(Vec3::new(half_width, 0.0, half_width));
+        vertices.push(Vec3::new(-half_width, 0.0, half_width));
+        normals.push(Vec3::Y);
+        normals.push(Vec3::Y);
+        normals.push(Vec3::Y);
+        normals.push(Vec3::Y);
+        indices.extend([ii, ii + 2, ii + 1]);
+        indices.extend([ii, ii + 3, ii + 2]);
+    }
+
+    let mesh = Mesh::new(
+        PrimitiveTopology::TriangleList,
+        RenderAssetUsages::MAIN_WORLD | RenderAssetUsages::RENDER_WORLD,
+    )
+    .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, vertices)
+    .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, normals)
+    .with_inserted_indices(Indices::U32(indices));
+
+    // let mesh: Mesh = Sphere { radius: 0.05 }.into();
+    // let mesh: Mesh = Sphere;
+    // warn!("lsdfmksf {:?}", mesh);
+    mesh
 }

@@ -1,10 +1,12 @@
 mod bind;
 mod consts;
+mod displaced_material;
 mod image;
 mod node;
 mod pipeline;
 mod warped_material;
 
+use displaced_material::DisplacedMaterial;
 pub use image::AdvectionSettings;
 pub use warped_material::WarpedMaterial;
 
@@ -34,6 +36,7 @@ impl Plugin for AdvectionPlugin {
 
         // main app
         app.add_plugins(MaterialPlugin::<WarpedMaterial>::default());
+        app.add_plugins(MaterialPlugin::<DisplacedMaterial>::default());
         app.add_plugins(ExtractResourcePlugin::<image::AdvectionImages>::default());
         app.add_plugins(ExtractResourcePlugin::<AdvectionTriggers>::default());
         app.add_systems(Startup, image::populate_planes_and_images);

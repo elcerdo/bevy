@@ -66,7 +66,7 @@ pub fn animate_camera(
     let Ok((mut transform, pivot)) = query.single_mut() else {
         return;
     };
-    if mouse_input.pressed(MouseButton::Left) {
+    if mouse_input.pressed(MouseButton::Right) {
         let delta = mouse_motion.delta;
         transform.rotation *=
             Quat::from_axis_angle(Vec3::X, PI / 2.0 * delta.y / pivot.sensitivity);

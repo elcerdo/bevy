@@ -103,7 +103,7 @@ fn update_internal_state(
             let snippet = &snippet.content;
             shaders.insert(
                 Slot0::RAY_HANDLE.id(),
-                make_shader_from_snippet(&server_asset, snippet, "sphere"),
+                make_shader_from_snippet(&server_asset, snippet, "icescream"),
             );
             shaders.insert(
                 Slot1::RAY_HANDLE.id(),

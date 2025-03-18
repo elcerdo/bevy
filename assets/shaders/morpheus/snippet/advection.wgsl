@@ -4,6 +4,7 @@
 // #import "shaders/morpheus/sdf/sphere.wgsl"::signed_distance_function
 // #import "shaders/morpheus/sdf/alien.wgsl"::signed_distance_function
 // #import "shaders/morpheus/sdf/can.wgsl"::signed_distance_function
+// #import "shaders/morpheus/sdf/icescream.wgsl"::signed_distance_function
 
 const DIFF_EPSILON: f32 = 1e-5;
 const DIFF_DIRECTION_UU: vec3<f32> = vec3(1.0, 0.0, 0.0);

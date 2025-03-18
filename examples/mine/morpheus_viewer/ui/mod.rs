@@ -107,7 +107,7 @@ fn click_ui_widget_buttons(
 fn drag_ui_widget_sliders(
     mut interaction_query: Query<
         (&Interaction, &RelativeCursorPosition, &mut SliderData),
-        (Changed<Interaction>, With<Button>),
+        With<Button>,
     >,
 ) {
     for (interaction, relative_cursor, mut data) in &mut interaction_query {
