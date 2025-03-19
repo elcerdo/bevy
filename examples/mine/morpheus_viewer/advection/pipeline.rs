@@ -3,15 +3,15 @@ use crate::advection::image::AdvectionSettings;
 use bevy::prelude::*;
 
 use bevy::render::render_resource::{
-    binding_types::{/* sampler, texture_2d, */ texture_storage_2d, uniform_buffer},
+    binding_types::{texture_storage_2d, uniform_buffer},
     BindGroupLayout, CachedComputePipelineId,
 };
 use bevy::render::renderer::RenderDevice;
 
 use std::borrow::Cow;
 
-use crate::advection::consts::SHADER_PATH;
 use crate::advection::consts::TEXTURE_FORMAT;
+use crate::slot::ADVECTION_HANDLE;
 
 //////////////////////////////////////////////////////////////////////
 
@@ -42,7 +42,7 @@ impl FromWorld for AdvectionPipeline {
             ),
         );
 
-        let shader: Handle<Shader> = world.load_asset(SHADER_PATH);
+        let shader: Handle<Shader> = ADVECTION_HANDLE;
 
         let init_id = pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
             label: Some(Cow::from("init_pipeline_id")),

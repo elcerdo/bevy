@@ -1,4 +1,4 @@
-use crate::morpheus::slot::Slot;
+use crate::slot::Slot;
 
 use bevy::prelude::*;
 use bevy::render::render_resource::{AsBindGroup, ShaderRef};

@@ -4,9 +4,9 @@ use bevy::render::render_resource::ShaderRef;
 use bevy::prelude::*;
 
 pub trait Slot: TypePath + Clone + Sync + Send {
-    const RAY_HANDLE: Handle<Shader>;
+    const RAYMARCHING_HANDLE: Handle<Shader>;
     fn raymarching_shader() -> ShaderRef {
-        Self::RAY_HANDLE.into()
+        Self::RAYMARCHING_HANDLE.into()
     }
 }
 
@@ -14,7 +14,7 @@ pub trait Slot: TypePath + Clone + Sync + Send {
 pub struct SlotN<const N: usize>;
 
 impl<const N: usize> Slot for SlotN<N> {
-    const RAY_HANDLE: Handle<Shader> = match N {
+    const RAYMARCHING_HANDLE: Handle<Shader> = match N {
         0 => weak_handle!("7987c9b7-1598-0000-0000-023a354b7cac"),
         1 => weak_handle!("7987c9b7-1598-0000-0001-023a354b7cac"),
         2 => weak_handle!("7987c9b7-1598-0000-0002-023a354b7cac"),
@@ -35,3 +35,5 @@ pub type Slot4 = SlotN<4>;
 pub type Slot5 = SlotN<5>;
 pub type Slot6 = SlotN<6>;
 pub type Slot7 = SlotN<7>;
+
+pub const ADVECTION_HANDLE: Handle<Shader> = weak_handle!("7987c9b7-abcd-0000-0000-023a354b7cac");

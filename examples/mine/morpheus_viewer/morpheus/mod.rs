@@ -1,11 +1,10 @@
+use crate::slot::{Slot, Slot0, Slot1, Slot2, Slot3, Slot4, Slot5, Slot6, Slot7, ADVECTION_HANDLE};
+use crate::snippet::{Snippet, SnippetAssetLoader};
+
 mod camera;
 mod raymarching_material;
-mod slot;
-mod snippet;
 
 use raymarching_material::MorpheusRaymarchingMaterial;
-use slot::{Slot, Slot0, Slot1, Slot2, Slot3, Slot4, Slot5, Slot6, Slot7};
-use snippet::{Snippet, SnippetAssetLoader};
 
 use bevy::prelude::*;
 
@@ -67,16 +66,17 @@ enum State {
 #[derive(Resource, Default)]
 struct SnippetHandles {
     raymarching_snippet: Handle<Snippet>,
+    advection_snippet: Handle<Snippet>,
     state: State,
 }
 
-fn make_shader_from_snippet(
+fn make_raymarching_shader_from_snippet(
     server_asset: &Res<AssetServer>,
     ray_snippet: &str,
     shape: &str,
 ) -> Shader {
     let sdf_path = format!("shaders/morpheus/sdf/{shape}.wgsl");
-    let sdf_handle: Handle<Shader> = server_asset.load::<Shader>(sdf_path.clone());
+    let sdf_handle: Handle<Shader> = server_asset.load(sdf_path.clone());
 
     let ray_path = format!("shaders/morpheus/raymarching/{shape}.wgsl");
     let mut ray_source: String = ray_snippet.to_owned();
@@ -85,6 +85,23 @@ fn make_shader_from_snippet(
     ray_shader.file_dependencies.push(sdf_handle);
 
     ray_shader
+}
+
+fn make_advection_shader_from_snippet(
+    server_asset: &Res<AssetServer>,
+    adv_snippet: &str,
+    shape: &str,
+) -> Shader {
+    let sdf_path = format!("shaders/morpheus/sdf/{shape}.wgsl");
+    let sdf_handle: Handle<Shader> = server_asset.load(sdf_path.clone());
+
+    let adv_path = format!("shaders/morpheus/advection/{shape}.wgsl");
+    let mut adv_source: String = adv_snippet.to_owned();
+    adv_source = adv_source.replace("SDF_PATH", &sdf_path);
+    let mut adv_shader = Shader::from_wgsl(adv_source, adv_path);
+    adv_shader.file_dependencies.push(sdf_handle);
+
+    adv_shader
 }
 
 fn update_internal_state(
@@ -97,51 +114,66 @@ fn update_internal_state(
         State::Init => {
             handles.raymarching_snippet =
                 server_asset.load::<Snippet>("shaders/morpheus/snippet/raymarching.snippet");
+            handles.advection_snippet =
+                server_asset.load::<Snippet>("shaders/morpheus/snippet/advection.snippet");
             State::LoadingSnippets
         }
         State::LoadingSnippets => {
-            let has_snippet = snippets.get(handles.raymarching_snippet.id()).is_some();
-            match has_snippet {
+            let mut has_snippets: bool = true;
+            has_snippets &= snippets.get(handles.raymarching_snippet.id()).is_some();
+            has_snippets &= snippets.get(handles.advection_snippet.id()).is_some();
+            match has_snippets {
                 true => State::PreparingShaders,
                 false => State::LoadingSnippets,
             }
         }
         State::PreparingShaders => {
-            info!("** prepare_shaders **");
-            let snippet = snippets.get(handles.raymarching_snippet.id()).unwrap();
-            let snippet = &snippet.content;
-            shaders.insert(
-                Slot0::RAY_HANDLE.id(),
-                make_shader_from_snippet(&server_asset, snippet, "icescream"),
-            );
-            shaders.insert(
-                Slot1::RAY_HANDLE.id(),
-                make_shader_from_snippet(&server_asset, snippet, "union"),
-            );
-            shaders.insert(
-                Slot2::RAY_HANDLE.id(),
-                make_shader_from_snippet(&server_asset, snippet, "alien"),
-            );
-            shaders.insert(
-                Slot3::RAY_HANDLE.id(),
-                make_shader_from_snippet(&server_asset, snippet, "can"),
-            );
-            shaders.insert(
-                Slot4::RAY_HANDLE.id(),
-                make_shader_from_snippet(&server_asset, snippet, "runman"),
-            );
-            shaders.insert(
-                Slot5::RAY_HANDLE.id(),
-                make_shader_from_snippet(&server_asset, snippet, "seascape"),
-            );
-            shaders.insert(
-                Slot6::RAY_HANDLE.id(),
-                make_shader_from_snippet(&server_asset, snippet, "cheese"),
-            );
-            shaders.insert(
-                Slot7::RAY_HANDLE.id(),
-                make_shader_from_snippet(&server_asset, snippet, "sphere"),
-            );
+            {
+                info!("** prepare_raymarching_shaders **");
+                let snippet = snippets.get(handles.raymarching_snippet.id()).unwrap();
+                let snippet = &snippet.content;
+                shaders.insert(
+                    Slot0::RAYMARCHING_HANDLE.id(),
+                    make_raymarching_shader_from_snippet(&server_asset, snippet, "icescream"),
+                );
+                shaders.insert(
+                    Slot1::RAYMARCHING_HANDLE.id(),
+                    make_raymarching_shader_from_snippet(&server_asset, snippet, "union"),
+                );
+                shaders.insert(
+                    Slot2::RAYMARCHING_HANDLE.id(),
+                    make_raymarching_shader_from_snippet(&server_asset, snippet, "alien"),
+                );
+                shaders.insert(
+                    Slot3::RAYMARCHING_HANDLE.id(),
+                    make_raymarching_shader_from_snippet(&server_asset, snippet, "can"),
+                );
+                shaders.insert(
+                    Slot4::RAYMARCHING_HANDLE.id(),
+                    make_raymarching_shader_from_snippet(&server_asset, snippet, "runman"),
+                );
+                shaders.insert(
+                    Slot5::RAYMARCHING_HANDLE.id(),
+                    make_raymarching_shader_from_snippet(&server_asset, snippet, "seascape"),
+                );
+                shaders.insert(
+                    Slot6::RAYMARCHING_HANDLE.id(),
+                    make_raymarching_shader_from_snippet(&server_asset, snippet, "cheese"),
+                );
+                shaders.insert(
+                    Slot7::RAYMARCHING_HANDLE.id(),
+                    make_raymarching_shader_from_snippet(&server_asset, snippet, "sphere"),
+                );
+            }
+            {
+                info!("** prepare_advection_shader **");
+                let snippet = snippets.get(handles.advection_snippet.id()).unwrap();
+                let snippet = &snippet.content;
+                shaders.insert(
+                    ADVECTION_HANDLE.id(),
+                    make_advection_shader_from_snippet(&server_asset, snippet, "alien"),
+                )
+            }
             State::Done
         }
         State::Done => State::Done,

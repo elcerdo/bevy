@@ -2,6 +2,8 @@
 
 mod advection;
 mod morpheus;
+mod slot;
+mod snippet;
 mod ui;
 
 use bevy::prelude::*;
