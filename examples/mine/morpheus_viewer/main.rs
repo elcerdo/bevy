@@ -139,7 +139,7 @@ fn keyboard_toggle_advection_learning_rate(
             } else {
                 advection::AdvectionSettings::default().learning_rate
             };
-            warn!("learning_rate {:04.2}", settings.learning_rate);
+            debug!("learning_rate {:04.2}", settings.learning_rate);
         }
     }
 }

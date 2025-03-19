@@ -1,6 +1,8 @@
 use crate::ui::UiGrab;
 
 use bevy::input::mouse::AccumulatedMouseMotion;
+use bevy::input::mouse::MouseScrollUnit;
+use bevy::input::mouse::MouseWheel;
 use bevy::prelude::*;
 
 use std::f32::consts::PI;
@@ -59,8 +61,22 @@ pub fn populate_camera_and_lights(mut commands: Commands, asset_server: Res<Asse
         ));
 }
 
-pub fn animate_camera(
-    mut query: Query<(&mut Transform, &CameraPivot)>,
+pub fn zoom_camera(
+    query: Single<&mut Transform, With<Camera3d>>,
+    mut evr_scroll: EventReader<MouseWheel>,
+) {
+    let mut transform = query.into_inner();
+    for event in evr_scroll.read() {
+        let delta = match event.unit {
+            MouseScrollUnit::Line => event.y * 1e-1,
+            MouseScrollUnit::Pixel => event.y * 1e-2,
+        };
+        transform.translation -= Vec3::new(0.0, 3.0, -7.5) * delta;
+    }
+}
+
+pub fn rotate_camera(
+    query: Single<(&mut Transform, &CameraPivot)>,
     mouse_input: Res<ButtonInput<MouseButton>>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mouse_motion: Res<AccumulatedMouseMotion>,
@@ -69,9 +85,7 @@ pub fn animate_camera(
     if grab.any() {
         return;
     }
-    let Ok((mut transform, pivot)) = query.single_mut() else {
-        return;
-    };
+    let (mut transform, pivot) = query.into_inner();
     if mouse_input.pressed(MouseButton::Left) {
         let delta = mouse_motion.delta;
         transform.rotation *=

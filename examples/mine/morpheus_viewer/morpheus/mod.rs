@@ -46,7 +46,8 @@ impl Plugin for MorpheusPlugin {
         app.add_systems(Update, update_internal_state);
 
         app.add_systems(Startup, camera::populate_camera_and_lights);
-        app.add_systems(Update, camera::animate_camera);
+        app.add_systems(Update, camera::rotate_camera);
+        app.add_systems(Update, camera::zoom_camera);
 
         app.add_systems(Startup, populate_models);
     }
