@@ -4,7 +4,7 @@ mod slot;
 mod snippet;
 
 use raymarching_material::MorpheusRaymarchingMaterial;
-use slot::{Slot, Slot0, Slot1, Slot2, Slot3};
+use slot::{Slot, Slot0, Slot1, Slot2, Slot3, Slot4, Slot5, Slot6, Slot7};
 use snippet::{Snippet, SnippetAssetLoader};
 
 use bevy::prelude::*;
@@ -31,10 +31,18 @@ impl Plugin for MorpheusPlugin {
         app.add_plugins(MaterialPlugin::<MorpheusRaymarchingMaterial<Slot1>>::default());
         app.add_plugins(MaterialPlugin::<MorpheusRaymarchingMaterial<Slot2>>::default());
         app.add_plugins(MaterialPlugin::<MorpheusRaymarchingMaterial<Slot3>>::default());
+        app.add_plugins(MaterialPlugin::<MorpheusRaymarchingMaterial<Slot4>>::default());
+        app.add_plugins(MaterialPlugin::<MorpheusRaymarchingMaterial<Slot5>>::default());
+        app.add_plugins(MaterialPlugin::<MorpheusRaymarchingMaterial<Slot6>>::default());
+        app.add_plugins(MaterialPlugin::<MorpheusRaymarchingMaterial<Slot7>>::default());
         app.add_systems(Update, update_bbox_centers_slot::<Slot0>);
         app.add_systems(Update, update_bbox_centers_slot::<Slot1>);
         app.add_systems(Update, update_bbox_centers_slot::<Slot2>);
         app.add_systems(Update, update_bbox_centers_slot::<Slot3>);
+        app.add_systems(Update, update_bbox_centers_slot::<Slot4>);
+        app.add_systems(Update, update_bbox_centers_slot::<Slot5>);
+        app.add_systems(Update, update_bbox_centers_slot::<Slot6>);
+        app.add_systems(Update, update_bbox_centers_slot::<Slot7>);
         app.add_systems(Update, update_internal_state);
 
         app.add_systems(Startup, camera::populate_camera_and_lights);
@@ -117,6 +125,22 @@ fn update_internal_state(
                 Slot3::RAY_HANDLE.id(),
                 make_shader_from_snippet(&server_asset, snippet, "can"),
             );
+            shaders.insert(
+                Slot4::RAY_HANDLE.id(),
+                make_shader_from_snippet(&server_asset, snippet, "runman"),
+            );
+            shaders.insert(
+                Slot5::RAY_HANDLE.id(),
+                make_shader_from_snippet(&server_asset, snippet, "seascape"),
+            );
+            shaders.insert(
+                Slot6::RAY_HANDLE.id(),
+                make_shader_from_snippet(&server_asset, snippet, "cheese"),
+            );
+            shaders.insert(
+                Slot7::RAY_HANDLE.id(),
+                make_shader_from_snippet(&server_asset, snippet, "sphere"),
+            );
             State::Done
         }
         State::Done => State::Done,
@@ -130,6 +154,10 @@ fn populate_models(
     mut morpheus_slot1_materials: ResMut<Assets<MorpheusRaymarchingMaterial<Slot1>>>,
     mut morpheus_slot2_materials: ResMut<Assets<MorpheusRaymarchingMaterial<Slot2>>>,
     mut morpheus_slot3_materials: ResMut<Assets<MorpheusRaymarchingMaterial<Slot3>>>,
+    mut morpheus_slot4_materials: ResMut<Assets<MorpheusRaymarchingMaterial<Slot4>>>,
+    mut morpheus_slot5_materials: ResMut<Assets<MorpheusRaymarchingMaterial<Slot5>>>,
+    mut morpheus_slot6_materials: ResMut<Assets<MorpheusRaymarchingMaterial<Slot6>>>,
+    mut morpheus_slot7_materials: ResMut<Assets<MorpheusRaymarchingMaterial<Slot7>>>,
     mut standard_materials: ResMut<Assets<StandardMaterial>>,
     asset_server: Res<AssetServer>,
 ) {
@@ -146,18 +174,40 @@ fn populate_models(
     // materials
     let slot0_material = morpheus_slot0_materials.add(MorpheusRaymarchingMaterial::<Slot0>::new(
         matcap_texture.clone(),
+        1.0,
     ));
     let slot1_material = morpheus_slot1_materials.add(MorpheusRaymarchingMaterial::<Slot1>::new(
         matcap_texture.clone(),
+        1.0,
     ));
     let slot2_material = morpheus_slot2_materials.add(MorpheusRaymarchingMaterial::<Slot2>::new(
         matcap_texture.clone(),
-    ));
-    let slot2_material_ = morpheus_slot2_materials.add(MorpheusRaymarchingMaterial::<Slot2>::new(
-        matcap_texture_.clone(),
+        1.0,
     ));
     let slot3_material = morpheus_slot3_materials.add(MorpheusRaymarchingMaterial::<Slot3>::new(
         matcap_texture.clone(),
+        1.0,
+    ));
+    let slot4_material = morpheus_slot4_materials.add(MorpheusRaymarchingMaterial::<Slot4>::new(
+        matcap_texture.clone(),
+        1.0,
+    ));
+    let slot5_material = morpheus_slot5_materials.add(MorpheusRaymarchingMaterial::<Slot5>::new(
+        matcap_texture.clone(),
+        45e-2,
+    ));
+    let slot6_material = morpheus_slot6_materials.add(MorpheusRaymarchingMaterial::<Slot6>::new(
+        matcap_texture.clone(),
+        1.0,
+    ));
+    let slot7_material = morpheus_slot7_materials.add(MorpheusRaymarchingMaterial::<Slot7>::new(
+        matcap_texture.clone(),
+        1.0,
+    ));
+
+    let slot2_material_ = morpheus_slot2_materials.add(MorpheusRaymarchingMaterial::<Slot2>::new(
+        matcap_texture_.clone(),
+        1.0,
     ));
 
     commands
@@ -212,13 +262,34 @@ fn populate_models(
             ));
             parent.spawn((
                 Mesh3d(cube_mesh.clone()),
-                MeshMaterial3d(slot2_material_),
-                Transform::from_xyz(0.0, 2.0, 0.0),
+                MeshMaterial3d(slot3_material),
+                Transform::from_xyz(2.0, 0.0, 0.0),
             ));
             parent.spawn((
                 Mesh3d(cube_mesh.clone()),
-                MeshMaterial3d(slot3_material),
-                Transform::from_xyz(2.0, 0.0, 0.0),
+                MeshMaterial3d(slot4_material),
+                Transform::from_xyz(-4.0, 0.0, 2.0),
+            ));
+            parent.spawn((
+                Mesh3d(cube_mesh.clone()),
+                MeshMaterial3d(slot5_material),
+                Transform::from_xyz(-2.0, 0.0, 2.0),
+            ));
+            parent.spawn((
+                Mesh3d(cube_mesh.clone()),
+                MeshMaterial3d(slot6_material),
+                Transform::from_xyz(0.0, 0.0, 2.0),
+            ));
+            parent.spawn((
+                Mesh3d(cube_mesh.clone()),
+                MeshMaterial3d(slot7_material),
+                Transform::from_xyz(2.0, 0.0, 2.0),
+            ));
+
+            parent.spawn((
+                Mesh3d(cube_mesh.clone()),
+                MeshMaterial3d(slot2_material_),
+                Transform::from_xyz(0.0, 2.0, 0.0),
             ));
         });
 }

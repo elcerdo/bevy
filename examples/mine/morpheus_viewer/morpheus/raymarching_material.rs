@@ -12,6 +12,10 @@ pub struct MorpheusRaymarchingMaterial<S: Slot> {
     pub matcap_texture: Option<Handle<Image>>,
     #[uniform(2)]
     pub bbox_center: Vec3,
+    #[uniform(3)]
+    pub num_steps: u32,
+    #[uniform(4)]
+    pub step_bias: f32,
     phantom: PhantomData<S>,
 }
 
@@ -30,10 +34,12 @@ impl<S: Slot> Material for MorpheusRaymarchingMaterial<S> {
 }
 
 impl<S: Slot> MorpheusRaymarchingMaterial<S> {
-    pub fn new(matcap_texture: Handle<Image>) -> Self {
+    pub fn new(matcap_texture: Handle<Image>, step_bias: f32) -> Self {
         Self {
-            bbox_center: Vec3::ZERO,
             matcap_texture: Some(matcap_texture),
+            bbox_center: Vec3::ZERO,
+            num_steps: 64,
+            step_bias,
             phantom: PhantomData,
         }
     }
