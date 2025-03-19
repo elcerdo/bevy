@@ -66,7 +66,6 @@ pub fn animate_camera(
     mouse_motion: Res<AccumulatedMouseMotion>,
     grab: Res<UiGrab>,
 ) {
-    warn!("grab {:?}", grab);
     if grab.any() {
         return;
     }
