@@ -131,8 +131,6 @@ fn make_cubes_mesh(num_points: u32, half_width: f32) -> Mesh {
     use bevy::render::render_asset::RenderAssetUsages;
     use bevy::render::render_resource::PrimitiveTopology;
 
-    // Keep the mesh data accessible in future frames to be able to mutate it in toggle_texture.
-
     let mut vertices: Vec<Vec3> = vec![];
     let mut normals: Vec<Vec3> = vec![];
     let mut indices: Vec<u32> = vec![];
@@ -158,8 +156,5 @@ fn make_cubes_mesh(num_points: u32, half_width: f32) -> Mesh {
     .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, normals)
     .with_inserted_indices(Indices::U32(indices));
 
-    // let mesh: Mesh = Sphere { radius: 0.05 }.into();
-    // let mesh: Mesh = Sphere;
-    // warn!("lsdfmksf {:?}", mesh);
     mesh
 }

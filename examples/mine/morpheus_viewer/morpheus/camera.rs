@@ -1,3 +1,5 @@
+use crate::ui::UiGrab;
+
 use bevy::input::mouse::AccumulatedMouseMotion;
 use bevy::prelude::*;
 
@@ -62,11 +64,16 @@ pub fn animate_camera(
     mouse_input: Res<ButtonInput<MouseButton>>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mouse_motion: Res<AccumulatedMouseMotion>,
+    grab: Res<UiGrab>,
 ) {
+    warn!("grab {:?}", grab);
+    if grab.any() {
+        return;
+    }
     let Ok((mut transform, pivot)) = query.single_mut() else {
         return;
     };
-    if mouse_input.pressed(MouseButton::Right) {
+    if mouse_input.pressed(MouseButton::Left) {
         let delta = mouse_motion.delta;
         transform.rotation *=
             Quat::from_axis_angle(Vec3::X, PI / 2.0 * delta.y / pivot.sensitivity);

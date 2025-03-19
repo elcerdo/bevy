@@ -17,8 +17,21 @@ static UI_WIDGETS: &[WidgetType] = &[
 
 pub struct UiPlugin;
 
+#[derive(Resource, Default, Debug)]
+pub struct UiGrab {
+    any_buttons: bool,
+    any_sliders: bool,
+}
+
+impl UiGrab {
+    pub fn any(&self) -> bool {
+        self.any_buttons || self.any_sliders
+    }
+}
+
 impl Plugin for UiPlugin {
     fn build(&self, app: &mut App) {
+        app.init_resource::<UiGrab>();
         app.add_systems(Startup, populate_ui_widgets);
         app.add_systems(Update, click_ui_widget_buttons);
         app.add_systems(Update, drag_ui_widget_sliders);
@@ -95,9 +108,12 @@ fn populate_ui_widgets(mut commands: Commands) {
 }
 
 fn click_ui_widget_buttons(
-    mut query: Query<(&Interaction, &mut ButtonData), (Changed<Interaction>, With<Button>)>,
+    mut buttons: Query<(&Interaction, &mut ButtonData), (Changed<Interaction>, With<Button>)>,
+    mut grab: ResMut<UiGrab>,
 ) {
-    for (interaction, mut data) in &mut query {
+    grab.any_buttons = false;
+    for (interaction, mut data) in buttons.iter_mut() {
+        grab.any_buttons |= !matches!(*interaction, Interaction::None);
         if matches!(*interaction, Interaction::Pressed) {
             data.count += 1;
         }
@@ -105,12 +121,12 @@ fn click_ui_widget_buttons(
 }
 
 fn drag_ui_widget_sliders(
-    mut interaction_query: Query<
-        (&Interaction, &RelativeCursorPosition, &mut SliderData),
-        With<Button>,
-    >,
+    mut sliders: Query<(&Interaction, &RelativeCursorPosition, &mut SliderData), With<Button>>,
+    mut grab: ResMut<UiGrab>,
 ) {
-    for (interaction, relative_cursor, mut data) in &mut interaction_query {
+    grab.any_sliders = false;
+    for (interaction, relative_cursor, mut data) in &mut sliders.iter_mut() {
+        grab.any_sliders |= !matches!(*interaction, Interaction::None);
         if !matches!(*interaction, Interaction::Pressed) {
             continue;
         }

@@ -6,8 +6,6 @@ mod ui;
 
 use bevy::prelude::*;
 
-use bevy::color::palettes::css::YELLOW;
-
 fn main() {
     let mut app = App::new();
 
@@ -49,7 +47,6 @@ fn main() {
     app.add_plugins(advection::AdvectionPlugin);
     app.add_plugins(ui::UiPlugin);
 
-    app.add_systems(Startup, setup);
     app.add_systems(Update, keyboard_quit_with_escape);
     app.add_systems(Update, keyboard_reinit_advection);
     app.add_systems(Update, keyboard_toggle_advection_learning_rate);
@@ -57,21 +54,6 @@ fn main() {
     app.add_systems(Update, ui_update_sliders);
 
     app.run();
-}
-
-fn setup(
-    mut commands: Commands,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    mut meshes: ResMut<Assets<Mesh>>,
-) {
-    commands.spawn((
-        Mesh3d(meshes.add(Sphere { radius: 0.05 })),
-        MeshMaterial3d(materials.add(StandardMaterial {
-            emissive: YELLOW.into(),
-            ..default()
-        })),
-        Transform::from_xyz(0.5, 1.0, 0.5),
-    ));
 }
 
 fn ui_update_buttons(
@@ -106,7 +88,7 @@ fn ui_update_sliders(
                 let learning_rate = ops::powf(10.0, learning_rate);
                 for mut settings in query_.iter_mut() {
                     settings.learning_rate = learning_rate;
-                    warn!("learning_rate {:04.2}", settings.learning_rate);
+                    debug!("learning_rate {:04.2}", settings.learning_rate);
                 }
                 triggers.should_reinit = true;
             }
@@ -116,7 +98,7 @@ fn ui_update_sliders(
                 for material_handle in query__.iter() {
                     let material = materials.get_mut(material_handle).unwrap();
                     material.warp_amount = data.ratio;
-                    warn!("warp {:04.2}", material.warp_amount);
+                    debug!("warp {:04.2}", material.warp_amount);
                 }
             }
             _ => {
