@@ -148,13 +148,11 @@ fn make_cubes_mesh(num_points: u32, half_width: f32) -> Mesh {
         indices.extend([ii, ii + 3, ii + 2]);
     }
 
-    let mesh = Mesh::new(
+    Mesh::new(
         PrimitiveTopology::TriangleList,
         RenderAssetUsages::MAIN_WORLD | RenderAssetUsages::RENDER_WORLD,
     )
     .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, vertices)
     .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, normals)
-    .with_inserted_indices(Indices::U32(indices));
-
-    mesh
+    .with_inserted_indices(Indices::U32(indices))
 }
