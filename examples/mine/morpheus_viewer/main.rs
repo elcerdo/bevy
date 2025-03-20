@@ -119,8 +119,6 @@ fn keyboard_quit_with_escape(
     }
 }
 
-
-
 fn keyboard_reinit_advection(
     mut triggers: ResMut<advection::AdvectionTriggers>,
     keyboard: Res<ButtonInput<KeyCode>>,
