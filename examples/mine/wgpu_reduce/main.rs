@@ -13,36 +13,41 @@ fn main() {
     app.add_plugins(partial_sum::PartialSumPlugin);
 
     app.add_systems(Startup, setup);
-    app.add_systems(Update, keyboard_quit_with_escape);
-    app.add_systems(Update, keyboard_reinit_with_space);
+    app.add_systems(Update, keyboard_shortcuts);
 
     app.run();
 }
 
-fn setup(
-    mut commands: Commands,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    mut meshes: ResMut<Assets<Mesh>>,
-) {
+fn setup() {
     warn!("hello world");
 }
 
-fn keyboard_quit_with_escape(
+fn hash(value: u32) -> u32 {
+    let mut state = value;
+    state = state ^ 2747636419;
+    state = state * 2654435769;
+    state = state ^ state >> 16;
+    state = state * 2654435769;
+    state = state ^ state >> 16;
+    state = state * 2654435769;
+    state
+}
+
+fn keyboard_shortcuts(
+    mut settings: Single<&mut partial_sum::PartialSumSettings>,
+    mut triggers: ResMut<partial_sum::PartialSumTriggers>,
     mut writer: EventWriter<AppExit>,
     keyboard: Res<ButtonInput<KeyCode>>,
 ) {
     if keyboard.just_pressed(KeyCode::Escape) {
         writer.write(AppExit::Success);
     }
-}
-
-fn keyboard_reinit_with_space(
-    mut triggers: ResMut<partial_sum::PartialSumTriggers>,
-    keyboard: Res<ButtonInput<KeyCode>>,
-) {
-    let should_reinit = keyboard.pressed(KeyCode::Space);
-    triggers.should_reinit = should_reinit;
-    if should_reinit {
-        warn!("reinit");
+    if keyboard.just_pressed(KeyCode::Tab) {
+        triggers.should_reinit = true;
+    }
+    if keyboard.just_pressed(KeyCode::Space) {
+        warn!("reseed");
+        settings.seed = hash(settings.seed);
+        triggers.should_reinit = true;
     }
 }

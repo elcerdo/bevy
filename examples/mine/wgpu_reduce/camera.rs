@@ -7,7 +7,12 @@ use std::f32::consts::PI;
 
 //////////////////////////////////////////////////////////////////////
 
-const CAMERA_REST_POSITION: Vec3 = vec3(-0.6, 1.0, 1.2);
+const CAMERA_REST_SCALE: f32 = 1.5;
+const CAMERA_REST_POSITION: Vec3 = vec3(
+    -0.6 * CAMERA_REST_SCALE,
+    1.0 * CAMERA_REST_SCALE,
+    1.2 * CAMERA_REST_SCALE,
+);
 const CAMERA_SENSITIVITY: f32 = 200.0;
 
 pub struct CameraPlugin;
@@ -79,7 +84,7 @@ fn rotate_camera(
     if mouse_input.pressed(MouseButton::Left) {
         let sensitivity = CAMERA_SENSITIVITY;
         let delta = mouse_motion.delta;
-        transform.rotation *= Quat::from_axis_angle(Vec3::X, PI / 2.0 * delta.y / sensitivity);
+        transform.rotation *= Quat::from_axis_angle(Vec3::X, -PI / 2.0 * delta.y / sensitivity);
         transform.rotation *= Quat::from_axis_angle(Vec3::Y, -PI / 2.0 * delta.x / sensitivity);
     }
 }

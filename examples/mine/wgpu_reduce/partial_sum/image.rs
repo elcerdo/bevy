@@ -1,5 +1,4 @@
-use super::DebugMaterial;
-// use super::displaced_material::DisplacedMaterial;
+use super::debug_material::DebugMaterial;
 
 use super::consts::TEXTURE_FORMAT;
 use super::consts::TEXTURE_SIZE;
@@ -18,7 +17,7 @@ pub struct PartialSumImages {
     pub image_b: Handle<Image>,
 }
 
-pub fn populate_plane(
+pub fn populate_planes(
     mut commands: Commands,
     mut images: ResMut<Assets<Image>>,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -38,7 +37,7 @@ pub fn populate_plane(
             depth_or_array_layers: 1,
         },
         TextureDimension::D2,
-        &[255, 0, 255, 255],
+        &[0, 0],
         TEXTURE_FORMAT,
         RenderAssetUsages::RENDER_WORLD,
     );
@@ -55,47 +54,38 @@ pub fn populate_plane(
     // magic planes
     commands
         .spawn((
-            PartialSumSettings::default(),
+            PartialSumSettings {
+                count: 0,
+                seed: 0x1fb474bf,
+            },
             Transform::default(),
             InheritedVisibility::VISIBLE,
         ))
         .with_children(|parent| {
             parent.spawn((
-                Mesh3d(plane),
+                Mesh3d(plane.clone()),
                 MeshMaterial3d(materials.add(DebugMaterial {
                     data_texture: image_data.clone(),
-                    // perceptual_roughness: 1.0,
-                    // metallic: 0.0,
-                    // base_color_texture: Some(image_data.clone()),
-                    // ..default()
+                })),
+                Transform::from_xyz(-1.0, 0.0, 0.0),
+            ));
+            parent.spawn((
+                Mesh3d(plane.clone()),
+                MeshMaterial3d(materials.add(DebugMaterial {
+                    data_texture: image_a.clone(),
                 })),
                 Transform::from_xyz(0.0, 0.0, 0.0),
+            ));
+            parent.spawn((
+                Mesh3d(plane.clone()),
+                MeshMaterial3d(materials.add(DebugMaterial {
+                    data_texture: image_b.clone(),
+                })),
+                Transform::from_xyz(1.0, 0.0, 0.0),
             ));
         });
 
     /*
-
-    commands.spawn((
-        Mesh3d(meshes.add(Plane3d::new(Vec3::Y, Vec2::ONE))),
-        MeshMaterial3d(standard_materials.add(StandardMaterial {
-            perceptual_roughness: 1.0,
-            metallic: 0.0,
-            base_color_texture: Some(image_b.clone()),
-            ..default()
-        })),
-        Transform::from_xyz(-1.0, 0.0, -1.0),
-    ));
-    commands.spawn((
-        Mesh3d(meshes.add(Plane3d::new(Vec3::Y, Vec2::ONE))),
-        MeshMaterial3d(standard_materials.add(StandardMaterial {
-            perceptual_roughness: 1.0,
-            metallic: 0.0,
-            base_color_texture: Some(image_pattern.clone()),
-            ..default()
-        })),
-        Transform::from_xyz(1.0, 0.0, -1.0),
-    ));
-
     let image_voronoi = asset_server.load::<Image>("textures/voronoi.png");
     commands.spawn((
         Mesh3d(meshes.add(Plane3d::new(Vec3::Y, Vec2::ONE))),
