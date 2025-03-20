@@ -31,7 +31,7 @@ impl CameraPivot {
     }
 }
 
-fn populate_camera(mut commands: Commands, asset_server: Res<AssetServer>) {
+fn populate_camera(mut commands: Commands, _asset_server: Res<AssetServer>) {
     info!("** populate_camera_and_lights **");
 
     // camera with envmap
@@ -42,15 +42,14 @@ fn populate_camera(mut commands: Commands, asset_server: Res<AssetServer>) {
             InheritedVisibility::VISIBLE,
         ))
         .with_child((
-            Transform::from_translation(CAMERA_REST_POSITION)
-                .looking_at(Vec3::new(0., 0., 0.), Vec3::Y),
+            Transform::from_translation(CAMERA_REST_POSITION).looking_at(Vec3::ZERO, Vec3::Y),
             Camera3d::default(),
-            EnvironmentMapLight {
-                diffuse_map: asset_server.load("environment_maps/pisa_diffuse_rgb9e5_zstd.ktx2"),
-                specular_map: asset_server.load("environment_maps/pisa_specular_rgb9e5_zstd.ktx2"),
-                intensity: 5e2,
-                ..default()
-            },
+            // EnvironmentMapLight {
+            //     diffuse_map: asset_server.load("environment_maps/pisa_diffuse_rgb9e5_zstd.ktx2"),
+            //     specular_map: asset_server.load("environment_maps/pisa_specular_rgb9e5_zstd.ktx2"),
+            //     intensity: 1e3,
+            //     ..default()
+            // },
         ));
 }
 

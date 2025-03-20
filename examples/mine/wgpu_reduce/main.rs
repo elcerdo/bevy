@@ -1,6 +1,7 @@
 //! headless wgpu pipeline cli
 
 mod camera;
+mod partial_sum;
 
 use bevy::prelude::*;
 
@@ -11,8 +12,11 @@ fn main() {
 
     app.add_plugins(DefaultPlugins);
     app.add_plugins(camera::CameraPlugin);
+    app.add_plugins(partial_sum::PartialSumPlugin);
 
     app.add_systems(Startup, setup);
+    app.add_systems(Update, keyboard_quit_with_escape);
+    app.add_systems(Update, keyboard_reinit_with_space);
 
     app.run();
 }
@@ -23,15 +27,24 @@ fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
     warn!("hello world");
+}
 
-    commands.spawn((
-        Mesh3d(meshes.add(Plane3d::default())),
-        MeshMaterial3d(materials.add(StandardMaterial {
-            perceptual_roughness: 0.2,
-            metallic: 0.0,
-            base_color: YELLOW.into(),
-            alpha_mode: AlphaMode::Blend,
-            ..default()
-        })),
-    ));
+fn keyboard_quit_with_escape(
+    mut writer: EventWriter<AppExit>,
+    keyboard: Res<ButtonInput<KeyCode>>,
+) {
+    if keyboard.just_pressed(KeyCode::Escape) {
+        writer.write(AppExit::Success);
+    }
+}
+
+fn keyboard_reinit_with_space(
+    mut triggers: ResMut<partial_sum::PartialSumTriggers>,
+    keyboard: Res<ButtonInput<KeyCode>>,
+) {
+    let should_reinit = keyboard.pressed(KeyCode::Space);
+    triggers.should_reinit = should_reinit;
+    if should_reinit {
+        warn!("reinit");
+    }
 }
