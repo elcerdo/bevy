@@ -12,9 +12,8 @@ use bevy::render::render_asset::RenderAssetUsages;
 
 #[derive(Resource, ExtractResource, Clone)]
 pub struct PartialSumImages {
-    pub image_data: Handle<Image>,
-    pub image_a: Handle<Image>,
-    pub image_b: Handle<Image>,
+    pub image_initial: Handle<Image>,
+    pub image_current: Handle<Image>,
 }
 
 pub fn populate_planes(
@@ -45,9 +44,8 @@ pub fn populate_planes(
         TextureUsages::COPY_DST | TextureUsages::STORAGE_BINDING | TextureUsages::TEXTURE_BINDING;
     image.sampler = bevy::image::ImageSampler::nearest();
 
-    let image_data = images.add(image.clone());
-    let image_a = images.add(image.clone());
-    let image_b = images.add(image);
+    let image_initial = images.add(image.clone());
+    let image_current = images.add(image);
 
     let plane = meshes.add(Plane3d::default());
 
@@ -65,23 +63,16 @@ pub fn populate_planes(
             parent.spawn((
                 Mesh3d(plane.clone()),
                 MeshMaterial3d(materials.add(DebugMaterial {
-                    data_texture: image_data.clone(),
+                    data_texture: image_initial.clone(),
                 })),
-                Transform::from_xyz(-1.0, 0.0, 0.0),
+                Transform::from_xyz(-0.5, 0.0, 0.0),
             ));
             parent.spawn((
                 Mesh3d(plane.clone()),
                 MeshMaterial3d(materials.add(DebugMaterial {
-                    data_texture: image_a.clone(),
+                    data_texture: image_current.clone(),
                 })),
-                Transform::from_xyz(0.0, 0.0, 0.0),
-            ));
-            parent.spawn((
-                Mesh3d(plane.clone()),
-                MeshMaterial3d(materials.add(DebugMaterial {
-                    data_texture: image_b.clone(),
-                })),
-                Transform::from_xyz(1.0, 0.0, 0.0),
+                Transform::from_xyz(0.5, 0.0, 0.0),
             ));
         });
 
@@ -105,9 +96,8 @@ pub fn populate_planes(
 
     // insert images
     commands.insert_resource(PartialSumImages {
-        image_data,
-        image_a,
-        image_b,
+        image_initial,
+        image_current,
     });
 }
 

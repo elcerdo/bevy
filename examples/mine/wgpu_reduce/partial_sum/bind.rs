@@ -13,8 +13,7 @@ use bevy::render::texture::GpuImage;
 
 #[derive(Resource)]
 pub struct PartialSumBindGroups {
-    pub group_a_to_b: BindGroup,
-    pub group_b_to_a: BindGroup,
+    pub group_main: BindGroup,
 }
 
 pub fn prepare_bind_groups(
@@ -27,34 +26,19 @@ pub fn prepare_bind_groups(
 ) {
     let settings = settings.uniforms().binding().unwrap();
 
-    let view_data = gpu_images.get(&images.image_data).unwrap();
-    let view_a = gpu_images.get(&images.image_a).unwrap();
-    let view_b = gpu_images.get(&images.image_b).unwrap();
+    let view_initial = gpu_images.get(&images.image_initial).unwrap();
+    let view_current = gpu_images.get(&images.image_current).unwrap();
 
-    let group_a_to_b = render_device.create_bind_group(
-        Some("group_a_to_b"),
+    let group_main = render_device.create_bind_group(
+        Some("group_main"),
         &pipeline.group_layout,
         &BindGroupEntries::sequential((
-            &view_data.texture_view,
-            &view_a.texture_view,
-            &view_b.texture_view,
-            settings.clone(),
-        )),
-    );
-    let group_b_to_a = render_device.create_bind_group(
-        Some("group_b_to_a"),
-        &pipeline.group_layout,
-        &BindGroupEntries::sequential((
-            &view_data.texture_view,
-            &view_b.texture_view,
-            &view_a.texture_view,
-            settings.clone(),
+            &view_initial.texture_view,
+            &view_current.texture_view,
+            settings.clone(), // FIXME update count
         )),
     );
 
     // insert bind groups
-    commands.insert_resource(PartialSumBindGroups {
-        group_a_to_b,
-        group_b_to_a,
-    });
+    commands.insert_resource(PartialSumBindGroups { group_main });
 }

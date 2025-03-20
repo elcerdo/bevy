@@ -12,12 +12,10 @@ struct Settings {
 }
 
 @group(0) @binding(0)
-var data: texture_storage_2d<rgba32uint, read_write>;
+var initial: texture_storage_2d<rgba32uint, write>;
 @group(0) @binding(1)
-var input: texture_storage_2d<rgba32uint, read>;
+var current: texture_storage_2d<rgba32uint, read_write>;
 @group(0) @binding(2)
-var output: texture_storage_2d<rgba32uint, write>;
-@group(0) @binding(3)
 var<uniform> settings: Settings;
 
 fn hash(value: u32) -> u32 {
@@ -41,10 +39,11 @@ fn init(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
 
     let aa = random_int(invocation_id.y << 16u | invocation_id.x + settings.seed, 1000);
     let color = vec4<u32>(aa, 0, 0, 0);
+
     let color_ = vec4<u32>(999, 0, 0, 0);
 
-    textureStore(data, location, color);
-    textureStore(output, location, color_);
+    textureStore(initial, location, color);
+    textureStore(current, location, color_);
 }
 
 @compute @workgroup_size(8, 8, 1)

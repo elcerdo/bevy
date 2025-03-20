@@ -35,9 +35,8 @@ impl FromWorld for PartialSumPipeline {
             &BindGroupLayoutEntries::sequential(
                 ShaderStages::COMPUTE,
                 (
-                    texture_storage_2d(TEXTURE_FORMAT, StorageTextureAccess::ReadWrite),
-                    texture_storage_2d(TEXTURE_FORMAT, StorageTextureAccess::ReadOnly),
                     texture_storage_2d(TEXTURE_FORMAT, StorageTextureAccess::WriteOnly),
+                    texture_storage_2d(TEXTURE_FORMAT, StorageTextureAccess::ReadWrite),
                     uniform_buffer::<PartialSumSettings>(false),
                 ),
             ),

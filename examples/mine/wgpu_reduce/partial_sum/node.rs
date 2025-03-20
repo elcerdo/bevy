@@ -113,7 +113,7 @@ impl Node for MainNode {
         match self.state {
             MainState::Init => {
                 let init_pipeline = cache.get_compute_pipeline(pipeline.init_id).unwrap();
-                pass.set_bind_group(0, &bind_groups.group_b_to_a, &[]);
+                pass.set_bind_group(0, &bind_groups.group_main, &[]);
                 pass.set_pipeline(init_pipeline);
                 pass.dispatch_workgroups(
                     TEXTURE_SIZE.0 / WORKGROUP_SIZE.0,
@@ -123,15 +123,7 @@ impl Node for MainNode {
             }
             MainState::Reduce(count) => {
                 let update_pipeline = cache.get_compute_pipeline(pipeline.update_id).unwrap();
-                pass.set_bind_group(
-                    0,
-                    if count % 2 == 0 {
-                        &bind_groups.group_a_to_b
-                    } else {
-                        &bind_groups.group_b_to_a
-                    },
-                    &[],
-                );
+                pass.set_bind_group(0, &bind_groups.group_main, &[]);
                 pass.set_pipeline(update_pipeline);
                 pass.dispatch_workgroups(
                     TEXTURE_SIZE.0 / WORKGROUP_SIZE.0,
