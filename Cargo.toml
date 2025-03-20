@@ -541,6 +541,14 @@ web-sys = { version = "0.3", features = ["Window"] }
 # Mine
 
 [[example]]
+name = "headless_pipeline"
+path = "examples/mine/headless_pipeline/main.rs"
+doc-scrape-examples = true
+
+[package.metadata.example.headless_pipeline]
+hidden = true
+
+[[example]]
 name = "morpheus_viewer"
 path = "examples/mine/morpheus_viewer/main.rs"
 doc-scrape-examples = true
