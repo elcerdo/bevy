@@ -5,8 +5,6 @@ mod partial_sum;
 
 use bevy::prelude::*;
 
-use bevy::color::palettes::css::YELLOW;
-
 fn main() {
     let mut app = App::new();
 

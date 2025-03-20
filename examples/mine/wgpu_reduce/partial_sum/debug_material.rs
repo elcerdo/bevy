@@ -1,13 +1,13 @@
 use bevy::prelude::*;
-use bevy::render::render_resource::{AsBindGroup, ShaderRef};
+use bevy::render::render_resource::{AsBindGroup, ShaderRef, TextureViewDimension};
 
 pub const SHADER_PATH: &str = "shaders/wgpu_reduce/debug.wgsl";
 
 #[derive(Asset, TypePath, AsBindGroup, Clone)]
 pub struct DebugMaterial {
-    // #[texture(0)]
+    #[storage_texture(0, image_format=Rg32Uint)] // FIXME use TEXTURE_FORMAT
+    pub data_texture: Handle<Image>,
     // #[sampler(1)]
-    // pub pattern_texture: Option<Handle<Image>>,
     // #[texture(2)]
     // #[sampler(3)]
     // pub warp_texture: Option<Handle<Image>>,
@@ -24,13 +24,3 @@ impl Material for DebugMaterial {
         AlphaMode::Blend
     }
 }
-
-// impl DebugMaterial {
-//     pub fn new(pattern_texture: Handle<Image>, warp_texture: Handle<Image>) -> Self {
-//         Self {
-//             pattern_texture: Some(pattern_texture),
-//             warp_texture: Some(warp_texture),
-//             warp_amount: 1.0,
-//         }
-//     }
-// }

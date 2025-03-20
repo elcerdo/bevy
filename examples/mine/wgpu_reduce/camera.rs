@@ -7,7 +7,8 @@ use std::f32::consts::PI;
 
 //////////////////////////////////////////////////////////////////////
 
-const CAMERA_REST_POSITION: Vec3 = vec3(1.2, 1.0, -1.2);
+const CAMERA_REST_POSITION: Vec3 = vec3(-0.6, 1.0, 1.2);
+const CAMERA_SENSITIVITY: f32 = 200.0;
 
 pub struct CameraPlugin;
 
@@ -20,16 +21,8 @@ impl Plugin for CameraPlugin {
 
 //////////////////////////////////////////////////////////////////////
 
-#[derive(Component)]
-struct CameraPivot {
-    sensitivity: f32,
-}
-
-impl CameraPivot {
-    fn default() -> Self {
-        Self { sensitivity: 200.0 }
-    }
-}
+#[derive(Component, Default)]
+struct CameraPivot;
 
 fn populate_camera(mut commands: Commands, _asset_server: Res<AssetServer>) {
     info!("** populate_camera_and_lights **");
@@ -78,16 +71,15 @@ fn zoom_camera(query: Single<&mut Transform, With<Camera3d>>, mut events: EventR
 }
 
 fn rotate_camera(
-    query: Single<(&mut Transform, &CameraPivot)>,
+    transform: Single<&mut Transform, With<CameraPivot>>,
     mouse_input: Res<ButtonInput<MouseButton>>,
     mouse_motion: Res<AccumulatedMouseMotion>,
 ) {
-    let (mut transform, pivot) = query.into_inner();
+    let mut transform = transform.into_inner();
     if mouse_input.pressed(MouseButton::Left) {
+        let sensitivity = CAMERA_SENSITIVITY;
         let delta = mouse_motion.delta;
-        transform.rotation *=
-            Quat::from_axis_angle(Vec3::X, PI / 2.0 * delta.y / pivot.sensitivity);
-        transform.rotation *=
-            Quat::from_axis_angle(Vec3::Y, -PI / 2.0 * delta.x / pivot.sensitivity);
+        transform.rotation *= Quat::from_axis_angle(Vec3::X, PI / 2.0 * delta.y / sensitivity);
+        transform.rotation *= Quat::from_axis_angle(Vec3::Y, -PI / 2.0 * delta.x / sensitivity);
     }
 }

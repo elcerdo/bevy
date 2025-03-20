@@ -63,6 +63,7 @@ pub fn populate_plane(
             parent.spawn((
                 Mesh3d(plane),
                 MeshMaterial3d(materials.add(DebugMaterial {
+                    data_texture: image_data.clone(),
                     // perceptual_roughness: 1.0,
                     // metallic: 0.0,
                     // base_color_texture: Some(image_data.clone()),
