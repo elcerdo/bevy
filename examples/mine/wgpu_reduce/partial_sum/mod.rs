@@ -1,15 +1,12 @@
-mod consts;
 mod debug_material;
-mod image;
 
-// mod bind;
-// mod displaced_material;
+mod bind;
+mod consts;
+mod image;
+mod pipeline;
 // mod node;
-// mod pipeline;
-// mod warped_material;
 
 use debug_material::DebugMaterial;
-// pub use warped_material::WarpedMaterial;
 
 use bevy::prelude::*;
 use bevy::render::extract_component::ExtractComponent;
@@ -17,16 +14,17 @@ use bevy::render::extract_component::ExtractComponentPlugin;
 use bevy::render::extract_component::UniformComponentPlugin;
 use bevy::render::extract_resource::ExtractResource;
 use bevy::render::extract_resource::ExtractResourcePlugin;
+use bevy::render::render_graph::{RenderGraph, RenderLabel};
 use bevy::render::render_resource::ShaderType;
+use bevy::render::{Render, RenderApp, RenderSet};
 
 // use bevy::render::graph::CameraDriverLabel;
-// use bevy::render::render_graph::{RenderGraph, RenderLabel};
-// use bevy::render::{Render, RenderApp, RenderSet};
 
 //////////////////////////////////////////////////////////////////////
 
 #[derive(Component, ExtractComponent, Clone, Default, ShaderType)]
 pub struct PartialSumSettings {
+    pub count: u32,
     pub learning_rate: f32,
 }
 
@@ -56,7 +54,6 @@ impl Plugin for PartialSumPlugin {
         app.add_plugins(ExtractResourcePlugin::<PartialSumTriggers>::default());
         app.add_systems(Startup, image::populate_plane);
 
-        /*
         // render app
         let render_app = app.sub_app_mut(RenderApp);
         render_app.add_systems(
@@ -64,6 +61,7 @@ impl Plugin for PartialSumPlugin {
             bind::prepare_bind_groups.in_set(RenderSet::PrepareBindGroups),
         );
         let mut render_graph = render_app.world_mut().resource_mut::<RenderGraph>();
+        /*
         render_graph.add_node(PartialSumMainNode, node::MainNode::default());
         render_graph.add_node_edge(PartialSumMainNode, CameraDriverLabel);
         */
@@ -72,9 +70,9 @@ impl Plugin for PartialSumPlugin {
         // main app
         app.init_resource::<PartialSumTriggers>();
 
-        // // render app
-        // let render_app = app.sub_app_mut(RenderApp);
-        // render_app.init_resource::<pipeline::PartialSumPipeline>();
+        // render app
+        let render_app = app.sub_app_mut(RenderApp);
+        render_app.init_resource::<pipeline::PartialSumPipeline>();
     }
 }
 
