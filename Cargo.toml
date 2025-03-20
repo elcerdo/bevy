@@ -541,11 +541,11 @@ web-sys = { version = "0.3", features = ["Window"] }
 # Mine
 
 [[example]]
-name = "headless_pipeline"
-path = "examples/mine/headless_pipeline/main.rs"
+name = "wgpu_reduce"
+path = "examples/mine/wgpu_reduce/main.rs"
 doc-scrape-examples = true
 
-[package.metadata.example.headless_pipeline]
+[package.metadata.example.wgpu_reduce]
 hidden = true
 
 [[example]]
