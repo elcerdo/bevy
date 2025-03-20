@@ -5,6 +5,7 @@ use super::PartialSumTriggers;
 
 use super::consts::TEXTURE_SIZE;
 use super::consts::WORKGROUP_SIZE;
+use super::pipeline::PILELINE_COUNT_INVALID;
 
 use bevy::prelude::*;
 use bevy::render::render_graph::Node;
@@ -43,54 +44,69 @@ impl Node for MainNode {
             warn!("reinit");
         }
 
-        let cache = world.resource::<PipelineCache>();
-        let pipeline = world.resource::<PartialSumPipeline>();
-        // let images = world.resource::<PartialSumImages>();
-        // let gpu_images = world.resource::<RenderAssets<GpuImage>>();
+        let pipeline_count: u32;
+        {
+            const NUM_REDUCE_STEPS: u32 = 4;
+            assert!(NUM_REDUCE_STEPS < PILELINE_COUNT_INVALID);
 
-        // advance to next state
-        match self.state {
-            MainState::Loading => {
-                let init_ok = matches!(
-                    cache.get_compute_pipeline_state(pipeline.init_id),
-                    CachedPipelineState::Ok(_)
-                );
-                let update_ok = matches!(
-                    cache.get_compute_pipeline_state(pipeline.update_id),
-                    CachedPipelineState::Ok(_)
-                );
-                // let voronoi_ok = gpu_images.get(&images.image_pattern).is_some();
-                debug!("loading {} {}", init_ok, update_ok);
-                if init_ok && update_ok {
-                    self.state = MainState::Init;
-                }
-            }
-            MainState::Init => {
-                self.state = match should_reinit {
-                    false => MainState::Reduce(0),
-                    true => MainState::Init,
-                };
-            }
-            MainState::Reduce(count_) => {
-                let count = count_ + 1;
-                self.state = match should_reinit {
-                    false => {
-                        if count < 8 {
-                            MainState::Reduce(count)
-                        } else {
-                            MainState::Done
-                        }
+            let cache = world.resource::<PipelineCache>();
+            let pipeline = world.resource::<PartialSumPipeline>();
+            // let images = world.resource::<PartialSumImages>();
+            // let gpu_images = world.resource::<RenderAssets<GpuImage>>();
+
+            // advance to next state
+            pipeline_count = match self.state {
+                MainState::Loading => {
+                    let init_ok = matches!(
+                        cache.get_compute_pipeline_state(pipeline.init_id),
+                        CachedPipelineState::Ok(_)
+                    );
+                    let update_ok = matches!(
+                        cache.get_compute_pipeline_state(pipeline.update_id),
+                        CachedPipelineState::Ok(_)
+                    );
+                    // let voronoi_ok = gpu_images.get(&images.image_pattern).is_some();
+                    debug!("loading {} {}", init_ok, update_ok);
+                    if init_ok && update_ok {
+                        self.state = MainState::Init;
                     }
-                    true => MainState::Init,
-                };
-            }
-            MainState::Done => {
-                self.state = match should_reinit {
-                    false => MainState::Done,
-                    true => MainState::Init,
-                };
-            }
-        };
+                    PILELINE_COUNT_INVALID
+                }
+                MainState::Init => {
+                    self.state = match should_reinit {
+                        false => MainState::Reduce(0),
+                        true => MainState::Init,
+                    };
+                    PILELINE_COUNT_INVALID
+                }
+                MainState::Reduce(count_) => {
+                    let count = count_ + 1;
+                    self.state = match should_reinit {
+                        false => {
+                            if count < NUM_REDUCE_STEPS {
+                                MainState::Reduce(count)
+                            } else {
+                                MainState::Done
+                            }
+                        }
+                        true => MainState::Init,
+                    };
+                    count_
+                }
+                MainState::Done => {
+                    self.state = match should_reinit {
+                        false => MainState::Done,
+                        true => MainState::Init,
+                    };
+                    PILELINE_COUNT_INVALID
+                }
+            };
+        }
+
+        {
+            let mut pipeline = world.resource_mut::<PartialSumPipeline>();
+            pipeline.count = pipeline_count;
+        }
     }
 
     fn run(
@@ -112,6 +128,7 @@ impl Node for MainNode {
         // select the pipeline based on the current state
         match self.state {
             MainState::Init => {
+                debug!("dispatch_init");
                 let init_pipeline = cache.get_compute_pipeline(pipeline.init_id).unwrap();
                 pass.set_bind_group(0, &bind_groups.group_main, &[]);
                 pass.set_pipeline(init_pipeline);
@@ -122,6 +139,10 @@ impl Node for MainNode {
                 );
             }
             MainState::Reduce(count) => {
+                // pipeline.count is outdated here
+                let factor = 1 << count;
+                let factor = factor as u32;
+                debug!("dispatch_reduce count {} factor {}", count, factor);
                 let update_pipeline = cache.get_compute_pipeline(pipeline.update_id).unwrap();
                 pass.set_bind_group(0, &bind_groups.group_main, &[]);
                 pass.set_pipeline(update_pipeline);

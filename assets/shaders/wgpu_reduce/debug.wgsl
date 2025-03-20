@@ -7,7 +7,7 @@
 // @group(2) @binding(3) var warp_sampler: sampler;
 // @group(2) @binding(4) var<uniform> warp_amount: f32;
 
-const TEXTURE_SIZE: vec2<f32> = vec2(16.0);
+const TEXTURE_SIZE: vec2<f32> = vec2(256, 64);
 
 @fragment
 fn fragment(

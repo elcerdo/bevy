@@ -19,9 +19,9 @@ use bevy::render::{Render, RenderApp, RenderSet};
 
 //////////////////////////////////////////////////////////////////////
 
-#[derive(Component, ExtractComponent, Clone, ShaderType)]
+#[derive(Component, ExtractComponent, Clone, ShaderType, Debug)]
 pub struct PartialSumSettings {
-    pub count: u32,
+    count: u32,
     pub seed: u32,
 }
 
@@ -53,6 +53,7 @@ impl Plugin for PartialSumPlugin {
 
         // render app
         let render_app = app.sub_app_mut(RenderApp);
+        render_app.add_systems(ExtractSchedule, bind::sync_settings);
         render_app.add_systems(
             Render,
             bind::prepare_bind_groups.in_set(RenderSet::PrepareBindGroups),

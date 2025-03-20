@@ -1,5 +1,6 @@
 use super::image::PartialSumImages;
 use super::pipeline::PartialSumPipeline;
+use super::pipeline::PILELINE_COUNT_INVALID;
 use super::PartialSumSettings;
 
 use bevy::prelude::*;
@@ -14,6 +15,20 @@ use bevy::render::texture::GpuImage;
 #[derive(Resource)]
 pub struct PartialSumBindGroups {
     pub group_main: BindGroup,
+}
+
+pub fn sync_settings(
+    mut settings: Query<&mut PartialSumSettings>,
+    pipeline: Res<PartialSumPipeline>,
+) {
+    if settings.is_empty() {
+        return;
+    }
+    let mut settings = settings.single_mut().unwrap();
+    settings.count = pipeline.count;
+    if settings.count != PILELINE_COUNT_INVALID {
+        info!("sync_settings {:?}", settings);
+    }
 }
 
 pub fn prepare_bind_groups(
