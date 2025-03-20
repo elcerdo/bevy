@@ -7,14 +7,14 @@
 // @group(2) @binding(3) var warp_sampler: sampler;
 // @group(2) @binding(4) var<uniform> warp_amount: f32;
 
-const TEXTURE_SIZE: vec2<f32> = vec2(256, 64);
+const TEXTURE_SIZE: vec2<f32> = vec2(16);
 
 @fragment
 fn fragment(
     in: VertexOutput,
 ) -> @location(0) vec4<f32> {
     // let location = vec2<i32>(i32(invocation_id.x), i32(invocation_id.y));
-    let location = vec2<i32>(in.uv.yx * (TEXTURE_SIZE - 1));
+    let location = vec2<i32>(in.uv * (TEXTURE_SIZE - 1));
     let count: u32 = textureLoad(data, location, 0).x;
 
     let aa = f32((count / 1) % 10) / 9.0;

@@ -19,7 +19,7 @@ pub const SHADER_PATH: &str = "shaders/wgpu_reduce/partial_sum.wgsl";
 pub struct PartialSumPipeline {
     pub group_layout: BindGroupLayout,
     pub init_id: CachedComputePipelineId,
-    pub update_id: CachedComputePipelineId,
+    pub reduce_id: CachedComputePipelineId,
     pub count: u32,
 }
 
@@ -56,20 +56,20 @@ impl FromWorld for PartialSumPipeline {
             zero_initialize_workgroup_memory: false,
         });
 
-        let update_id = pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
-            label: Some(Cow::from("update_pipeline_id")),
+        let reduce_id = pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
+            label: Some(Cow::from("reduce_id")),
             layout: vec![group_layout.clone()],
             push_constant_ranges: Vec::new(),
             shader,
             shader_defs: vec![],
-            entry_point: Cow::from("update"),
+            entry_point: Cow::from("reduce"),
             zero_initialize_workgroup_memory: false,
         });
 
         PartialSumPipeline {
             group_layout,
             init_id,
-            update_id,
+            reduce_id,
             count: PILELINE_COUNT_INVALID,
         }
     }

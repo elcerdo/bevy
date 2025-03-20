@@ -46,7 +46,7 @@ impl Node for MainNode {
 
         let pipeline_count: u32;
         {
-            const NUM_REDUCE_STEPS: u32 = 4;
+            const NUM_REDUCE_STEPS: u32 = 1;
             assert!(NUM_REDUCE_STEPS < PILELINE_COUNT_INVALID);
 
             let cache = world.resource::<PipelineCache>();
@@ -61,13 +61,13 @@ impl Node for MainNode {
                         cache.get_compute_pipeline_state(pipeline.init_id),
                         CachedPipelineState::Ok(_)
                     );
-                    let update_ok = matches!(
-                        cache.get_compute_pipeline_state(pipeline.update_id),
+                    let reduce_ok = matches!(
+                        cache.get_compute_pipeline_state(pipeline.reduce_id),
                         CachedPipelineState::Ok(_)
                     );
                     // let voronoi_ok = gpu_images.get(&images.image_pattern).is_some();
-                    debug!("loading {} {}", init_ok, update_ok);
-                    if init_ok && update_ok {
+                    debug!("loading {} {}", init_ok, reduce_ok);
+                    if init_ok && reduce_ok {
                         self.state = MainState::Init;
                     }
                     PILELINE_COUNT_INVALID
@@ -140,14 +140,14 @@ impl Node for MainNode {
             }
             MainState::Reduce(count) => {
                 // pipeline.count is outdated here
-                let factor = 1 << count;
+                let factor = 1 << (count + 1);
                 let factor = factor as u32;
-                debug!("dispatch_reduce count {} factor {}", count, factor);
-                let update_pipeline = cache.get_compute_pipeline(pipeline.update_id).unwrap();
+                warn!("dispatch_reduce count {} factor {}", count, factor);
+                let update_pipeline = cache.get_compute_pipeline(pipeline.reduce_id).unwrap();
                 pass.set_bind_group(0, &bind_groups.group_main, &[]);
                 pass.set_pipeline(update_pipeline);
                 pass.dispatch_workgroups(
-                    TEXTURE_SIZE.0 / WORKGROUP_SIZE.0,
+                    TEXTURE_SIZE.0 / WORKGROUP_SIZE.0 / factor,
                     TEXTURE_SIZE.1 / WORKGROUP_SIZE.1,
                     1,
                 );
