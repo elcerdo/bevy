@@ -172,7 +172,7 @@ fn update_internal_state(
                 shaders.insert(
                     ADVECTION_HANDLE.id(),
                     make_advection_shader_from_snippet(&server_asset, snippet, "alien"),
-                )
+                );
             }
             State::Done
         }
