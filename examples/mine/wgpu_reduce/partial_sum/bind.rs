@@ -18,7 +18,7 @@ pub struct PartialSumBindGroups {
 
 pub fn prepare_bind_groups(
     mut commands: Commands,
-    foo: Single<&PartialSumSettings>,
+    settings_: Single<&PartialSumSettings>,
     settings: Res<ComponentUniforms<PartialSumSettings>>,
     pipeline: Res<PartialSumPipeline>,
     images: Res<PartialSumImages>,
@@ -26,9 +26,9 @@ pub fn prepare_bind_groups(
     render_device: Res<RenderDevice>,
 ) {
     {
-        let foo = foo.into_inner();
-        if foo.count < 256 {
-            debug!("prepare_bind_groups {:?}", foo); // FIXME no luck
+        let settings_ = settings_.into_inner();
+        if settings_.count < 256 {
+            debug!("prepare_bind_groups {:?}", settings_); // FIXME no luck
         }
     }
 

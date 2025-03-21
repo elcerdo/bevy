@@ -24,12 +24,12 @@ fn setup() {
 
 fn hash(value: u32) -> u32 {
     let mut state = value;
-    state = state ^ 2747636419;
-    state = state * 2654435769;
-    state = state ^ state >> 16;
-    state = state * 2654435769;
-    state = state ^ state >> 16;
-    state = state * 2654435769;
+    state ^= 2747636419;
+    state *= 2654435769;
+    state ^= state >> 16;
+    state *= 2654435769;
+    state ^= state >> 16;
+    state *= 2654435769;
     state
 }
 

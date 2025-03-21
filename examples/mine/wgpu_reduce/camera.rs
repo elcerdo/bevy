@@ -36,7 +36,7 @@ fn populate_camera(mut commands: Commands, _asset_server: Res<AssetServer>) {
     commands
         .spawn((
             Transform::from_translation(Vec3::ZERO),
-            CameraPivot::default(),
+            CameraPivot,
             InheritedVisibility::VISIBLE,
         ))
         .with_child((
