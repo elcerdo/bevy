@@ -4,7 +4,6 @@ use crate::material::wavy_material;
 
 use bevy::asset::{AssetServer, Assets};
 use bevy::color::Srgba;
-use bevy::core_pipeline::fxaa::Fxaa;
 use bevy::pbr::{ScreenSpaceReflections, StandardMaterial};
 use bevy::render::mesh::Mesh;
 
@@ -104,7 +103,6 @@ fn populate_camera_and_lights(mut commands: Commands, asset_server: Res<AssetSer
             ..OrthographicProjection::default_3d()
         }),
         Msaa::Off,
-        Fxaa::default(),
         ScreenSpaceReflections::default(),
         EnvironmentMapLight {
             diffuse_map: asset_server.load("environment_maps/pisa_diffuse_rgb9e5_zstd.ktx2"),
