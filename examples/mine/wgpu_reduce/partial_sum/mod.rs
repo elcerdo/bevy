@@ -15,6 +15,7 @@ use bevy::render::extract_resource::ExtractResourcePlugin;
 use bevy::render::graph::CameraDriverLabel;
 use bevy::render::render_graph::{RenderGraph, RenderLabel};
 use bevy::render::render_resource::ShaderType;
+use bevy::render::Extract;
 use bevy::render::{Render, RenderApp, RenderSet};
 
 //////////////////////////////////////////////////////////////////////
@@ -53,7 +54,7 @@ impl Plugin for PartialSumPlugin {
 
         // render app
         let render_app = app.sub_app_mut(RenderApp);
-        render_app.add_systems(ExtractSchedule, bind::increment_count);
+        render_app.add_systems(ExtractSchedule, monitor_settings);
         render_app.add_systems(
             Render,
             bind::prepare_bind_groups.in_set(RenderSet::PrepareBindGroups),
@@ -73,3 +74,13 @@ impl Plugin for PartialSumPlugin {
 }
 
 //////////////////////////////////////////////////////////////////////
+
+pub fn monitor_settings(settings: Extract<Query<&PartialSumSettings>>) {
+    if settings.is_empty() {
+        return;
+    }
+    let settings = settings.single().unwrap();
+    if settings.count < 256 {
+        info!("monitor_settings {:?}", settings);
+    }
+}

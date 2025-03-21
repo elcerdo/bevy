@@ -1,6 +1,7 @@
 use super::bind::PartialSumBindGroups;
 // use super::image::PartialSumImages;
 use super::pipeline::PartialSumPipeline;
+use super::PartialSumSettings;
 use super::PartialSumTriggers;
 
 use super::consts::TEXTURE_SIZE;
@@ -45,6 +46,7 @@ impl Node for MainNode {
             warn!("reinit");
         }
 
+        let mut settings_count: u32 = 256;
         {
             let cache = world.resource::<PipelineCache>();
             let pipeline = world.resource::<PartialSumPipeline>();
@@ -86,6 +88,7 @@ impl Node for MainNode {
                         }
                         true => MainState::Init,
                     };
+                    settings_count = count_;
                 }
                 MainState::Done => {
                     self.state = match should_reinit {
@@ -94,6 +97,15 @@ impl Node for MainNode {
                     };
                 }
             };
+        }
+
+        {
+            let mut settings = world.query::<&mut PartialSumSettings>();
+            if settings.iter(world).len() == 1 {
+                let mut settings = settings.single_mut(world).unwrap();
+                settings.count = settings_count;
+                debug!("forcing settings {:?}", settings);
+            }
         }
     }
 
@@ -116,7 +128,7 @@ impl Node for MainNode {
         // select the pipeline based on the current state
         match self.state {
             MainState::Init => {
-                debug!("dispatch_init");
+                info!("dispatch_init");
                 let init_pipeline = cache.get_compute_pipeline(pipeline.init_id).unwrap();
                 pass.set_bind_group(0, &bind_groups.group_main, &[]);
                 pass.set_pipeline(init_pipeline);
@@ -130,7 +142,7 @@ impl Node for MainNode {
                 // pipeline.count is outdated here
                 let factor = 1 << (count + 1);
                 let factor = factor as u32;
-                warn!("dispatch_reduce count {} factor {}", count, factor);
+                info!("dispatch_reduce count {} factor {}", count, factor);
                 let update_pipeline = cache.get_compute_pipeline(pipeline.reduce_id).unwrap();
                 pass.set_bind_group(0, &bind_groups.group_main, &[]);
                 pass.set_pipeline(update_pipeline);
