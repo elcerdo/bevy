@@ -7,7 +7,6 @@
 // const DIFF_DIRECTION_VV: vec3<f32> = vec3(0.0, 1.0, 0.0);
 
 struct Settings {
-    count: u32,
     seed: u32,
 }
 
@@ -49,13 +48,18 @@ fn reduce(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
     // if settings.count != 3 {
     //     return;
     // }
-    let factor = 1u << (settings.count + 1);
+    let count = 0u;
+    let factor = 1u << (count + 1);
+    let shift = 1u << count;
     let location = vec2<i32>(i32(invocation_id.x * factor), i32(invocation_id.y));
-    let location_ = vec2<i32>(i32(invocation_id.x * factor + 1), i32(invocation_id.y));
+    let location_ = vec2<i32>(i32(invocation_id.x * factor + shift), i32(invocation_id.y));
 
     var color: vec4<u32> = textureLoad(current, location);
     color += textureLoad(current, location_);
-    let color_ = vec4<u32>(0);
+    var color_ = vec4<u32>(0);
+    if count != 0 {
+        color_ = vec4<u32>(999, 0, 0, 0);
+    }
 
     workgroupBarrier();
 

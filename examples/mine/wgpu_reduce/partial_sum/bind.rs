@@ -9,6 +9,7 @@ use bevy::render::render_asset::RenderAssets;
 use bevy::render::render_resource::{BindGroup, BindGroupEntries};
 use bevy::render::renderer::RenderDevice;
 use bevy::render::texture::GpuImage;
+use bevy::render::Extract;
 
 //////////////////////////////////////////////////////////////////////
 
@@ -18,16 +19,16 @@ pub struct PartialSumBindGroups {
 }
 
 pub fn sync_settings(
-    mut settings: Query<&mut PartialSumSettings>,
+    settings: Extract<Query<&PartialSumSettings>>,
     pipeline: Res<PartialSumPipeline>,
 ) {
     if settings.is_empty() {
         return;
     }
-    let mut settings = settings.single_mut().unwrap();
-    settings.count = pipeline.count;
-    if settings.count != PILELINE_COUNT_INVALID {
-        info!("sync_settings {:?}", settings);
+    let settings = settings.single().unwrap();
+    // settings.count = pipeline.count;
+    if pipeline.count != PILELINE_COUNT_INVALID {
+        warn!("sync_settings {} {:?}", pipeline.count, settings);
     }
 }
 

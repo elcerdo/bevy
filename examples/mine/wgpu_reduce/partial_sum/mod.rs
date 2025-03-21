@@ -21,7 +21,6 @@ use bevy::render::{Render, RenderApp, RenderSet};
 
 #[derive(Component, ExtractComponent, Clone, ShaderType, Debug)]
 pub struct PartialSumSettings {
-    count: u32,
     pub seed: u32,
 }
 

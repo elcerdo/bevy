@@ -46,7 +46,7 @@ impl Node for MainNode {
 
         let pipeline_count: u32;
         {
-            const NUM_REDUCE_STEPS: u32 = 1;
+            const NUM_REDUCE_STEPS: u32 = 2;
             assert!(NUM_REDUCE_STEPS < PILELINE_COUNT_INVALID);
 
             let cache = world.resource::<PipelineCache>();
