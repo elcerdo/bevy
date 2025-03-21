@@ -30,7 +30,6 @@ pub fn prepare_bind_groups(
         if foo.count < 256 {
             debug!("prepare_bind_groups {:?}", foo); // FIXME no luck
         }
-        
     }
 
     let settings = settings.uniforms().binding().unwrap();
