@@ -5,13 +5,14 @@ use super::PartialSumTriggers;
 
 use super::consts::TEXTURE_SIZE;
 use super::consts::WORKGROUP_SIZE;
-use super::pipeline::PILELINE_COUNT_INVALID;
 
 use bevy::prelude::*;
 use bevy::render::render_graph::Node;
 
 // use bevy::render::render_asset::RenderAssets;
 // use bevy::render::texture::GpuImage;
+
+const NUM_REDUCE_STEPS: u32 = 2;
 
 //////////////////////////////////////////////////////////////////////
 
@@ -44,18 +45,14 @@ impl Node for MainNode {
             warn!("reinit");
         }
 
-        let pipeline_count: u32;
         {
-            const NUM_REDUCE_STEPS: u32 = 2;
-            assert!(NUM_REDUCE_STEPS < PILELINE_COUNT_INVALID);
-
             let cache = world.resource::<PipelineCache>();
             let pipeline = world.resource::<PartialSumPipeline>();
             // let images = world.resource::<PartialSumImages>();
             // let gpu_images = world.resource::<RenderAssets<GpuImage>>();
 
             // advance to next state
-            pipeline_count = match self.state {
+            match self.state {
                 MainState::Loading => {
                     let init_ok = matches!(
                         cache.get_compute_pipeline_state(pipeline.init_id),
@@ -70,14 +67,12 @@ impl Node for MainNode {
                     if init_ok && reduce_ok {
                         self.state = MainState::Init;
                     }
-                    PILELINE_COUNT_INVALID
                 }
                 MainState::Init => {
                     self.state = match should_reinit {
                         false => MainState::Reduce(0),
                         true => MainState::Init,
                     };
-                    PILELINE_COUNT_INVALID
                 }
                 MainState::Reduce(count_) => {
                     let count = count_ + 1;
@@ -91,21 +86,14 @@ impl Node for MainNode {
                         }
                         true => MainState::Init,
                     };
-                    count_
                 }
                 MainState::Done => {
                     self.state = match should_reinit {
                         false => MainState::Done,
                         true => MainState::Init,
                     };
-                    PILELINE_COUNT_INVALID
                 }
             };
-        }
-
-        {
-            let mut pipeline = world.resource_mut::<PartialSumPipeline>();
-            pipeline.count = pipeline_count;
         }
     }
 

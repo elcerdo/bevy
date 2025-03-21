@@ -1,6 +1,5 @@
 use super::image::PartialSumImages;
 use super::pipeline::PartialSumPipeline;
-use super::pipeline::PILELINE_COUNT_INVALID;
 use super::PartialSumSettings;
 
 use bevy::prelude::*;
@@ -9,7 +8,7 @@ use bevy::render::render_asset::RenderAssets;
 use bevy::render::render_resource::{BindGroup, BindGroupEntries};
 use bevy::render::renderer::RenderDevice;
 use bevy::render::texture::GpuImage;
-use bevy::render::Extract;
+// use bevy::render::Extract;
 
 //////////////////////////////////////////////////////////////////////
 
@@ -18,18 +17,16 @@ pub struct PartialSumBindGroups {
     pub group_main: BindGroup,
 }
 
-pub fn sync_settings(
-    settings: Extract<Query<&PartialSumSettings>>,
-    pipeline: Res<PartialSumPipeline>,
+pub fn increment_count(
+    // settings: Extract<Query<&PartialSumSettings>>,
+    mut settings: Query<&mut PartialSumSettings>,
 ) {
     if settings.is_empty() {
         return;
     }
-    let settings = settings.single().unwrap();
-    // settings.count = pipeline.count;
-    if pipeline.count != PILELINE_COUNT_INVALID {
-        warn!("sync_settings {} {:?}", pipeline.count, settings);
-    }
+    let mut settings = settings.single_mut().unwrap();
+    warn!("increment_count {:?}", settings);
+    settings.count += 1; // this has no effect
 }
 
 pub fn prepare_bind_groups(
@@ -51,7 +48,7 @@ pub fn prepare_bind_groups(
         &BindGroupEntries::sequential((
             &view_initial.texture_view,
             &view_current.texture_view,
-            settings.clone(), // FIXME update count
+            settings.clone(),
         )),
     );
 

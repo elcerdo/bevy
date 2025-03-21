@@ -7,6 +7,7 @@
 // const DIFF_DIRECTION_VV: vec3<f32> = vec3(0.0, 1.0, 0.0);
 
 struct Settings {
+    count: u32,
     seed: u32,
 }
 
@@ -48,7 +49,7 @@ fn reduce(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
     // if settings.count != 3 {
     //     return;
     // }
-    let count = 0u;
+    let count = settings.count;
     let factor = 1u << (count + 1);
     let shift = 1u << count;
     let location = vec2<i32>(i32(invocation_id.x * factor), i32(invocation_id.y));

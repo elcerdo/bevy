@@ -52,7 +52,10 @@ pub fn populate_planes(
     // magic planes
     commands
         .spawn((
-            PartialSumSettings { seed: 0x1fb474bf },
+            PartialSumSettings {
+                seed: 0x1fb474bf,
+                count: 0,
+            },
             Transform::default(),
             InheritedVisibility::VISIBLE,
         ))

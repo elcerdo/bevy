@@ -20,10 +20,7 @@ pub struct PartialSumPipeline {
     pub group_layout: BindGroupLayout,
     pub init_id: CachedComputePipelineId,
     pub reduce_id: CachedComputePipelineId,
-    pub count: u32,
 }
-
-pub const PILELINE_COUNT_INVALID: u32 = 256;
 
 impl FromWorld for PartialSumPipeline {
     fn from_world(world: &mut World) -> Self {
@@ -70,7 +67,6 @@ impl FromWorld for PartialSumPipeline {
             group_layout,
             init_id,
             reduce_id,
-            count: PILELINE_COUNT_INVALID,
         }
     }
 }
