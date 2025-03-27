@@ -1,3 +1,15 @@
+# My stuff
+
+To run `morpheus_example`, install rust and run the following command from the root of the repository.
+```sh
+RUST_LOG=info cargo run --example morpheus_viewer --release
+```
+
+To run `offroad`, run the following.
+```sh
+RUST_LOG=info cargo run --example offroad --release
+```
+
 # [![Bevy](assets/branding/bevy_logo_light_dark_and_dimmed.svg)](https://bevyengine.org)
 
 [![License](https://img.shields.io/badge/license-MIT%2FApache-blue.svg)](https://github.com/bevyengine/bevy#license)
