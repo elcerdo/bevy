@@ -5,6 +5,8 @@ To run `morpheus_example`, install rust and run the following command from the r
 RUST_LOG=info cargo run --example morpheus_viewer --release
 ```
 
+![morpheus_viewer](assets/screenshot/morpheus_viewer.png)
+
 To run `offroad`, run the following.
 ```sh
 RUST_LOG=info cargo run --example offroad --release
