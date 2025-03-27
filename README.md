@@ -12,6 +12,8 @@ To run `offroad`, run the following.
 RUST_LOG=info cargo run --example offroad --release
 ```
 
+![morpheus_viewer](assets/screenshot/offroad.png)
+
 # [![Bevy](assets/branding/bevy_logo_light_dark_and_dimmed.svg)](https://bevyengine.org)
 
 [![License](https://img.shields.io/badge/license-MIT%2FApache-blue.svg)](https://github.com/bevyengine/bevy#license)
