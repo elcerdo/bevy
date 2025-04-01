@@ -220,6 +220,8 @@ fn _populate_models(
         asset_server.load("textures/matcap/583629_2E1810_765648_3C1C14-512px.png");
     let matcap_texture_: Handle<Image> =
         asset_server.load("textures/matcap/392307_B3AE7D_6D5618_847C42-512px.png");
+    let matcap_texture__: Handle<Image> =
+        asset_server.load("textures/matcap/3E95CC_65D9F1_A2E2F6_679BD4-512px.png");
 
     // meshes
     let tube_mesh = meshes.add(Mesh::from(Cylinder::new(0.05, 2.0)));
@@ -247,7 +249,7 @@ fn _populate_models(
         1.0,
     ));
     let slot5_material = morpheus_slot5_materials.add(MorpheusRaymarchingMaterial::<Slot5>::new(
-        matcap_texture.clone(),
+        matcap_texture__.clone(),
         45e-2,
     ));
     let slot6_material = morpheus_slot6_materials.add(MorpheusRaymarchingMaterial::<Slot6>::new(
