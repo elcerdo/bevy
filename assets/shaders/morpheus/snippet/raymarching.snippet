@@ -42,10 +42,14 @@ fn vertex(vertex: Vertex) -> VertexOutput {
 fn fragment(
     in: VertexOutput,
 ) -> @location(0) vec4<f32> {
-    let eye_position = view_transformations::position_ndc_to_world(vec3(0.0, 0.0, -1.0));
-    let world_direction = normalize(in.world_position - eye_position);
-
+    var eye_position = view_transformations::position_ndc_to_world(vec3(0.0, 0.0, -1.0));
+    var world_direction = normalize(in.world_position - eye_position);
     var pos = in.world_position - bbox_center;
+
+    eye_position = eye_position.xzy;
+    pos = pos.xzy;
+    world_direction = world_direction.xzy;
+    
     var dist = signed_distance_function(pos);
     for (var kk: u32 = 0; kk < 64; kk++) {
         if (dist <= 0.0) { break; }
@@ -65,7 +69,7 @@ fn fragment(
         signed_distance_function(pos + vec3(0.0, 0.0, hh)) - signed_distance_function(pos - vec3(0.0, 0.0, hh)), 
     ));
     let view_grad = normalize(view_transformations::direction_world_to_view(world_grad));
-    var color = textureSample(matcap_texture, matcap_sampler, (view_grad.xy + 1.0) / 2.0);
+    var color = textureSample(matcap_texture, matcap_sampler, (view_grad.yx + 1.0) / 2.0);
     
     return color;
 }

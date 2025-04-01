@@ -48,7 +48,8 @@ impl Plugin for MorpheusPlugin {
         app.add_systems(Update, camera::rotate_camera);
         app.add_systems(Update, camera::zoom_camera);
 
-        app.add_systems(Startup, populate_models);
+        // app.add_systems(Startup, populate_models);
+        app.add_systems(Startup, populate_advection_model);
     }
 }
 
@@ -180,7 +181,27 @@ fn update_internal_state(
     };
 }
 
-fn populate_models(
+fn populate_advection_model(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<MorpheusRaymarchingMaterial<Slot2>>>,
+    asset_server: Res<AssetServer>,
+) {
+    let matcap_texture: Handle<Image> =
+        asset_server.load("textures/matcap/583629_2E1810_765648_3C1C14-512px.png");
+    let cube_mesh: Handle<Mesh> = meshes.add(Mesh::from(Cuboid::new(2.0, 2.0, 2.0)));
+    let material = materials.add(MorpheusRaymarchingMaterial::<Slot2>::new(
+        matcap_texture.clone(),
+        1.0,
+    ));
+    commands.spawn((
+        Mesh3d(cube_mesh),
+        MeshMaterial3d(material),
+        Transform::from_xyz(-1.0, 0.0, 1.0),
+    ));
+}
+
+fn _populate_models(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut morpheus_slot0_materials: ResMut<Assets<MorpheusRaymarchingMaterial<Slot0>>>,
