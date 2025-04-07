@@ -29,10 +29,10 @@ const COLOR_BEST_LAP_BOARD: Srgba = bevy::color::palettes::css::LIGHT_GRAY;
 
 const MODEL_SCALE: f32 = 0.15;
 
-const MODEL_P1: &str = "models/offroad/boat_p1.glb";
-const MODEL_P2: &str = "models/offroad/boat_p2.glb";
-const MODEL_P3: &str = "models/offroad/boat_p3.glb";
-const MODEL_CUP: &str = "models/offroad/cup.glb";
+const MODEL_P1_PATH: &str = "models/offroad/boat_p1.glb";
+const MODEL_P2_PATH: &str = "models/offroad/boat_p2.glb";
+const MODEL_P3_PATH: &str = "models/offroad/boat_p3.glb";
+const MODEL_CUP_PATH: &str = "models/offroad/cup.glb";
 
 const COLOR_FIRST: Srgba = bevy::color::palettes::css::GOLD;
 const COLOR_SECOND: Srgba = bevy::color::palettes::css::SILVER;
@@ -199,9 +199,9 @@ fn populate_vehicles(
     assert!(track.is_looping);
 
     // vehicles
-    let model_p1: Handle<Scene> = server.load(GltfAssetLabel::Scene(0).from_asset(MODEL_P1));
-    let model_p2: Handle<Scene> = server.load(GltfAssetLabel::Scene(0).from_asset(MODEL_P2));
-    let model_p3: Handle<Scene> = server.load(GltfAssetLabel::Scene(0).from_asset(MODEL_P3));
+    let model_p1: Handle<Scene> = server.load(GltfAssetLabel::Scene(0).from_asset(MODEL_P1_PATH));
+    let model_p2: Handle<Scene> = server.load(GltfAssetLabel::Scene(0).from_asset(MODEL_P2_PATH));
+    let model_p3: Handle<Scene> = server.load(GltfAssetLabel::Scene(0).from_asset(MODEL_P3_PATH));
     let initial_righthand = track.initial_forward.cross(track.initial_up);
     let pos_p1 = track.initial_position;
     let pos_p2 = track.initial_position + initial_righthand * track.initial_left / 2.0;
@@ -243,7 +243,7 @@ fn populate_vehicles(
             mesh: 0,
             primitive: 0,
         }
-        .from_asset(MODEL_CUP),
+        .from_asset(MODEL_CUP_PATH),
     );
     commands.spawn((
         VehicleSceneMarker,

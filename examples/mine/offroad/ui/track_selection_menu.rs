@@ -6,9 +6,13 @@ use crate::ui::consts::*;
 use bevy::math::{Affine2, Vec2};
 use bevy::pbr::{StandardMaterial, UvChannel};
 use bevy::prelude::*;
+use bevy::sprite::Anchor;
 
 use std::f32::consts::PI;
 
+const LOGO_PATH: &str = "textures/offroad/super_splash_logo.png";
+
+//////////////////////////////////////////////////////////////////////
 pub struct TrackSelectionMenuPlugin;
 
 impl Plugin for TrackSelectionMenuPlugin {
@@ -19,6 +23,7 @@ impl Plugin for TrackSelectionMenuPlugin {
             let state = GlobalState::TrackSelectionHoovered(*track_nickname);
             let state_ = GlobalState::TrackSelected(*track_nickname);
             app.add_systems(OnEnter(state), update_selected_model);
+            app.add_systems(OnEnter(state), update_logo_transform);
             app.add_systems(Update, quit_with_escape.run_if(in_state(state)));
             app.add_systems(OnEnter(state_), depopulate_all);
         }
@@ -37,6 +42,8 @@ fn quit_with_escape(mut writer: EventWriter<AppExit>, keyboard: Res<ButtonInput<
         writer.write(AppExit::Success);
     }
 }
+
+//////////////////////////////////////////////////////////////////////
 
 #[derive(Component)]
 struct TrackSelectionModelMarker;
@@ -138,10 +145,16 @@ fn animate_selected_model(
     }
 }
 
+//////////////////////////////////////////////////////////////////////
+
 #[derive(Component)]
 struct TrackSelectionSceneMarker;
 
-fn populate_scene(mut commands: Commands, mut next_state: ResMut<NextState<GlobalState>>) {
+fn populate_scene(
+    mut commands: Commands,
+    mut next_state: ResMut<NextState<GlobalState>>,
+    asset_server: Res<AssetServer>,
+) {
     use bevy::prelude::*;
 
     // light
@@ -161,6 +174,14 @@ fn populate_scene(mut commands: Commands, mut next_state: ResMut<NextState<Globa
         TrackSelectionSceneMarker,
         Camera3d::default(),
         Transform::from_xyz(-20.0, 20.0, 30.0).looking_at(Vec3::ZERO, Vec3::Y),
+    ));
+    commands.spawn((
+        TrackSelectionSceneMarker,
+        Camera2d,
+        Camera {
+            order: 1,
+            ..default()
+        },
     ));
 
     // ui buttons
@@ -208,6 +229,12 @@ fn populate_scene(mut commands: Commands, mut next_state: ResMut<NextState<Globa
             add_button(TrackNickname::Advanced);
         });
 
+    // logo
+    commands.spawn((
+        TrackSelectionSceneMarker,
+        Sprite::from_image(asset_server.load(LOGO_PATH)),
+    ));
+
     next_state.set(GlobalState::TrackSelectionIdle);
 }
 
@@ -238,6 +265,24 @@ fn update_menu(
         }
     }
 }
+
+fn update_logo_transform(
+    query: Query<(&mut Transform, &mut Sprite), With<TrackSelectionSceneMarker>>,
+    window: Single<&Window>,
+) {
+    let transform_ = Vec3::new(
+        window.physical_width() as f32 - 20.0,
+        window.physical_height() as f32 - 30.0,
+        0.0,
+    ) / 2.0;
+    let transform_ = Transform::from_translation(transform_).with_scale(Vec3::ONE * 0.5);
+    for (mut transform, mut sprite) in query {
+        *transform = transform_;
+        sprite.anchor = Anchor::TopRight;
+    }
+}
+
+//////////////////////////////////////////////////////////////////////
 
 fn depopulate_all(
     mut commands: Commands,

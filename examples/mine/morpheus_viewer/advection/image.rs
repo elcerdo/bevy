@@ -76,7 +76,7 @@ pub fn populate_planes_and_images(
             base_color_texture: Some(image_a.clone()),
             ..default()
         })),
-        Transform::from_xyz(-3.0, 0.0, -1.0),
+        Transform::from_xyz(3.0, 0.0, -1.0),
         AdvectionSettings::default(),
     ));
     commands.spawn((
@@ -87,7 +87,7 @@ pub fn populate_planes_and_images(
             base_color_texture: Some(image_b.clone()),
             ..default()
         })),
-        Transform::from_xyz(-1.0, 0.0, -1.0),
+        Transform::from_xyz(1.0, 0.0, -1.0),
     ));
     commands.spawn((
         Mesh3d(meshes.add(Plane3d::new(Vec3::Y, Vec2::ONE))),
@@ -97,7 +97,7 @@ pub fn populate_planes_and_images(
             base_color_texture: Some(image_pattern.clone()),
             ..default()
         })),
-        Transform::from_xyz(1.0, 0.0, -1.0),
+        Transform::from_xyz(-1.0, 0.0, -1.0),
     ));
 
     let image_voronoi = asset_server.load::<Image>("textures/voronoi.png");
@@ -107,13 +107,13 @@ pub fn populate_planes_and_images(
             image_voronoi.clone(),
             image_pattern.clone(),
         ))),
-        Transform::from_xyz(3.0, 0.0, -1.0),
+        Transform::from_xyz(-3.0, 0.0, -1.0),
     ));
 
     commands.spawn((
         Mesh3d(meshes.add(make_cubes_mesh(256, 0.01))),
         MeshMaterial3d(displaced_materials.add(DisplacedMaterial::new(image_pattern.clone()))),
-        Transform::from_xyz(-4.0, 1e-2, -2.0),
+        Transform::from_xyz(2.0, 1e-2, -2.0),
     ));
 
     // insert images
