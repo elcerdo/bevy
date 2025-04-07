@@ -141,7 +141,11 @@ fn animate_selected_model(
 #[derive(Component)]
 struct TrackSelectionSceneMarker;
 
-fn populate_scene(mut commands: Commands, mut next_state: ResMut<NextState<GlobalState>>) {
+fn populate_scene(
+    mut commands: Commands,
+    mut next_state: ResMut<NextState<GlobalState>>,
+    asset_server: Res<AssetServer>,
+) {
     use bevy::prelude::*;
 
     // light
@@ -161,6 +165,14 @@ fn populate_scene(mut commands: Commands, mut next_state: ResMut<NextState<Globa
         TrackSelectionSceneMarker,
         Camera3d::default(),
         Transform::from_xyz(-20.0, 20.0, 30.0).looking_at(Vec3::ZERO, Vec3::Y),
+    ));
+    commands.spawn((
+        TrackSelectionSceneMarker,
+        Camera2d::default(),
+        Camera {
+            order: 1,
+            ..default()
+        },
     ));
 
     // ui buttons
@@ -207,6 +219,12 @@ fn populate_scene(mut commands: Commands, mut next_state: ResMut<NextState<Globa
             add_button(TrackNickname::Vertical);
             add_button(TrackNickname::Advanced);
         });
+
+    // logo
+    commands.spawn((
+        TrackSelectionSceneMarker,
+        Sprite::from_image(asset_server.load("textures/offroad/super_splash_logo.png")),
+    ));
 
     next_state.set(GlobalState::TrackSelectionIdle);
 }
