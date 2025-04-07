@@ -46,6 +46,7 @@ fn fragment(
     var world_direction = normalize(in.world_position - eye_position);
     var pos = in.world_position - bbox_center;
 
+    // FIXME flip axis around
     eye_position = eye_position.xzy;
     pos = pos.xzy;
     world_direction = world_direction.xzy;
@@ -68,7 +69,7 @@ fn fragment(
         signed_distance_function(pos + vec3(0.0, hh, 0.0)) - signed_distance_function(pos - vec3(0.0, hh, 0.0)), 
         signed_distance_function(pos + vec3(0.0, 0.0, hh)) - signed_distance_function(pos - vec3(0.0, 0.0, hh)), 
     ));
-    let view_grad = normalize(view_transformations::direction_world_to_view(world_grad));
+    var view_grad = normalize(view_transformations::direction_world_to_view(world_grad));
     var color = textureSample(matcap_texture, matcap_sampler, (view_grad.yx + 1.0) / 2.0);
     
     return color;
