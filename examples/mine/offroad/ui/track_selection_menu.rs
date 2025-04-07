@@ -10,6 +10,9 @@ use bevy::sprite::Anchor;
 
 use std::f32::consts::PI;
 
+const LOGO_PATH: &str = "textures/offroad/super_splash_logo.png";
+
+//////////////////////////////////////////////////////////////////////
 pub struct TrackSelectionMenuPlugin;
 
 impl Plugin for TrackSelectionMenuPlugin {
@@ -39,6 +42,8 @@ fn quit_with_escape(mut writer: EventWriter<AppExit>, keyboard: Res<ButtonInput<
         writer.write(AppExit::Success);
     }
 }
+
+//////////////////////////////////////////////////////////////////////
 
 #[derive(Component)]
 struct TrackSelectionModelMarker;
@@ -140,6 +145,8 @@ fn animate_selected_model(
     }
 }
 
+//////////////////////////////////////////////////////////////////////
+
 #[derive(Component)]
 struct TrackSelectionSceneMarker;
 
@@ -170,7 +177,7 @@ fn populate_scene(
     ));
     commands.spawn((
         TrackSelectionSceneMarker,
-        Camera2d::default(),
+        Camera2d,
         Camera {
             order: 1,
             ..default()
@@ -225,7 +232,7 @@ fn populate_scene(
     // logo
     commands.spawn((
         TrackSelectionSceneMarker,
-        Sprite::from_image(asset_server.load("textures/offroad/super_splash_logo.png")),
+        Sprite::from_image(asset_server.load(LOGO_PATH)),
     ));
 
     next_state.set(GlobalState::TrackSelectionIdle);
@@ -274,6 +281,8 @@ fn update_logo_transform(
         sprite.anchor = Anchor::TopRight;
     }
 }
+
+//////////////////////////////////////////////////////////////////////
 
 fn depopulate_all(
     mut commands: Commands,
