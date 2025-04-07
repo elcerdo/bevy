@@ -6,6 +6,7 @@ use crate::ui::consts::*;
 use bevy::math::{Affine2, Vec2};
 use bevy::pbr::{StandardMaterial, UvChannel};
 use bevy::prelude::*;
+use bevy::sprite::Anchor;
 
 use std::f32::consts::PI;
 
@@ -19,6 +20,7 @@ impl Plugin for TrackSelectionMenuPlugin {
             let state = GlobalState::TrackSelectionHoovered(*track_nickname);
             let state_ = GlobalState::TrackSelected(*track_nickname);
             app.add_systems(OnEnter(state), update_selected_model);
+            app.add_systems(OnEnter(state), update_logo_transform);
             app.add_systems(Update, quit_with_escape.run_if(in_state(state)));
             app.add_systems(OnEnter(state_), depopulate_all);
         }
@@ -254,6 +256,22 @@ fn update_menu(
             }
             _ => {}
         }
+    }
+}
+
+fn update_logo_transform(
+    query: Query<(&mut Transform, &mut Sprite), With<TrackSelectionSceneMarker>>,
+    window: Single<&Window>,
+) {
+    let transform_ = Vec3::new(
+        window.physical_width() as f32 - 20.0,
+        window.physical_height() as f32 - 30.0,
+        0.0,
+    ) / 2.0;
+    let transform_ = Transform::from_translation(transform_).with_scale(Vec3::ONE * 0.5);
+    for (mut transform, mut sprite) in query {
+        *transform = transform_;
+        sprite.anchor = Anchor::TopRight;
     }
 }
 
