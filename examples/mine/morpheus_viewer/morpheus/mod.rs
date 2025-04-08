@@ -48,8 +48,9 @@ impl Plugin for MorpheusPlugin {
         app.add_systems(Update, camera::rotate_camera);
         app.add_systems(Update, camera::zoom_camera);
 
-        // app.add_systems(Startup, populate_models);
-        app.add_systems(Startup, populate_advection_model);
+        app.add_systems(Startup, _populate_models);
+        // app.add_systems(Startup, _populate_advection_model);
+        app.add_systems(Update, keyboard_change_raymarching_model);
     }
 }
 
@@ -61,7 +62,8 @@ enum State {
     Init,
     LoadingSnippets,
     PreparingShaders,
-    Done,
+    SettingShader(usize, String),
+    Ready,
 }
 
 #[derive(Resource, Default)]
@@ -111,7 +113,7 @@ fn update_internal_state(
     snippets: Res<Assets<Snippet>>,
     server_asset: Res<AssetServer>,
 ) {
-    handles.state = match handles.state {
+    handles.state = match &handles.state {
         State::Init => {
             handles.raymarching_snippet =
                 server_asset.load::<Snippet>("shaders/morpheus/snippet/raymarching.snippet");
@@ -131,57 +133,92 @@ fn update_internal_state(
         State::PreparingShaders => {
             {
                 info!("** prepare_raymarching_shaders **");
-                let snippet = snippets.get(handles.raymarching_snippet.id()).unwrap();
-                let snippet = &snippet.content;
+                let ray_snippet = snippets.get(handles.raymarching_snippet.id()).unwrap();
+                let ray_snippet = &ray_snippet.content;
                 shaders.insert(
                     Slot0::RAYMARCHING_HANDLE.id(),
-                    make_raymarching_shader_from_snippet(&server_asset, snippet, "icescream"),
+                    make_raymarching_shader_from_snippet(&server_asset, ray_snippet, "icescream"),
                 );
                 shaders.insert(
                     Slot1::RAYMARCHING_HANDLE.id(),
-                    make_raymarching_shader_from_snippet(&server_asset, snippet, "union"),
+                    make_raymarching_shader_from_snippet(&server_asset, ray_snippet, "union"),
                 );
                 shaders.insert(
                     Slot2::RAYMARCHING_HANDLE.id(),
-                    make_raymarching_shader_from_snippet(&server_asset, snippet, "alien"),
+                    make_raymarching_shader_from_snippet(&server_asset, ray_snippet, "alien"),
                 );
                 shaders.insert(
                     Slot3::RAYMARCHING_HANDLE.id(),
-                    make_raymarching_shader_from_snippet(&server_asset, snippet, "can"),
+                    make_raymarching_shader_from_snippet(&server_asset, ray_snippet, "can"),
                 );
                 shaders.insert(
                     Slot4::RAYMARCHING_HANDLE.id(),
-                    make_raymarching_shader_from_snippet(&server_asset, snippet, "runman"),
+                    make_raymarching_shader_from_snippet(&server_asset, ray_snippet, "runman"),
                 );
                 shaders.insert(
                     Slot5::RAYMARCHING_HANDLE.id(),
-                    make_raymarching_shader_from_snippet(&server_asset, snippet, "seascape"),
+                    make_raymarching_shader_from_snippet(&server_asset, ray_snippet, "seascape"),
                 );
                 shaders.insert(
                     Slot6::RAYMARCHING_HANDLE.id(),
-                    make_raymarching_shader_from_snippet(&server_asset, snippet, "cheese"),
+                    make_raymarching_shader_from_snippet(&server_asset, ray_snippet, "cheese"),
                 );
                 shaders.insert(
                     Slot7::RAYMARCHING_HANDLE.id(),
-                    make_raymarching_shader_from_snippet(&server_asset, snippet, "sphere"),
+                    make_raymarching_shader_from_snippet(&server_asset, ray_snippet, "arlo"),
                 );
             }
             {
                 info!("** prepare_advection_shader **");
-                let snippet = snippets.get(handles.advection_snippet.id()).unwrap();
-                let snippet = &snippet.content;
+                let adv_snippet = snippets.get(handles.advection_snippet.id()).unwrap();
+                let adv_snippet = &adv_snippet.content;
                 shaders.insert(
                     ADVECTION_HANDLE.id(),
-                    make_advection_shader_from_snippet(&server_asset, snippet, "alien"),
+                    make_advection_shader_from_snippet(&server_asset, adv_snippet, "alien"),
                 );
             }
-            State::Done
+            State::Ready
         }
-        State::Done => State::Done,
+        State::SettingShader(slot, shape) => {
+            info!("** setting_shader {} {} **", slot, shape);
+            let shader_id = match slot {
+                0 => Slot0::RAYMARCHING_HANDLE.id(),
+                1 => Slot1::RAYMARCHING_HANDLE.id(),
+                2 => Slot2::RAYMARCHING_HANDLE.id(),
+                3 => Slot3::RAYMARCHING_HANDLE.id(),
+                4 => Slot4::RAYMARCHING_HANDLE.id(),
+                5 => Slot5::RAYMARCHING_HANDLE.id(),
+                6 => Slot6::RAYMARCHING_HANDLE.id(),
+                7 => Slot7::RAYMARCHING_HANDLE.id(),
+                _ => unreachable!(),
+            };
+            let ray_snippet = snippets.get(handles.raymarching_snippet.id()).unwrap();
+            let ray_snippet = &ray_snippet.content;
+            shaders.insert(
+                shader_id,
+                make_raymarching_shader_from_snippet(&server_asset, ray_snippet, shape.as_str()),
+            );
+            State::Ready
+        }
+        State::Ready => State::Ready,
     };
 }
 
-fn populate_advection_model(
+fn keyboard_change_raymarching_model(
+    mut handles: ResMut<SnippetHandles>,
+    keyboard: Res<ButtonInput<KeyCode>>,
+) {
+    if keyboard.just_pressed(KeyCode::KeyP) {
+        match &handles.state {
+            State::Ready => {
+                handles.state = State::SettingShader(7, "sphere".into());
+            }
+            _ => {}
+        }
+    }
+}
+
+fn _populate_advection_model(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<MorpheusRaymarchingMaterial<Slot2>>>,
