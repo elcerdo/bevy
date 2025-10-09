@@ -1,4 +1,4 @@
-use crate::ui::UiGrab;
+// use crate::ui::UiGrab;
 
 use bevy::input::mouse::AccumulatedMouseMotion;
 use bevy::input::mouse::MouseScrollUnit;
@@ -80,11 +80,11 @@ pub fn rotate_camera(
     mouse_input: Res<ButtonInput<MouseButton>>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mouse_motion: Res<AccumulatedMouseMotion>,
-    grab: Res<UiGrab>,
+    // grab: Res<UiGrab>,
 ) {
-    if grab.any() {
-        return;
-    }
+    // if grab.any() {
+    //     return;
+    // }
     let (mut transform, pivot) = query.into_inner();
     if mouse_input.pressed(MouseButton::Left) {
         let delta = mouse_motion.delta;

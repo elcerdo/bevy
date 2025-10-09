@@ -1,10 +1,11 @@
 //! morpheus model viewer
 
-mod advection;
+// mod advection;
+// mod ui;
+
 mod morpheus;
 mod slot;
 mod snippet;
-mod ui;
 
 use bevy::prelude::*;
 
@@ -46,18 +47,28 @@ fn main() {
     }
 
     app.add_plugins(morpheus::MorpheusPlugin);
-    app.add_plugins(advection::AdvectionPlugin);
-    app.add_plugins(ui::UiPlugin);
+    // app.add_plugins(advection::AdvectionPlugin);
+    // app.add_plugins(ui::UiPlugin);
 
     app.add_systems(Update, keyboard_quit_with_escape);
-    app.add_systems(Update, keyboard_reinit_advection);
-    app.add_systems(Update, keyboard_toggle_advection_learning_rate);
-    app.add_systems(Update, ui_update_buttons);
-    app.add_systems(Update, ui_update_sliders);
+    // app.add_systems(Update, keyboard_reinit_advection);
+    // app.add_systems(Update, keyboard_toggle_advection_learning_rate);
+    // app.add_systems(Update, ui_update_buttons);
+    // app.add_systems(Update, ui_update_sliders);
 
     app.run();
 }
 
+fn keyboard_quit_with_escape(
+    mut writer: EventWriter<AppExit>,
+    keyboard: Res<ButtonInput<KeyCode>>,
+) {
+    if keyboard.just_pressed(KeyCode::Escape) {
+        writer.write(AppExit::Success);
+    }
+}
+
+/*
 fn ui_update_buttons(
     query: Query<&ui::ButtonData, Changed<ui::ButtonData>>,
     mut triggers: ResMut<advection::AdvectionTriggers>,
@@ -110,15 +121,6 @@ fn ui_update_sliders(
     }
 }
 
-fn keyboard_quit_with_escape(
-    mut writer: EventWriter<AppExit>,
-    keyboard: Res<ButtonInput<KeyCode>>,
-) {
-    if keyboard.just_pressed(KeyCode::Escape) {
-        writer.write(AppExit::Success);
-    }
-}
-
 fn keyboard_reinit_advection(
     mut triggers: ResMut<advection::AdvectionTriggers>,
     keyboard: Res<ButtonInput<KeyCode>>,
@@ -145,3 +147,4 @@ fn keyboard_toggle_advection_learning_rate(
         }
     }
 }
+*/

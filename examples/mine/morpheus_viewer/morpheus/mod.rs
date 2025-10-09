@@ -48,8 +48,8 @@ impl Plugin for MorpheusPlugin {
         app.add_systems(Update, camera::rotate_camera);
         app.add_systems(Update, camera::zoom_camera);
 
-        app.add_systems(Startup, _populate_models);
-        // app.add_systems(Startup, _populate_advection_model);
+        // app.add_systems(Startup, populate_models);
+        app.add_systems(Startup, populate_single_model);
         app.add_systems(Update, keyboard_change_raymarching_model);
     }
 }
@@ -218,7 +218,7 @@ fn keyboard_change_raymarching_model(
     }
 }
 
-fn _populate_advection_model(
+fn populate_single_model(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<MorpheusRaymarchingMaterial<Slot2>>>,
@@ -234,11 +234,11 @@ fn _populate_advection_model(
     commands.spawn((
         Mesh3d(cube_mesh),
         MeshMaterial3d(material),
-        Transform::from_xyz(-1.0, 0.0, 1.0),
+        Transform::from_xyz(0.0, 0.0, 0.0),
     ));
 }
 
-fn _populate_models(
+fn populate_models(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut morpheus_slot0_materials: ResMut<Assets<MorpheusRaymarchingMaterial<Slot0>>>,
@@ -378,7 +378,6 @@ fn _populate_models(
                 MeshMaterial3d(slot7_material),
                 Transform::from_xyz(2.0, 0.0, 2.0),
             ));
-
             parent.spawn((
                 Mesh3d(cube_mesh.clone()),
                 MeshMaterial3d(slot2_material_),
