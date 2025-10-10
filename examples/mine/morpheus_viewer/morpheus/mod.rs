@@ -1,7 +1,6 @@
-use crate::slot::{Slot, Slot0, Slot1, Slot2, Slot3, Slot4, Slot5, Slot6, Slot7, ADVECTION_HANDLE};
+use crate::slot::{Slot, Slot0, Slot1, Slot2, Slot3, Slot4, Slot5, Slot6, Slot7};
 use crate::snippet::{Snippet, SnippetAssetLoader};
 
-mod camera;
 mod raymarching_material;
 
 use raymarching_material::MorpheusRaymarchingMaterial;
@@ -44,12 +43,8 @@ impl Plugin for MorpheusPlugin {
         app.add_systems(Update, update_bbox_centers_slot::<Slot7>);
         app.add_systems(Update, update_internal_state);
 
-        app.add_systems(Startup, camera::populate_camera_and_lights);
-        app.add_systems(Update, camera::rotate_camera);
-        app.add_systems(Update, camera::zoom_camera);
-
-        app.add_systems(Startup, _populate_models);
-        // app.add_systems(Startup, _populate_advection_model);
+        app.add_systems(Startup, populate_models);
+        app.add_systems(Startup, populate_single_model);
         app.add_systems(Update, keyboard_change_raymarching_model);
     }
 }
@@ -69,7 +64,7 @@ enum State {
 #[derive(Resource, Default)]
 struct SnippetHandles {
     raymarching_snippet: Handle<Snippet>,
-    advection_snippet: Handle<Snippet>,
+    // advection_snippet: Handle<Snippet>,
     state: State,
 }
 
@@ -90,22 +85,22 @@ fn make_raymarching_shader_from_snippet(
     ray_shader
 }
 
-fn make_advection_shader_from_snippet(
-    server_asset: &Res<AssetServer>,
-    adv_snippet: &str,
-    shape: &str,
-) -> Shader {
-    let sdf_path = format!("shaders/morpheus/sdf/{shape}.wgsl");
-    let sdf_handle: Handle<Shader> = server_asset.load(sdf_path.clone());
+// fn make_advection_shader_from_snippet(
+//     server_asset: &Res<AssetServer>,
+//     adv_snippet: &str,
+//     shape: &str,
+// ) -> Shader {
+//     let sdf_path = format!("shaders/morpheus/sdf/{shape}.wgsl");
+//     let sdf_handle: Handle<Shader> = server_asset.load(sdf_path.clone());
 
-    let adv_path = format!("shaders/morpheus/advection/{shape}.wgsl");
-    let mut adv_source: String = adv_snippet.to_owned();
-    adv_source = adv_source.replace("SDF_PATH", &sdf_path);
-    let mut adv_shader = Shader::from_wgsl(adv_source, adv_path);
-    adv_shader.file_dependencies.push(sdf_handle);
+//     let adv_path = format!("shaders/morpheus/advection/{shape}.wgsl");
+//     let mut adv_source: String = adv_snippet.to_owned();
+//     adv_source = adv_source.replace("SDF_PATH", &sdf_path);
+//     let mut adv_shader = Shader::from_wgsl(adv_source, adv_path);
+//     adv_shader.file_dependencies.push(sdf_handle);
 
-    adv_shader
-}
+//     adv_shader
+// }
 
 fn update_internal_state(
     mut handles: ResMut<SnippetHandles>,
@@ -117,14 +112,14 @@ fn update_internal_state(
         State::Init => {
             handles.raymarching_snippet =
                 server_asset.load::<Snippet>("shaders/morpheus/snippet/raymarching.snippet");
-            handles.advection_snippet =
-                server_asset.load::<Snippet>("shaders/morpheus/snippet/advection.snippet");
+            // handles.advection_snippet =
+            //     server_asset.load::<Snippet>("shaders/morpheus/snippet/advection.snippet");
             State::LoadingSnippets
         }
         State::LoadingSnippets => {
             let mut has_snippets: bool = true;
             has_snippets &= snippets.get(handles.raymarching_snippet.id()).is_some();
-            has_snippets &= snippets.get(handles.advection_snippet.id()).is_some();
+            // has_snippets &= snippets.get(handles.advection_snippet.id()).is_some();
             match has_snippets {
                 true => State::PreparingShaders,
                 false => State::LoadingSnippets,
@@ -168,15 +163,15 @@ fn update_internal_state(
                     make_raymarching_shader_from_snippet(&server_asset, ray_snippet, "arlo"),
                 );
             }
-            {
-                info!("** prepare_advection_shader **");
-                let adv_snippet = snippets.get(handles.advection_snippet.id()).unwrap();
-                let adv_snippet = &adv_snippet.content;
-                shaders.insert(
-                    ADVECTION_HANDLE.id(),
-                    make_advection_shader_from_snippet(&server_asset, adv_snippet, "alien"),
-                );
-            }
+            // {
+            //     info!("** prepare_advection_shader **");
+            //     let adv_snippet = snippets.get(handles.advection_snippet.id()).unwrap();
+            //     let adv_snippet = &adv_snippet.content;
+            //     shaders.insert(
+            //         ADVECTION_HANDLE.id(),
+            //         make_advection_shader_from_snippet(&server_asset, adv_snippet, "alien"),
+            //     );
+            // }
             State::Ready
         }
         State::SettingShader(slot, shape) => {
@@ -204,21 +199,20 @@ fn update_internal_state(
     };
 }
 
+// FIXME buggy
 fn keyboard_change_raymarching_model(
     mut handles: ResMut<SnippetHandles>,
     keyboard: Res<ButtonInput<KeyCode>>,
 ) {
+    if !matches!(&handles.state, State::Ready) {
+        return;
+    }
     if keyboard.just_pressed(KeyCode::KeyP) {
-        match &handles.state {
-            State::Ready => {
-                handles.state = State::SettingShader(7, "sphere".into());
-            }
-            _ => {}
-        }
+        handles.state = State::SettingShader(7, "sphere".into());
     }
 }
 
-fn _populate_advection_model(
+fn populate_single_model(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<MorpheusRaymarchingMaterial<Slot2>>>,
@@ -234,11 +228,11 @@ fn _populate_advection_model(
     commands.spawn((
         Mesh3d(cube_mesh),
         MeshMaterial3d(material),
-        Transform::from_xyz(-1.0, 0.0, 1.0),
+        Transform::from_xyz(0.0, 0.0, 0.0),
     ));
 }
 
-fn _populate_models(
+fn populate_models(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut morpheus_slot0_materials: ResMut<Assets<MorpheusRaymarchingMaterial<Slot0>>>,
@@ -378,7 +372,6 @@ fn _populate_models(
                 MeshMaterial3d(slot7_material),
                 Transform::from_xyz(2.0, 0.0, 2.0),
             ));
-
             parent.spawn((
                 Mesh3d(cube_mesh.clone()),
                 MeshMaterial3d(slot2_material_),

@@ -36,4 +36,4 @@ pub type Slot5 = SlotN<5>;
 pub type Slot6 = SlotN<6>;
 pub type Slot7 = SlotN<7>;
 
-pub const ADVECTION_HANDLE: Handle<Shader> = weak_handle!("7987c9b7-abcd-0000-0000-023a354b7cac");
+// pub const ADVECTION_HANDLE: Handle<Shader> = weak_handle!("7987c9b7-abcd-0000-0000-023a354b7cac");
