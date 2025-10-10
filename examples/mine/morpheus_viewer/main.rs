@@ -2,7 +2,7 @@
 
 // mod advection;
 // mod ui;
-
+mod camera;
 mod morpheus;
 mod slot;
 mod snippet;
@@ -46,6 +46,7 @@ fn main() {
         );
     }
 
+    app.add_plugins(camera::CameraPlugin);
     app.add_plugins(morpheus::MorpheusPlugin);
     // app.add_plugins(advection::AdvectionPlugin);
     // app.add_plugins(ui::UiPlugin);
